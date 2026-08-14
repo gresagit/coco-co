@@ -26,7 +26,7 @@ export default async function EtiquetasLotePage({ params }: { params: { id: stri
           <p className="text-brand-500">{lote?.productos?.sku} — {lote?.productos?.nombre} · {piezas?.length || 0} piezas</p>
         </div>
         <a href={`/api/etiquetas/${params.loteId}/pdf`} target="_blank" className="btn-primary">
-          📄 Exportar PDF para imprenta (Code128)
+          Exportar PDF para imprenta (Code128)
         </a>
       </div>
 

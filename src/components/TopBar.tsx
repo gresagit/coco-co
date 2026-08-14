@@ -1,0 +1,133 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
+type Sucursal = { id: string; nombre: string };
+
+export default function TopBar({
+  nombre,
+  usuario,
+  roles,
+  sucursales,
+  sucursalActualId,
+}: {
+  nombre: string;
+  usuario: string;
+  roles: string[];
+  sucursales: Sucursal[];
+  sucursalActualId: string | null;
+}) {
+  const router = useRouter();
+  const [cambiando, setCambiando] = useState(false);
+  const sucursalDetailsRef = useRef<HTMLDetailsElement>(null);
+  const perfilDetailsRef = useRef<HTMLDetailsElement>(null);
+
+  const sucursalActual = sucursales.find((s) => s.id === sucursalActualId) || sucursales[0];
+  const iniciales = nombre
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
+
+  async function elegirSucursal(id: string) {
+    setCambiando(true);
+    await fetch("/api/sucursal-actual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sucursalId: id }),
+    });
+    sucursalDetailsRef.current?.removeAttribute("open");
+    setCambiando(false);
+    router.refresh();
+  }
+
+  async function onLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
+  return (
+    <header className="h-16 border-b border-brand-150 bg-cream/95 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-end gap-3 px-6">
+      {/* Selector de tienda / sucursal */}
+      {sucursales.length > 0 && (
+        <details ref={sucursalDetailsRef} className="relative">
+          <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-sm border border-brand-200 bg-white px-3 py-1.5 text-sm hover:border-brand-400 transition-colors">
+            <IconStore />
+            <span className="text-brand-500 hidden sm:inline">Tienda:</span>
+            <span className="font-medium text-ink">{sucursalActual?.nombre || "—"}</span>
+            <IconChevron />
+          </summary>
+          <div className="absolute right-0 mt-2 w-56 bg-white border border-brand-150 rounded-sm shadow-soft py-1 z-30">
+            {sucursales.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={cambiando}
+                onClick={() => elegirSucursal(s.id)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-50 transition-colors ${
+                  s.id === sucursalActual?.id ? "text-ink font-medium" : "text-brand-500"
+                }`}
+              >
+                {s.nombre}
+              </button>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* Selector de perfil / usuario */}
+      <details ref={perfilDetailsRef} className="relative">
+        <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-sm border border-brand-200 bg-white pl-1.5 pr-3 py-1.5 hover:border-brand-400 transition-colors">
+          <span className="w-7 h-7 rounded-full bg-ink text-cream text-xs font-medium flex items-center justify-center">
+            {iniciales || "?"}
+          </span>
+          <span className="text-sm font-medium text-ink hidden sm:inline">{nombre}</span>
+          <IconChevron />
+        </summary>
+        <div className="absolute right-0 mt-2 w-60 bg-white border border-brand-150 rounded-sm shadow-soft py-1 z-30">
+          <div className="px-3 py-2 border-b border-brand-100">
+            <p className="text-sm font-medium text-ink">{nombre}</p>
+            <p className="text-xs text-brand-400">@{usuario}</p>
+            {roles.length > 0 && (
+              <p className="text-xs text-brand-400 mt-0.5">{roles.join(" · ")}</p>
+            )}
+          </div>
+          <a
+            href="/dashboard/usuarios"
+            className="block px-3 py-2 text-sm text-brand-600 hover:bg-brand-50 transition-colors"
+          >
+            Usuarios y roles
+          </a>
+          <button
+            onClick={onLogout}
+            className="block w-full text-left px-3 py-2 text-sm text-red-700 hover:bg-brand-50 transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </details>
+    </header>
+  );
+}
+
+function IconStore() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-brand-400">
+      <path d="M4 9.5 5.2 4h13.6l1.2 5.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 9.5V20h14V9.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.5 20v-6h5v6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChevron() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-400">
+      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

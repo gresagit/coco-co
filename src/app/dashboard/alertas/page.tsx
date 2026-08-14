@@ -38,8 +38,9 @@ export default async function AlertasPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Alertas y Notificaciones</h1>
-        <p className="text-brand-500">Semáforo en sistema + correo + WhatsApp. Configura quién recibe qué.</p>
+        <p className="eyebrow mb-1">Operación · 03</p>
+        <h1 className="page-title">Alertas y notificaciones</h1>
+        <p className="page-subtitle">Semáforo en sistema + correo + WhatsApp. Configura quién recibe qué.</p>
       </div>
 
       <div className="card">
@@ -107,7 +108,7 @@ export default async function AlertasPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="font-semibold mb-3">🚦 Alertas activas — Insumos ({activasInsumo.length})</h2>
+          <h2 className="font-semibold mb-3">Alertas activas — Insumos ({activasInsumo.length})</h2>
           <ul className="space-y-2 text-sm">
             {activasInsumo.map((r: any, i: number) => (
               <li key={i} className="flex justify-between">
@@ -119,7 +120,7 @@ export default async function AlertasPage() {
           </ul>
         </div>
         <div className="card">
-          <h2 className="font-semibold mb-3">🚦 Alertas activas — Producto Terminado ({activasProducto.length})</h2>
+          <h2 className="font-semibold mb-3">Alertas activas — Producto terminado ({activasProducto.length})</h2>
           <ul className="space-y-2 text-sm">
             {activasProducto.map((r: any, i: number) => (
               <li key={i} className="flex justify-between">

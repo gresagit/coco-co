@@ -2,18 +2,25 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
+import { siguienteSkuProducto } from "@/lib/sku";
 
 async function crearProducto(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
-  const sku = formData.get("sku") as string;
   let categoriaId = formData.get("categoria_id") as string;
   const categoriaNueva = (formData.get("categoria_nueva") as string)?.trim();
+  let categoriaNombre = categoriaNueva || null;
 
   if (!categoriaId && categoriaNueva) {
     const { data: cat } = await db.from("categorias").insert({ nombre: categoriaNueva }).select().single();
     categoriaId = cat?.id;
+  } else if (categoriaId) {
+    const { data: cat } = await db.from("categorias").select("nombre").eq("id", categoriaId).maybeSingle();
+    categoriaNombre = cat?.nombre || null;
   }
+
+  // El SKU se genera automáticamente a partir de la categoría — el usuario no lo escribe.
+  const sku = await siguienteSkuProducto(categoriaNombre);
 
   const { data: producto, error } = await db
     .from("productos")
@@ -63,17 +70,16 @@ export default async function ProductosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Producto Terminado</h1>
-        <p className="text-brand-500">Costo y precio sugerido se calculan automáticamente a partir del BOM.</p>
+        <p className="eyebrow mb-1">Catálogo · 01</p>
+        <h1 className="page-title">Producto terminado</h1>
+        <p className="page-subtitle">
+          El SKU se genera automáticamente a partir de la categoría. Costo y precio sugerido se calculan a partir del BOM.
+        </p>
       </div>
 
       <div className="card">
         <h2 className="font-semibold mb-3">Nuevo producto</h2>
         <form action={crearProducto} className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="label">SKU</label>
-            <input name="sku" className="input" placeholder="JAB-ROPA-1K" required />
-          </div>
           <div>
             <label className="label">Nombre</label>
             <input name="nombre" className="input" required />
@@ -90,6 +96,7 @@ export default async function ProductosPage() {
           <div>
             <label className="label">O nueva categoría</label>
             <input name="categoria_nueva" className="input" placeholder="Ej. Jabones" />
+            <p className="text-xs text-brand-400 mt-1">La categoría define el prefijo del SKU (ej. Jabones → JAB-0001).</p>
           </div>
           <div>
             <label className="label">Presentación / tamaño</label>

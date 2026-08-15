@@ -39,9 +39,8 @@ export default async function ProveedoresPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="eyebrow mb-1">Compras · 01</p>
-        <h1 className="page-title">Proveedores</h1>
-        <p className="page-subtitle">Perfil de proveedores e insumos que suministran.</p>
+        <h1 className="text-2xl font-bold">Proveedores</h1>
+        <p className="text-brand-500">Perfil de proveedores e insumos que suministran.</p>
       </div>
 
       <div className="card">

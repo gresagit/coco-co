@@ -10,8 +10,10 @@ según la Hoja de Requerimientos v2.0 (agosto 2026).
 3. Fórmulas (BOM), con soporte de **recetas anidadas**
 4. Producción: órdenes de producción + reportes de avance incrementales (con merma),
    generación automática de lotes y piezas (trazabilidad pieza → lote → orden → SKU)
-5. Generador de códigos de barra **Code128** y exportación de etiquetas en PDF listo
-   para imprenta externa, incluyendo margen de repuesto y reimpresión con mismo folio
+5. **Generador de Códigos de Barra** (independiente de producción): elige producto, si va ligado a
+   un lote existente / uno nuevo / sin lote (impresión anticipada), cuántos códigos quieres, y
+   descarga el PDF con todos los códigos **Code128** listos para tu imprenta, con % de repuesto
+   configurable. También sigue disponible el PDF de etiquetas por lote desde Producción.
 6. Movimientos de inventario (entradas/salidas/ajustes) y **transferencias entre sucursales**
 7. Proveedores + **Órdenes de Compra formales**, exportables en PDF, con recepción total/parcial
 8. Multi-sucursal: inventario independiente, catálogo compartido
@@ -29,7 +31,10 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
 2. Ve a **SQL Editor → New query**, pega el contenido de `supabase/schema.sql` y ejecútalo.
    Esto crea todas las tablas, el usuario `Admin` con contraseña `cisco`, los 5 roles base
    y una sucursal "Matriz" de ejemplo.
-3. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
+3. Corre también `supabase/migration_002_generador_codigos_barra.sql` (habilita el módulo de
+   Generador de Códigos de Barra independiente de producción). Si ya tenías el proyecto
+   desplegado, solo pega y corre este archivo una vez — no borra ni afecta datos existentes.
+4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.
 4. En **Project Settings → API** copia:

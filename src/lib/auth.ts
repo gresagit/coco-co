@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const COOKIE_NAME = "cococo_session";
-const COOKIE_SUCURSAL = "cococo_sucursal_actual";
 
 export type SessionUser = {
   id: string;
@@ -120,22 +119,4 @@ export async function requireUser(): Promise<SessionUser> {
     throw new Error("NO_AUTH");
   }
   return user;
-}
-
-// --- Sucursal actual (tienda con la que se está trabajando) ---
-// Se guarda en una cookie ligera e independiente de la sesión, para que el
-// selector de tienda en la barra superior funcione sin volver a iniciar sesión.
-
-export function getSucursalActualId(): string | null {
-  return cookies().get(COOKIE_SUCURSAL)?.value || null;
-}
-
-export function setSucursalActualId(sucursalId: string) {
-  cookies().set(COOKIE_SUCURSAL, sucursalId, {
-    httpOnly: false,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 días
-  });
 }

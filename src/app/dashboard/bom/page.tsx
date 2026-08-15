@@ -62,9 +62,8 @@ export default async function BomPage({ searchParams }: { searchParams: { produc
   return (
     <div className="space-y-6">
       <div>
-        <p className="eyebrow mb-1">Catálogo · 03</p>
-        <h1 className="page-title">Fórmulas (BOM)</h1>
-        <p className="page-subtitle">
+        <h1 className="text-2xl font-bold">Fórmulas (BOM)</h1>
+        <p className="text-brand-500">
           Define qué insumos —o qué otros productos (receta anidada)— componen cada producto terminado.
         </p>
       </div>

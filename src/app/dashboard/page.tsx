@@ -32,9 +32,8 @@ export default async function DashboardHome() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="eyebrow mb-1">Panel · 00</p>
-        <h1 className="page-title">Hola, {user?.nombre_completo?.split(" ")[0]}</h1>
-        <p className="page-subtitle">Resumen general del sistema de inventarios.</p>
+        <h1 className="text-2xl font-bold">Hola, {user?.nombre_completo}</h1>
+        <p className="text-brand-500">Resumen general del sistema de inventarios.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -46,7 +45,7 @@ export default async function DashboardHome() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">Semáforo — Insumos</h2>
+          <h2 className="font-semibold mb-3 flex items-center gap-2">🚦 Semáforo — Insumos</h2>
           {bajoInsumos.length === 0 ? (
             <p className="text-sm text-brand-500">Sin alertas de stock mínimo por ahora.</p>
           ) : (
@@ -66,7 +65,7 @@ export default async function DashboardHome() {
         </div>
 
         <div className="card">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">Semáforo — Producto terminado</h2>
+          <h2 className="font-semibold mb-3 flex items-center gap-2">🚦 Semáforo — Producto Terminado</h2>
           {bajoProductos.length === 0 ? (
             <p className="text-sm text-brand-500">Sin alertas de stock mínimo por ahora.</p>
           ) : (
@@ -92,8 +91,8 @@ export default async function DashboardHome() {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="card">
-      <p className="text-brand-400 text-xs uppercase tracking-wide">{label}</p>
-      <p className="font-serif text-3xl text-ink mt-1">{value}</p>
+      <p className="text-brand-500 text-sm">{label}</p>
+      <p className="text-3xl font-bold text-brand-700">{value}</p>
     </div>
   );
 }

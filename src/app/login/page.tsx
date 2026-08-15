@@ -33,9 +33,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="eyebrow mb-2">Coco & Co.</p>
-          <h1 className="page-title">Sistema de inventarios</h1>
-          <p className="page-subtitle">Gestión de catálogo, producción y sucursales en la nube.</p>
+          <h1 className="text-2xl font-bold text-brand-700">Coco & Co.</h1>
+          <p className="text-brand-500 text-sm mt-1">Sistema de Inventarios en la Nube</p>
         </div>
         <form onSubmit={onSubmit} className="card space-y-4">
           <div>

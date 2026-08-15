@@ -12,9 +12,8 @@ export default async function ProduccionPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="eyebrow mb-1">Operación · 01</p>
-          <h1 className="page-title">Órdenes de producción</h1>
-          <p className="page-subtitle">Declaración de intención de producción + reportes de avance incrementales.</p>
+          <h1 className="text-2xl font-bold">Órdenes de Producción</h1>
+          <p className="text-brand-500">Declaración de intención de producción + reportes de avance incrementales.</p>
         </div>
         <Link href="/dashboard/produccion/nueva" className="btn-primary">+ Nueva orden</Link>
       </div>

@@ -1,21 +1,16 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { siguienteCodigoInsumo } from "@/lib/sku";
 
 async function crearInsumo(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
-  const tipo = formData.get("tipo") as string;
-  // El código interno se genera automáticamente a partir del tipo de insumo.
-  const codigoInterno = await siguienteCodigoInsumo(tipo);
-
   const { data: insumo, error } = await db
     .from("insumos")
     .insert({
-      codigo_interno: codigoInterno,
+      codigo_interno: formData.get("codigo_interno"),
       nombre: formData.get("nombre"),
-      tipo,
+      tipo: formData.get("tipo"),
       unidad_medida: formData.get("unidad_medida"),
       controla_caducidad: formData.get("controla_caducidad") === "on",
       costo_unitario_actual: Number(formData.get("costo_unitario_actual") || 0),
@@ -42,16 +37,17 @@ export default async function InsumosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="eyebrow mb-1">Catálogo · 02</p>
-        <h1 className="page-title">Insumos</h1>
-        <p className="page-subtitle">
-          Materia prima, empaque, etiquetas y productos intermedios. El código interno se genera automáticamente según el tipo.
-        </p>
+        <h1 className="text-2xl font-bold">Insumos</h1>
+        <p className="text-brand-500">Materia prima, empaque, etiquetas y productos intermedios.</p>
       </div>
 
       <div className="card">
         <h2 className="font-semibold mb-3">Nuevo insumo</h2>
         <form action={crearInsumo} className="grid md:grid-cols-3 gap-3">
+          <div>
+            <label className="label">Código interno</label>
+            <input name="codigo_interno" className="input" required />
+          </div>
           <div>
             <label className="label">Nombre</label>
             <input name="nombre" className="input" required />
@@ -64,7 +60,6 @@ export default async function InsumosPage() {
               <option>Etiqueta</option>
               <option>Producto Intermedio</option>
             </select>
-            <p className="text-xs text-brand-400 mt-1">Define el prefijo del código (ej. Empaque → EMP-0001).</p>
           </div>
           <div>
             <label className="label">Unidad de medida</label>

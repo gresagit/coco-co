@@ -39,6 +39,7 @@ const GROUPS: NavGroup[] = [
   {
     label: "Administración",
     items: [
+      { href: "/dashboard/metas", label: "Metas de producción", icon: IconTarget },
       { href: "/dashboard/sucursales", label: "Sucursales", icon: IconStore },
       { href: "/dashboard/usuarios", label: "Usuarios y roles", icon: IconUsers },
     ],
@@ -209,6 +210,16 @@ function IconBarcode(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base(props)}>
       <path d="M4 5v14M7 5v14M9.5 5v14M13 5v14M15.5 5v14M18 5v14M20 5v14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTarget(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none" />
     </svg>
   );
 }

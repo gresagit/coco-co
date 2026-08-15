@@ -78,7 +78,7 @@ export default async function UsuariosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="eyebrow mb-1">Administración · 02</p>
+        <p className="eyebrow mb-1">Administración · 03</p>
         <h1 className="page-title">Usuarios, roles y permisos</h1>
         <p className="page-subtitle">Roles base + perfiles personalizados/temporales, acotables por sucursal.</p>
       </div>

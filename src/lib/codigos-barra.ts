@@ -18,6 +18,10 @@ export async function generarTandaCodigosBarra(params: {
   loteId?: string;
   folioLoteNuevo?: string;
   generadoPor?: string;
+  metaId?: string;
+  // "Disponible" = ya está producido (flujo manual de hoy).
+  // "Pendiente" = código impreso, aún no confirmado — lo confirma el escaneo.
+  estadoInicial?: "Disponible" | "Pendiente";
 }) {
   const db = supabaseAdmin();
 
@@ -57,10 +61,13 @@ export async function generarTandaCodigosBarra(params: {
       cantidad: params.cantidad,
       porcentaje_repuesto: params.porcentajeRepuesto,
       generado_por: params.generadoPor || null,
+      meta_id: params.metaId || null,
     })
     .select()
     .single();
   if (errGen || !generacion) throw errGen || new Error("No se pudo crear la generación");
+
+  const estadoInicial = params.estadoInicial || "Disponible";
 
   const piezas = [];
   for (let i = 0; i < params.cantidad; i++) {
@@ -73,8 +80,9 @@ export async function generarTandaCodigosBarra(params: {
       lote_id: loteId,
       producto_id: params.productoId,
       sucursal_id: params.sucursalId,
-      estado: "Disponible",
+      estado: estadoInicial,
       generacion_id: generacion.id,
+      meta_id: params.metaId || null,
     });
   }
 

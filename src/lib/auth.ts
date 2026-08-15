@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const COOKIE_NAME = "cococo_session";
+const SUCURSAL_COOKIE_NAME = "cococo_sucursal_actual";
 
 export type SessionUser = {
   id: string;
@@ -119,4 +120,33 @@ export async function requireUser(): Promise<SessionUser> {
     throw new Error("NO_AUTH");
   }
   return user;
+}
+
+// Sucursal "activa" en la sesión: el usuario la elige desde un selector en
+// el dashboard, y las pantallas que filtran por sucursal la usan como
+// default. No sustituye el control de acceso real (usuario_sucursales) —
+// solo valida que la sucursal elegida sea una a la que el usuario tenga
+// permiso, para evitar que alguien fije por cookie una sucursal ajena.
+export async function setSucursalActualId(sucursalId: string) {
+  const user = await getSessionUser();
+  if (!user) {
+    throw new Error("NO_AUTH");
+  }
+
+  const tieneAcceso = user.acceso_todas_sucursales || user.sucursales.includes(sucursalId);
+  if (!tieneAcceso) {
+    throw new Error("SUCURSAL_NO_PERMITIDA");
+  }
+
+  cookies().set(SUCURSAL_COOKIE_NAME, sucursalId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 días
+  });
+}
+
+export function getSucursalActualId(): string | null {
+  return cookies().get(SUCURSAL_COOKIE_NAME)?.value ?? null;
 }

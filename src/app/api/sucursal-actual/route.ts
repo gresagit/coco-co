@@ -6,6 +6,17 @@ export async function POST(req: NextRequest) {
   if (!sucursalId || typeof sucursalId !== "string") {
     return NextResponse.json({ ok: false, message: "sucursalId requerido" }, { status: 400 });
   }
-  setSucursalActualId(sucursalId);
-  return NextResponse.json({ ok: true });
+
+  try {
+    await setSucursalActualId(sucursalId);
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    if (e.message === "NO_AUTH") {
+      return NextResponse.json({ ok: false, message: "Sesión no válida" }, { status: 401 });
+    }
+    if (e.message === "SUCURSAL_NO_PERMITIDA") {
+      return NextResponse.json({ ok: false, message: "No tienes acceso a esa sucursal" }, { status: 403 });
+    }
+    return NextResponse.json({ ok: false, message: "No se pudo actualizar la sucursal activa" }, { status: 500 });
+  }
 }

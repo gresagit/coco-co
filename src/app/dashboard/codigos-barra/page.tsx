@@ -13,8 +13,9 @@ export default async function CodigosBarraPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Generador de Códigos de Barra</h1>
-          <p className="text-brand-500">
+          <p className="eyebrow mb-1">Catálogo · 04</p>
+          <h1 className="page-title">Generador de códigos de barra</h1>
+          <p className="page-subtitle">
             Genera e imprime códigos Code128 para cualquier producto, antes o durante la producción.
           </p>
         </div>

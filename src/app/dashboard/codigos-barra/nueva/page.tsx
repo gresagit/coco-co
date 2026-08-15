@@ -38,8 +38,9 @@ export default async function NuevaGeneracionPage({ searchParams }: { searchPara
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Generar Códigos de Barra</h1>
-        <p className="text-brand-500">
+        <p className="eyebrow mb-1">Catálogo · 04</p>
+        <h1 className="page-title">Generar códigos de barra</h1>
+        <p className="page-subtitle">
           Elige el producto, si van ligados a un lote, cuántos códigos quieres y descarga el PDF listo para imprimir.
         </p>
       </div>

@@ -31,7 +31,7 @@ export default async function DetalleGeneracionPage({ params }: { params: { id: 
           </p>
         </div>
         <a href={`/api/codigos-barra/${generacion.id}/pdf`} target="_blank" className="btn-primary">
-          📄 Descargar PDF ({generacion.cantidad} + {generacion.porcentaje_repuesto}% repuesto)
+          Descargar PDF ({generacion.cantidad} + {generacion.porcentaje_repuesto}% repuesto)
         </a>
       </div>
 

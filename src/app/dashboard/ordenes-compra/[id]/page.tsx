@@ -93,7 +93,7 @@ export default async function DetalleOrdenCompraPage({ params }: { params: { id:
           <p className="text-brand-500">{orden.proveedores?.nombre} · Sucursal {orden.sucursales?.nombre}</p>
         </div>
         <a href={`/api/ordenes-compra/${orden.id}/pdf`} target="_blank" className="btn-primary">
-          📄 Descargar PDF
+          Descargar PDF
         </a>
       </div>
 

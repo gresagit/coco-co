@@ -72,8 +72,9 @@ export default async function MovimientosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Movimientos e Inventario</h1>
-        <p className="text-brand-500">Entradas, salidas y transferencias entre sucursales.</p>
+        <p className="eyebrow mb-1">Operación · 02</p>
+        <h1 className="page-title">Movimientos e inventario</h1>
+        <p className="page-subtitle">Entradas, salidas y transferencias entre sucursales.</p>
       </div>
 
       <div className="card">

@@ -26,9 +26,10 @@ export default async function SucursalesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Sucursales</h1>
-        <p className="text-brand-500">
-          Cada sucursal tiene inventario independiente. El catálogo de productos, insumos y BOM es compartido.
+        <p className="eyebrow mb-1">Administración · 01</p>
+        <h1 className="page-title">Sucursales</h1>
+        <p className="page-subtitle">
+          Cada sucursal tiene inventario independiente. El catálogo de productos, insumos y BOM es compartido. Para cambiar la tienda con la que trabajas, usa el selector arriba a la derecha.
         </p>
       </div>
 

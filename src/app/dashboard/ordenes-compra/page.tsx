@@ -21,8 +21,9 @@ export default async function OrdenesCompraPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Órdenes de Compra</h1>
-          <p className="text-brand-500">Documento formal, exportable en PDF para el proveedor.</p>
+          <p className="eyebrow mb-1">Compras · 02</p>
+          <h1 className="page-title">Órdenes de compra</h1>
+          <p className="page-subtitle">Documento formal, exportable en PDF para el proveedor.</p>
         </div>
         <Link href="/dashboard/ordenes-compra/nueva" className="btn-primary">+ Nueva orden</Link>
       </div>

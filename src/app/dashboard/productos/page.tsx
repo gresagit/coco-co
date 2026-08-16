@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import { siguienteSkuProducto } from "@/lib/sku";
+import { getSucursalActualId } from "@/lib/auth";
 
 async function crearProducto(formData: FormData) {
   "use server";
@@ -59,23 +60,60 @@ export default async function ProductosPage() {
     .order("nombre");
   const { data: categorias } = await db.from("categorias").select("*").order("nombre");
 
+  const sucursalId = getSucursalActualId();
+  const stockPorProducto: Record<string, number> = {};
+  if (sucursalId) {
+    const { data: stockRows } = await db
+      .from("producto_stock")
+      .select("producto_id, cantidad_disponible")
+      .eq("sucursal_id", sucursalId);
+    for (const row of stockRows || []) {
+      stockPorProducto[row.producto_id] = Number(row.cantidad_disponible);
+    }
+  }
+
   const conCosteo = await Promise.all(
     (productos || []).map(async (p: any) => {
       const costo = await calcularCostoProducto(p.id);
       const precio = p.precio_venta_override ?? precioSugerido(costo, Number(p.porcentaje_margen_deseado));
-      return { ...p, costo, precio };
+      return { ...p, costo, precio, stock: stockPorProducto[p.id] ?? 0 };
     })
   );
 
+  const stockPorCategoria: Record<string, number> = {};
+  for (const p of conCosteo) {
+    const nombre = p.categorias?.nombre || "Sin categoría";
+    stockPorCategoria[nombre] = (stockPorCategoria[nombre] || 0) + p.stock;
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <p className="eyebrow mb-1">Catálogo · 01</p>
-        <h1 className="page-title">Producto terminado</h1>
-        <p className="page-subtitle">
-          El SKU se genera automáticamente a partir de la categoría. Costo y precio sugerido se calculan a partir del BOM.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow mb-1">Catálogo · 01</p>
+          <h1 className="page-title">Producto terminado</h1>
+          <p className="page-subtitle">
+            El SKU se genera automáticamente a partir de la categoría. Costo y precio sugerido se calculan a partir del BOM.
+          </p>
+        </div>
+        <Link href="/dashboard/productos/escanear" className="btn-accent">
+          Escanear para agregar stock
+        </Link>
       </div>
+
+      {sucursalId && Object.keys(stockPorCategoria).length > 0 && (
+        <div className="card">
+          <h2 className="font-semibold mb-3">Stock por categoría — esta sucursal</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(stockPorCategoria).map(([nombre, cantidad]) => (
+              <div key={nombre} className="rounded-sm border border-brand-150 px-3 py-2.5">
+                <p className="text-xs text-brand-400 uppercase tracking-wide truncate">{nombre}</p>
+                <p className="font-serif text-2xl text-ink mt-0.5">{cantidad}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h2 className="font-semibold mb-3">Nuevo producto</h2>
@@ -131,6 +169,7 @@ export default async function ProductosPage() {
               <th>SKU</th>
               <th>Nombre</th>
               <th>Categoría</th>
+              <th>Stock</th>
               <th>Costo (auto)</th>
               <th>Precio sugerido</th>
               <th></th>
@@ -142,6 +181,7 @@ export default async function ProductosPage() {
                 <td className="font-mono text-xs">{p.sku}</td>
                 <td className="font-medium">{p.nombre}</td>
                 <td>{p.categorias?.nombre || "—"}</td>
+                <td className="font-medium">{p.stock}</td>
                 <td>${p.costo.toFixed(2)}</td>
                 <td>
                   ${p.precio.toFixed(2)}

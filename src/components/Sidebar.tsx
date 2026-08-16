@@ -16,6 +16,7 @@ const GROUPS: NavGroup[] = [
     label: "Catálogo",
     items: [
       { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
+      { href: "/dashboard/productos/escanear", label: "Escanear inventario", icon: IconScan },
       { href: "/dashboard/insumos", label: "Insumos", icon: IconLayers },
       { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
       { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
@@ -220,6 +221,18 @@ function IconTarget(props: SVGProps<SVGSVGElement>) {
       <circle cx="12" cy="12" r="8" />
       <circle cx="12" cy="12" r="4.2" />
       <circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconScan(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 12h16" strokeLinecap="round" />
     </svg>
   );
 }

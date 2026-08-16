@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { siguienteCodigoInsumo } from "@/lib/sku";
+import { getSucursalActualId } from "@/lib/auth";
 
 async function crearInsumo(formData: FormData) {
   "use server";
@@ -9,6 +10,9 @@ async function crearInsumo(formData: FormData) {
   const tipo = formData.get("tipo") as string;
   // El código interno se genera automáticamente a partir del tipo de insumo.
   const codigoInterno = await siguienteCodigoInsumo(tipo);
+  const controlaCaducidad = formData.get("controla_caducidad") === "on";
+  const cantidadInicial = Number(formData.get("cantidad_inicial") || 0);
+  const fechaCaducidad = (formData.get("fecha_caducidad") as string) || null;
 
   const { data: insumo, error } = await db
     .from("insumos")
@@ -17,7 +21,7 @@ async function crearInsumo(formData: FormData) {
       nombre: formData.get("nombre"),
       tipo,
       unidad_medida: formData.get("unidad_medida"),
-      controla_caducidad: formData.get("controla_caducidad") === "on",
+      controla_caducidad: controlaCaducidad,
       costo_unitario_actual: Number(formData.get("costo_unitario_actual") || 0),
     })
     .select()
@@ -31,6 +35,36 @@ async function crearInsumo(formData: FormData) {
         sucursales.map((s: any) => ({ insumo_id: insumo.id, sucursal_id: s.id, stock_minimo: 0, cantidad_disponible: 0 }))
       );
     }
+
+    // Si se capturó cantidad inicial, se aplica a la sucursal con la que
+    // estás trabajando ahorita (la que elegiste arriba a la derecha).
+    const sucursalActualId = getSucursalActualId();
+    if (cantidadInicial > 0 && sucursalActualId) {
+      if (controlaCaducidad) {
+        await db.from("insumo_lotes").insert({
+          insumo_id: insumo.id,
+          sucursal_id: sucursalActualId,
+          folio_lote: `${codigoInterno}-INICIAL`,
+          fecha_caducidad: fechaCaducidad,
+          cantidad_inicial: cantidadInicial,
+          cantidad_restante: cantidadInicial,
+        });
+      }
+      await db
+        .from("insumo_stock")
+        .update({ cantidad_disponible: cantidadInicial })
+        .eq("insumo_id", insumo.id)
+        .eq("sucursal_id", sucursalActualId);
+      await db.from("movimientos").insert({
+        tipo: "Entrada",
+        origen_tipo: "Insumo",
+        insumo_id: insumo.id,
+        sucursal_id: sucursalActualId,
+        cantidad: cantidadInicial,
+        referencia: "Alta inicial",
+        notas: "Cantidad inicial capturada al crear el insumo",
+      });
+    }
   }
   revalidatePath("/dashboard/insumos");
 }
@@ -38,6 +72,21 @@ async function crearInsumo(formData: FormData) {
 export default async function InsumosPage() {
   const db = supabaseAdmin();
   const { data: insumos } = await db.from("insumos").select("*").order("nombre");
+
+  const sucursalId = getSucursalActualId();
+  let sucursalNombre = "";
+  const stockPorInsumo: Record<string, number> = {};
+  if (sucursalId) {
+    const { data: sucursal } = await db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle();
+    sucursalNombre = sucursal?.nombre || "";
+    const { data: stockRows } = await db
+      .from("insumo_stock")
+      .select("insumo_id, cantidad_disponible")
+      .eq("sucursal_id", sucursalId);
+    for (const row of stockRows || []) {
+      stockPorInsumo[row.insumo_id] = Number(row.cantidad_disponible);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -51,6 +100,12 @@ export default async function InsumosPage() {
 
       <div className="card">
         <h2 className="font-semibold mb-3">Nuevo insumo</h2>
+        {!sucursalId && (
+          <p className="text-xs text-accent-600 mb-3">
+            No tienes una tienda elegida arriba a la derecha — puedes crear el insumo, pero la cantidad inicial no se
+            va a poder guardar hasta que elijas sucursal.
+          </p>
+        )}
         <form action={crearInsumo} className="grid md:grid-cols-3 gap-3">
           <div>
             <label className="label">Nombre</label>
@@ -79,6 +134,16 @@ export default async function InsumosPage() {
             <label className="label">Costo unitario actual</label>
             <input name="costo_unitario_actual" type="number" step="0.0001" className="input" defaultValue={0} />
           </div>
+          <div>
+            <label className="label">
+              Cantidad inicial {sucursalNombre && <span className="text-brand-400 font-normal">({sucursalNombre})</span>}
+            </label>
+            <input name="cantidad_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 100" defaultValue={0} />
+          </div>
+          <div>
+            <label className="label">Fecha de caducidad (si aplica)</label>
+            <input name="fecha_caducidad" type="date" className="input" />
+          </div>
           <div className="flex items-center gap-2 pt-6">
             <input type="checkbox" name="controla_caducidad" id="cad" />
             <label htmlFor="cad" className="text-sm">¿Controla caducidad? (activa FEFO)</label>
@@ -96,7 +161,7 @@ export default async function InsumosPage() {
               <th>Código</th>
               <th>Nombre</th>
               <th>Tipo</th>
-              <th>Unidad</th>
+              <th>Disponible{sucursalNombre && ` (${sucursalNombre})`}</th>
               <th>Caducidad</th>
               <th>Costo actual</th>
               <th></th>
@@ -108,12 +173,14 @@ export default async function InsumosPage() {
                 <td className="font-mono text-xs">{i.codigo_interno}</td>
                 <td className="font-medium">{i.nombre}</td>
                 <td>{i.tipo}</td>
-                <td>{i.unidad_medida}</td>
+                <td className="font-medium">
+                  {sucursalId ? `${stockPorInsumo[i.id] ?? 0} ${i.unidad_medida}` : "—"}
+                </td>
                 <td>{i.controla_caducidad ? <span className="badge-amarillo">FEFO</span> : "—"}</td>
                 <td>${Number(i.costo_unitario_actual).toFixed(4)}</td>
                 <td>
                   <Link href={`/dashboard/insumos/${i.id}/stock`} className="text-brand-600 text-xs underline">
-                    Ver stock por sucursal
+                    Ver / agregar stock
                   </Link>
                 </td>
               </tr>

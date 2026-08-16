@@ -2,6 +2,55 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
+async function agregarEntrada(insumoId: string, formData: FormData) {
+  "use server";
+  const db = supabaseAdmin();
+  const sucursalId = formData.get("sucursal_id") as string;
+  const cantidad = Number(formData.get("cantidad"));
+  const fechaCaducidad = (formData.get("fecha_caducidad") as string) || null;
+  const folioLote = (formData.get("folio_lote") as string)?.trim();
+
+  const { data: insumo } = await db.from("insumos").select("*").eq("id", insumoId).single();
+  if (!insumo || !cantidad || cantidad <= 0) return;
+
+  if (insumo.controla_caducidad) {
+    const folio = folioLote || `${insumo.codigo_interno}-${new Date().toISOString().slice(0, 10)}`;
+    await db.from("insumo_lotes").insert({
+      insumo_id: insumoId,
+      sucursal_id: sucursalId,
+      folio_lote: folio,
+      fecha_caducidad: fechaCaducidad,
+      cantidad_inicial: cantidad,
+      cantidad_restante: cantidad,
+    });
+  }
+
+  const { data: row } = await db
+    .from("insumo_stock")
+    .select("cantidad_disponible")
+    .eq("insumo_id", insumoId)
+    .eq("sucursal_id", sucursalId)
+    .maybeSingle();
+  const actual = Number(row?.cantidad_disponible || 0);
+  await db
+    .from("insumo_stock")
+    .update({ cantidad_disponible: actual + cantidad })
+    .eq("insumo_id", insumoId)
+    .eq("sucursal_id", sucursalId);
+
+  await db.from("movimientos").insert({
+    tipo: "Entrada",
+    origen_tipo: "Insumo",
+    insumo_id: insumoId,
+    sucursal_id: sucursalId,
+    cantidad,
+    referencia: insumo.controla_caducidad ? "Entrada con lote" : "Entrada",
+    notas: "Registrada desde ficha de insumo",
+  });
+
+  revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
+}
+
 async function actualizarStockMinimo(insumoId: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
@@ -20,7 +69,7 @@ async function ajusteManual(insumoId: string, formData: FormData) {
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const cantidad = Number(formData.get("cantidad"));
-  const tipo = formData.get("tipo") as string; // Entrada | Salida | Ajuste
+  const tipo = formData.get("tipo") as string; // Salida | Ajuste
 
   const { data: row } = await db
     .from("insumo_stock")
@@ -30,7 +79,7 @@ async function ajusteManual(insumoId: string, formData: FormData) {
     .maybeSingle();
 
   const actual = Number(row?.cantidad_disponible || 0);
-  const nueva = tipo === "Salida" ? actual - cantidad : actual + cantidad;
+  const nueva = actual - cantidad;
 
   await db
     .from("insumo_stock")
@@ -39,7 +88,7 @@ async function ajusteManual(insumoId: string, formData: FormData) {
     .eq("sucursal_id", sucursalId);
 
   await db.from("movimientos").insert({
-    tipo: tipo === "Ajuste" ? "Ajuste" : tipo,
+    tipo,
     origen_tipo: "Insumo",
     insumo_id: insumoId,
     sucursal_id: sucursalId,
@@ -57,7 +106,21 @@ export default async function InsumoStockPage({ params }: { params: { id: string
   const { data: stocks } = await db
     .from("insumo_stock")
     .select("*, sucursales(nombre)")
-    .eq("insumo_id", params.id);
+    .eq("insumo_id", params.id)
+    .order("sucursales(nombre)");
+
+  const lotesPorSucursal: Record<string, any[]> = {};
+  if (insumo?.controla_caducidad) {
+    const { data: lotes } = await db
+      .from("insumo_lotes")
+      .select("*")
+      .eq("insumo_id", params.id)
+      .gt("cantidad_restante", 0)
+      .order("fecha_caducidad", { ascending: true });
+    for (const lote of lotes || []) {
+      (lotesPorSucursal[lote.sucursal_id] ||= []).push(lote);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -65,63 +128,103 @@ export default async function InsumoStockPage({ params }: { params: { id: string
         <Link href="/dashboard/insumos" className="text-brand-600 text-sm underline">
           ← Volver a Insumos
         </Link>
-        <h1 className="text-2xl font-bold mt-2">{insumo?.nombre}</h1>
-        <p className="text-brand-500">Código {insumo?.codigo_interno} · Stock por sucursal</p>
+        <h1 className="page-title mt-2">{insumo?.nombre}</h1>
+        <p className="page-subtitle">
+          Código {insumo?.codigo_interno} · Stock por sucursal
+          {insumo?.controla_caducidad && " · controla caducidad (FEFO)"}
+        </p>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="table-base">
-          <thead>
-            <tr>
-              <th>Sucursal</th>
-              <th>Disponible</th>
-              <th>Stock mínimo</th>
-              <th>Semáforo</th>
-              <th>Actualizar mínimo</th>
-              <th>Ajuste manual</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(stocks || []).map((s: any) => {
-              const nivel =
-                s.cantidad_disponible <= 0 ? "rojo" : s.cantidad_disponible <= s.stock_minimo ? "amarillo" : "verde";
-              return (
-                <tr key={s.id}>
-                  <td className="font-medium">{s.sucursales?.nombre}</td>
-                  <td>{s.cantidad_disponible} {insumo?.unidad_medida}</td>
-                  <td>{s.stock_minimo} {insumo?.unidad_medida}</td>
-                  <td>
-                    <span className={`badge-${nivel}`}>{nivel}</span>
-                  </td>
-                  <td>
-                    <form action={actualizarStockMinimo.bind(null, params.id)} className="flex gap-2">
-                      <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
-                      <input
-                        name="stock_minimo"
-                        type="number"
-                        step="0.01"
-                        defaultValue={s.stock_minimo}
-                        className="input !w-24 !py-1"
-                      />
-                      <button className="btn-secondary text-xs">Guardar</button>
-                    </form>
-                  </td>
-                  <td>
-                    <form action={ajusteManual.bind(null, params.id)} className="flex gap-2 items-center">
-                      <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
-                      <select name="tipo" className="input !w-28 !py-1">
-                        <option value="Entrada">Entrada</option>
-                        <option value="Salida">Salida</option>
-                      </select>
-                      <input name="cantidad" type="number" step="0.01" className="input !w-20 !py-1" required />
-                      <button className="btn-secondary text-xs">Aplicar</button>
-                    </form>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="space-y-4">
+        {(stocks || []).map((s: any) => {
+          const nivel =
+            s.cantidad_disponible <= 0 ? "rojo" : s.cantidad_disponible <= s.stock_minimo ? "amarillo" : "verde";
+          const lotes = lotesPorSucursal[s.sucursal_id] || [];
+          return (
+            <div key={s.id} className="card">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-serif text-lg text-ink">{s.sucursales?.nombre}</h2>
+                  <p className="text-sm text-brand-500">
+                    Disponible:{" "}
+                    <span className="text-ink font-medium">
+                      {s.cantidad_disponible} {insumo?.unidad_medida}
+                    </span>{" "}
+                    · mínimo {s.stock_minimo} {insumo?.unidad_medida} · <span className={`badge-${nivel}`}>{nivel}</span>
+                  </p>
+                </div>
+                <form action={actualizarStockMinimo.bind(null, params.id)} className="flex items-end gap-2">
+                  <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
+                  <div>
+                    <label className="label">Stock mínimo</label>
+                    <input name="stock_minimo" type="number" step="0.01" defaultValue={s.stock_minimo} className="input !w-28 !py-1.5" />
+                  </div>
+                  <button className="btn-secondary text-xs">Guardar</button>
+                </form>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-brand-100">
+                <form action={agregarEntrada.bind(null, params.id)} className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-brand-400">Agregar cantidad (compra o carga inicial)</p>
+                  <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
+                  <div className="flex flex-wrap gap-2">
+                    <input name="cantidad" type="number" step="0.01" min={0.01} placeholder="Cantidad" className="input !w-28" required />
+                    {insumo?.controla_caducidad && (
+                      <>
+                        <input name="fecha_caducidad" type="date" className="input !w-40" />
+                        <input name="folio_lote" placeholder="Folio de lote (opcional)" className="input !w-44" />
+                      </>
+                    )}
+                    <button className="btn-primary text-xs">Agregar</button>
+                  </div>
+                </form>
+
+                <form action={ajusteManual.bind(null, params.id)} className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-brand-400">Corregir cantidad (salida o ajuste)</p>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
+                    <select name="tipo" className="input !w-28">
+                      <option value="Salida">Salida</option>
+                      <option value="Ajuste">Ajuste</option>
+                    </select>
+                    <input name="cantidad" type="number" step="0.01" min={0.01} placeholder="Cantidad" className="input !w-28" required />
+                    <button className="btn-secondary text-xs">Aplicar</button>
+                  </div>
+                </form>
+              </div>
+
+              {insumo?.controla_caducidad && (
+                <div className="mt-4 pt-4 border-t border-brand-100">
+                  <p className="text-xs font-medium uppercase tracking-wide text-brand-400 mb-2">Lotes activos (FEFO)</p>
+                  {lotes.length === 0 ? (
+                    <p className="text-sm text-brand-400">Sin lotes registrados todavía.</p>
+                  ) : (
+                    <table className="table-base">
+                      <thead>
+                        <tr>
+                          <th>Folio</th>
+                          <th>Caduca</th>
+                          <th>Restante</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lotes.map((l) => (
+                          <tr key={l.id}>
+                            <td className="font-mono text-xs">{l.folio_lote}</td>
+                            <td>{l.fecha_caducidad || "—"}</td>
+                            <td>
+                              {l.cantidad_restante} {insumo?.unidad_medida}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

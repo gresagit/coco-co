@@ -18,6 +18,7 @@ const GROUPS: NavGroup[] = [
       { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
       { href: "/dashboard/productos/escanear", label: "Escanear inventario", icon: IconScan },
       { href: "/dashboard/insumos", label: "Insumos", icon: IconLayers },
+      { href: "/dashboard/insumos/escanear", label: "Escanear insumos", icon: IconScan },
       { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
       { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
     ],
@@ -47,14 +48,40 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-export default function Sidebar({ nombre }: { nombre: string }) {
+export default function Sidebar({
+  nombre,
+  open = false,
+  onClose,
+}: {
+  nombre: string;
+  open?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-brand-150 flex flex-col min-h-screen">
-      <div className="px-6 py-6 border-b border-brand-150">
-        <h1 className="font-serif text-lg text-ink leading-none">Coco & Co.</h1>
-        <p className="text-brand-400 text-xs mt-1.5 uppercase tracking-widest2">Inventarios</p>
+    <aside
+      className={`w-64 shrink-0 bg-white border-r border-brand-150 flex flex-col min-h-screen
+        fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-out
+        lg:static lg:translate-x-0
+        ${open ? "translate-x-0 shadow-soft" : "-translate-x-full"}`}
+    >
+      <div className="px-6 py-6 border-b border-brand-150 flex items-center justify-between">
+        <div>
+          <h1 className="font-serif text-lg text-ink leading-none">Coco & Co.</h1>
+          <p className="text-brand-400 text-xs mt-1.5 uppercase tracking-widest2">Inventarios</p>
+        </div>
+        {/* Botón para cerrar el menú en pantallas chicas (celular/tablet) */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar menú"
+          className="lg:hidden text-brand-400 hover:text-ink p-1 -mr-1"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
       <nav className="flex-1 overflow-y-auto py-5">
         {GROUPS.map((group, gi) => (
@@ -71,6 +98,7 @@ export default function Sidebar({ nombre }: { nombre: string }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={onClose}
                   className={`flex items-center gap-3 px-6 py-2 text-sm border-l-2 transition-colors ${
                     active
                       ? "border-ink text-ink font-medium bg-brand-50"

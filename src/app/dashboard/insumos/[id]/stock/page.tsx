@@ -51,6 +51,23 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
 }
 
+async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
+  "use server";
+  const db = supabaseAdmin();
+  await db
+    .from("insumos")
+    .update({
+      nombre: formData.get("nombre"),
+      marca: (formData.get("marca") as string)?.trim() || null,
+      tipo: formData.get("tipo"),
+      unidad_medida: formData.get("unidad_medida"),
+      costo_unitario_actual: Number(formData.get("costo_unitario_actual") || 0),
+    })
+    .eq("id", insumoId);
+  revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
+  revalidatePath("/dashboard/insumos");
+}
+
 async function actualizarStockMinimo(insumoId: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
@@ -128,11 +145,70 @@ export default async function InsumoStockPage({ params }: { params: { id: string
         <Link href="/dashboard/insumos" className="text-brand-600 text-sm underline">
           ← Volver a Insumos
         </Link>
-        <h1 className="page-title mt-2">{insumo?.nombre}</h1>
-        <p className="page-subtitle">
-          Código {insumo?.codigo_interno} · Stock por sucursal
-          {insumo?.controla_caducidad && " · controla caducidad (FEFO)"}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 mt-2">
+          <div>
+            <h1 className="page-title">{insumo?.nombre}</h1>
+            <p className="page-subtitle">
+              Código {insumo?.codigo_interno} · Stock por sucursal
+              {insumo?.controla_caducidad && " · controla caducidad (FEFO)"}
+            </p>
+          </div>
+          <a
+            href={`/api/insumos/${params.id}/barcode/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary text-sm"
+          >
+            Descargar código de barra
+          </a>
+        </div>
+      </div>
+
+      {/* Ficha editable: nombre, marca, tipo, unidad, costo — todo lo que
+          normalmente se necesita corregir después de escanear el insumo. */}
+      <div className="card">
+        <h2 className="font-semibold mb-3">Editar datos del insumo</h2>
+        <form action={actualizarDatosInsumo.bind(null, params.id)} className="grid md:grid-cols-3 gap-3">
+          <div>
+            <label className="label">Nombre</label>
+            <input name="nombre" defaultValue={insumo?.nombre} className="input" required />
+          </div>
+          <div>
+            <label className="label">Marca (opcional)</label>
+            <input name="marca" defaultValue={insumo?.marca || ""} className="input" placeholder="Ej. proveedor o fabricante" />
+          </div>
+          <div>
+            <label className="label">Tipo</label>
+            <select name="tipo" defaultValue={insumo?.tipo} className="input" required>
+              <option>Materia Prima</option>
+              <option>Empaque</option>
+              <option>Etiqueta</option>
+              <option>Producto Intermedio</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Unidad de medida</label>
+            <select name="unidad_medida" defaultValue={insumo?.unidad_medida} className="input" required>
+              <option value="kg">kg</option>
+              <option value="L">L</option>
+              <option value="pz">pz</option>
+              <option value="m">m</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Costo unitario actual</label>
+            <input
+              name="costo_unitario_actual"
+              type="number"
+              step="0.0001"
+              defaultValue={insumo?.costo_unitario_actual}
+              className="input"
+            />
+          </div>
+          <div className="flex items-end">
+            <button className="btn-primary w-full sm:w-auto">Guardar cambios</button>
+          </div>
+        </form>
       </div>
 
       <div className="space-y-4">

@@ -20,7 +20,8 @@ export async function GET(_req: Request, { params }: { params: { loteId: string 
   }
 
   const bytes = await construirPdfEtiquetas(
-    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: lote.productos?.sku }))
+    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: lote.productos?.sku })),
+    { titulo: `${lote.productos?.nombre || "Producto"} · Lote ${lote.folio_lote}` }
   );
 
   return new NextResponse(Buffer.from(bytes), {

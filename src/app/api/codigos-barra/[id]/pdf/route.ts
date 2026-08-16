@@ -26,7 +26,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 
   const bytes = await construirPdfEtiquetas(
-    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: generacion.productos?.sku }))
+    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: generacion.productos?.sku })),
+    { titulo: `${generacion.productos?.nombre || "Producto"} (${generacion.productos?.sku || ""})` }
   );
 
   return new NextResponse(Buffer.from(bytes), {

@@ -19,6 +19,7 @@ async function crearInsumo(formData: FormData) {
     .insert({
       codigo_interno: codigoInterno,
       nombre: formData.get("nombre"),
+      marca: (formData.get("marca") as string)?.trim() || null,
       tipo,
       unidad_medida: formData.get("unidad_medida"),
       controla_caducidad: controlaCaducidad,
@@ -91,11 +92,23 @@ export default async function InsumosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="eyebrow mb-1">Catálogo · 02</p>
-        <h1 className="page-title">Insumos</h1>
-        <p className="page-subtitle">
-          Materia prima, empaque, etiquetas y productos intermedios. El código interno se genera automáticamente según el tipo.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow mb-1">Catálogo · 02</p>
+            <h1 className="page-title">Insumos</h1>
+            <p className="page-subtitle">
+              Materia prima, empaque, etiquetas y productos intermedios. El código interno se genera automáticamente según el tipo.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a href="/dashboard/insumos/escanear" className="btn-primary text-sm">
+              Escanear insumos
+            </a>
+            <a href="/api/insumos/barcodes/pdf" target="_blank" rel="noreferrer" className="btn-secondary text-sm">
+              Descargar códigos (todos)
+            </a>
+          </div>
+        </div>
       </div>
 
       <div className="card">
@@ -110,6 +123,10 @@ export default async function InsumosPage() {
           <div>
             <label className="label">Nombre</label>
             <input name="nombre" className="input" required />
+          </div>
+          <div>
+            <label className="label">Marca (opcional)</label>
+            <input name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
           </div>
           <div>
             <label className="label">Tipo</label>
@@ -160,6 +177,7 @@ export default async function InsumosPage() {
             <tr>
               <th>Código</th>
               <th>Nombre</th>
+              <th>Marca</th>
               <th>Tipo</th>
               <th>Disponible{sucursalNombre && ` (${sucursalNombre})`}</th>
               <th>Caducidad</th>
@@ -172,16 +190,26 @@ export default async function InsumosPage() {
               <tr key={i.id}>
                 <td className="font-mono text-xs">{i.codigo_interno}</td>
                 <td className="font-medium">{i.nombre}</td>
+                <td className="text-brand-500">{i.marca || "—"}</td>
                 <td>{i.tipo}</td>
                 <td className="font-medium">
                   {sucursalId ? `${stockPorInsumo[i.id] ?? 0} ${i.unidad_medida}` : "—"}
                 </td>
                 <td>{i.controla_caducidad ? <span className="badge-amarillo">FEFO</span> : "—"}</td>
                 <td>${Number(i.costo_unitario_actual).toFixed(4)}</td>
-                <td>
+                <td className="whitespace-nowrap">
                   <Link href={`/dashboard/insumos/${i.id}/stock`} className="text-brand-600 text-xs underline">
-                    Ver / agregar stock
+                    Ver / editar
                   </Link>
+                  <span className="text-brand-200 mx-1.5">·</span>
+                  <a
+                    href={`/api/insumos/${i.id}/barcode/pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand-600 text-xs underline"
+                  >
+                    Código de barra
+                  </a>
                 </td>
               </tr>
             ))}

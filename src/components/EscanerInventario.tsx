@@ -19,16 +19,55 @@ export default function EscanerInventario() {
   const [camaraActiva, setCamaraActiva] = useState(false);
   const [errorCamara, setErrorCamara] = useState<string | null>(null);
 
+  const [ultimoResultado, setUltimoResultado] = useState<Registro | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
   const ultimoDecodificado = useRef<{ folio: string; hora: number }>({ folio: "", hora: 0 });
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // El input siempre debe tener el foco: así un escáner Bluetooth (que actúa
   // como teclado) puede "escribir" y mandar Enter sin que el usuario haga nada.
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+    };
+  }, []);
+
+  // Retroalimentación clara e inmediata de que "sí pasó algo": beep + vibración
+  // + un aviso grande en pantalla (no solo una línea chiquita en la lista de
+  // abajo, que fácilmente se pierde de vista, sobre todo usando la cámara).
+  function avisarResultado(ok: boolean) {
+    try {
+      if (!audioCtxRef.current) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) audioCtxRef.current = new AudioCtx();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = ok ? 880 : 220;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (ok ? 0.15 : 0.35));
+        osc.start();
+        osc.stop(ctx.currentTime + (ok ? 0.15 : 0.35));
+      }
+    } catch {
+      // Si el navegador bloquea el audio (autoplay), simplemente no suena.
+    }
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(ok ? 80 : [80, 60, 80]);
+    }
+  }
 
   async function procesarFolio(folio: string) {
     const limpio = folio.trim();
@@ -41,18 +80,32 @@ export default function EscanerInventario() {
         body: JSON.stringify({ folio: limpio }),
       });
       const data = await res.json();
-      setRegistros((prev) => [
-        { folio: limpio, ok: !!data.ok, mensaje: data.ok ? `${data.productoNombre}` : data.mensaje, hora: new Date().toLocaleTimeString() },
-        ...prev,
-      ].slice(0, 30));
+      const registro: Registro = {
+        folio: limpio,
+        ok: !!data.ok,
+        mensaje: data.ok ? `${data.productoNombre}` : data.mensaje,
+        hora: new Date().toLocaleTimeString(),
+      };
+      setRegistros((prev) => [registro, ...prev].slice(0, 30));
+      setUltimoResultado(registro);
+      avisarResultado(registro.ok);
+      if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+      bannerTimeoutRef.current = setTimeout(() => setUltimoResultado(null), 4000);
       if (data.ok) {
         setTally((prev) => ({ ...prev, [data.productoNombre]: (prev[data.productoNombre] || 0) + 1 }));
       }
     } catch {
-      setRegistros((prev) => [
-        { folio: limpio, ok: false, mensaje: "No se pudo conectar con el servidor.", hora: new Date().toLocaleTimeString() },
-        ...prev,
-      ].slice(0, 30));
+      const registro: Registro = {
+        folio: limpio,
+        ok: false,
+        mensaje: "No se pudo conectar con el servidor.",
+        hora: new Date().toLocaleTimeString(),
+      };
+      setRegistros((prev) => [registro, ...prev].slice(0, 30));
+      setUltimoResultado(registro);
+      avisarResultado(false);
+      if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+      bannerTimeoutRef.current = setTimeout(() => setUltimoResultado(null), 4000);
     } finally {
       setEnviando(false);
       setInputValue("");
@@ -115,6 +168,34 @@ export default function EscanerInventario() {
 
   return (
     <div className="space-y-4">
+      {/* Aviso grande e imposible de perder: confirma de inmediato si el
+          escaneo funcionó o no (antes solo aparecía chiquito hasta abajo). */}
+      {ultimoResultado && (
+        <div
+          role="status"
+          aria-live="assertive"
+          className={`card !py-4 flex items-center gap-3 border-2 transition-colors ${
+            ultimoResultado.ok ? "border-green-600 bg-green-50" : "border-red-600 bg-red-50"
+          }`}
+        >
+          <span
+            className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-bold ${
+              ultimoResultado.ok ? "bg-green-600" : "bg-red-600"
+            }`}
+          >
+            {ultimoResultado.ok ? "✓" : "✕"}
+          </span>
+          <div className="min-w-0">
+            <p className={`font-semibold ${ultimoResultado.ok ? "text-green-800" : "text-red-800"}`}>
+              {ultimoResultado.ok ? "¡Escaneado correctamente!" : "No se pudo escanear"}
+            </p>
+            <p className="text-sm text-ink truncate">
+              <span className="font-mono text-xs text-brand-500">{ultimoResultado.folio}</span> — {ultimoResultado.mensaje}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex-1 min-w-[240px]">
@@ -134,10 +215,22 @@ export default function EscanerInventario() {
             {camaraActiva ? "Apagar cámara" : "Usar cámara del teléfono"}
           </button>
         </div>
+        {enviando && (
+          <p className="text-xs text-brand-500 mt-2 flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" /> Procesando escaneo…
+          </p>
+        )}
         {errorCamara && <p className="text-sm text-red-700 mt-2">{errorCamara}</p>}
         {camaraActiva && (
-          <div className="mt-4 max-w-sm">
+          <div className="mt-4 max-w-sm relative">
             <video ref={videoRef} className="w-full rounded-sm border border-brand-150" muted playsInline />
+            {/* Marco guía + destello de color al detectar un código, para que
+                se note al instante incluso mirando la pantalla del celular. */}
+            <div
+              className={`pointer-events-none absolute inset-0 rounded-sm border-4 transition-colors duration-300 ${
+                ultimoResultado ? (ultimoResultado.ok ? "border-green-500" : "border-red-500") : "border-transparent"
+              }`}
+            />
             <p className="text-xs text-brand-400 mt-1">Apunta la cámara directo al código de barras.</p>
           </div>
         )}

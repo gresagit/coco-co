@@ -82,6 +82,7 @@ create table insumos (
   id uuid primary key default uuid_generate_v4(),
   codigo_interno text not null unique,
   nombre text not null,
+  marca text, -- opcional: proveedor/fabricante del insumo
   tipo text not null check (tipo in ('Materia Prima','Empaque','Etiqueta','Producto Intermedio')),
   unidad_medida text not null check (unidad_medida in ('kg','L','pz','m')),
   controla_caducidad boolean not null default false, -- activa FEFO

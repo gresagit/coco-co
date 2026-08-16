@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import Sidebar from "@/components/Sidebar";
-import TopBar from "@/components/TopBar";
+import DashboardChrome from "@/components/DashboardChrome";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
@@ -16,18 +15,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: sucursales } = await query;
 
   return (
-    <div className="flex">
-      <Sidebar nombre={user.nombre_completo} />
-      <div className="flex-1 flex flex-col min-h-screen">
-        <TopBar
-          nombre={user.nombre_completo}
-          usuario={user.usuario}
-          roles={user.roles}
-          sucursales={sucursales || []}
-          sucursalActualId={getSucursalActualId()}
-        />
-        <main className="flex-1 p-8 max-w-7xl mx-auto w-full">{children}</main>
-      </div>
-    </div>
+    <DashboardChrome
+      nombre={user.nombre_completo}
+      usuario={user.usuario}
+      roles={user.roles}
+      sucursales={sucursales || []}
+      sucursalActualId={getSucursalActualId()}
+    >
+      {children}
+    </DashboardChrome>
   );
 }

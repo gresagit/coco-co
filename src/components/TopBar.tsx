@@ -11,12 +11,14 @@ export default function TopBar({
   roles,
   sucursales,
   sucursalActualId,
+  onMenuClick,
 }: {
   nombre: string;
   usuario: string;
   roles: string[];
   sucursales: Sucursal[];
   sucursalActualId: string | null;
+  onMenuClick?: () => void;
 }) {
   const router = useRouter();
   const [cambiando, setCambiando] = useState(false);
@@ -50,7 +52,19 @@ export default function TopBar({
   }
 
   return (
-    <header className="h-16 border-b border-brand-150 bg-cream/95 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-end gap-3 px-6">
+    <header className="h-16 border-b border-brand-150 bg-cream/95 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between gap-3 px-4 sm:px-6">
+      {/* Botón de menú — solo visible en pantallas chicas, abre el sidebar */}
+      <button
+        type="button"
+        onClick={onMenuClick}
+        aria-label="Abrir menú"
+        className="lg:hidden text-ink p-1.5 -ml-1.5 rounded-sm hover:bg-brand-50 transition-colors"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17" strokeLinecap="round" />
+        </svg>
+      </button>
+      <div className="flex items-center justify-end gap-3 flex-1 min-w-0">
       {/* Selector de tienda / sucursal */}
       {sucursales.length > 0 && (
         <details ref={sucursalDetailsRef} className="relative">
@@ -109,6 +123,7 @@ export default function TopBar({
           </button>
         </div>
       </details>
+      </div>
     </header>
   );
 }

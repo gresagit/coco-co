@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { SVGProps } from "react";
+import { dispararBurbujas } from "@/lib/burbujas";
 
 type NavItem = { href: string; label: string; icon: (props: SVGProps<SVGSVGElement>) => JSX.Element };
 type NavGroup = { label: string; items: NavItem[] };
@@ -59,8 +60,17 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
 
+  // Mismo efecto de burbujitas de jabón que la barra superior, ahora al
+  // hacer click en cualquier link/botón del menú lateral.
+  function onClickSidebar(e: React.MouseEvent<HTMLElement>) {
+    const target = (e.target as HTMLElement).closest("button, summary, a");
+    if (!target) return;
+    dispararBurbujas(e.clientX, e.clientY);
+  }
+
   return (
     <aside
+      onClickCapture={onClickSidebar}
       className={`w-64 shrink-0 bg-white border-r border-brand-150 flex flex-col min-h-screen
         fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-out
         lg:static lg:translate-x-0

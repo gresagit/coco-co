@@ -223,11 +223,11 @@ export default function EscanerInventario() {
         {errorCamara && <p className="text-sm text-red-700 mt-2">{errorCamara}</p>}
         {camaraActiva && (
           <div className="mt-4 max-w-sm relative">
-            <video ref={videoRef} className="w-full rounded-sm border border-brand-150" muted playsInline />
+            <video ref={videoRef} className="w-full rounded-lg border border-brand-150" muted playsInline />
             {/* Marco guía + destello de color al detectar un código, para que
                 se note al instante incluso mirando la pantalla del celular. */}
             <div
-              className={`pointer-events-none absolute inset-0 rounded-sm border-4 transition-colors duration-300 ${
+              className={`pointer-events-none absolute inset-0 rounded-lg border-4 transition-colors duration-300 ${
                 ultimoResultado ? (ultimoResultado.ok ? "border-green-500" : "border-red-500") : "border-transparent"
               }`}
             />

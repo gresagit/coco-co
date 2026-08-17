@@ -102,11 +102,11 @@ export default async function ProductosPage() {
       </div>
 
       {sucursalId && Object.keys(stockPorCategoria).length > 0 && (
-        <div className="card">
+        <div className="banner">
           <h2 className="font-semibold mb-3">Stock por categoría — esta sucursal</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(stockPorCategoria).map(([nombre, cantidad]) => (
-              <div key={nombre} className="rounded-sm border border-brand-150 px-3 py-2.5">
+              <div key={nombre} className="rounded-lg border border-brand-150 bg-white px-3 py-2.5 transition-transform hover:-translate-y-0.5">
                 <p className="text-xs text-brand-400 uppercase tracking-wide truncate">{nombre}</p>
                 <p className="font-serif text-2xl text-ink mt-0.5">{cantidad}</p>
               </div>

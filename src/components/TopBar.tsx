@@ -58,7 +58,7 @@ export default function TopBar({
         type="button"
         onClick={onMenuClick}
         aria-label="Abrir menú"
-        className="lg:hidden text-ink p-1.5 -ml-1.5 rounded-sm hover:bg-brand-50 transition-colors"
+        className="lg:hidden text-ink p-1.5 -ml-1.5 rounded-lg hover:bg-brand-100 transition-colors"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17" strokeLinecap="round" />
@@ -68,13 +68,13 @@ export default function TopBar({
       {/* Selector de tienda / sucursal */}
       {sucursales.length > 0 && (
         <details ref={sucursalDetailsRef} className="relative">
-          <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-sm border border-brand-200 bg-white px-3 py-1.5 text-sm hover:border-brand-400 transition-colors">
+          <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-lg border border-brand-200 bg-white px-2.5 sm:px-3 py-1.5 text-sm hover:border-brand-400 transition-colors">
             <IconStore />
             <span className="text-brand-500 hidden sm:inline">Tienda:</span>
             <span className="font-medium text-ink">{sucursalActual?.nombre || "—"}</span>
             <IconChevron />
           </summary>
-          <div className="absolute right-0 mt-2 w-56 bg-white border border-brand-150 rounded-sm shadow-soft py-1 z-30">
+          <div className="absolute right-0 mt-2 w-56 bg-white border border-brand-150 rounded-lg shadow-soft py-1 z-30 animate-fade-in-up">
             {sucursales.map((s) => (
               <button
                 key={s.id}
@@ -94,14 +94,14 @@ export default function TopBar({
 
       {/* Selector de perfil / usuario */}
       <details ref={perfilDetailsRef} className="relative">
-        <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-sm border border-brand-200 bg-white pl-1.5 pr-3 py-1.5 hover:border-brand-400 transition-colors">
+        <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-lg border border-brand-200 bg-white pl-1.5 pr-2.5 sm:pr-3 py-1.5 hover:border-brand-400 transition-colors">
           <span className="w-7 h-7 rounded-full bg-ink text-cream text-xs font-medium flex items-center justify-center">
             {iniciales || "?"}
           </span>
           <span className="text-sm font-medium text-ink hidden sm:inline">{nombre}</span>
           <IconChevron />
         </summary>
-        <div className="absolute right-0 mt-2 w-60 bg-white border border-brand-150 rounded-sm shadow-soft py-1 z-30">
+        <div className="absolute right-0 mt-2 w-60 bg-white border border-brand-150 rounded-lg shadow-soft py-1 z-30 animate-fade-in-up">
           <div className="px-3 py-2 border-b border-brand-100">
             <p className="text-sm font-medium text-ink">{nombre}</p>
             <p className="text-xs text-brand-400">@{usuario}</p>

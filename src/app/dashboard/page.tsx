@@ -91,7 +91,7 @@ export default async function DashboardHome() {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="card">
+    <div className="banner">
       <p className="text-brand-400 text-xs uppercase tracking-wide">{label}</p>
       <p className="font-serif text-3xl text-ink mt-1">{value}</p>
     </div>

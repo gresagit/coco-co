@@ -8,6 +8,23 @@
   }
 }
 
+@layer utilities {
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
 @layer components {
   /* Etiqueta numerada estilo editorial, ej. "01 · Catálogo" */
   .eyebrow {
@@ -23,24 +40,24 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center rounded-sm px-4 py-2 text-sm font-medium transition-colors duration-150;
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.98];
   }
   .btn-primary {
-    @apply btn bg-ink text-cream hover:bg-brand-700;
+    @apply btn bg-ink text-cream hover:bg-brand-700 hover:shadow-soft;
   }
   .btn-secondary {
     @apply btn bg-transparent border border-brand-200 text-brand-600 hover:border-brand-400 hover:text-ink;
   }
   .btn-accent {
-    @apply btn bg-accent-400 text-white hover:bg-accent-500;
+    @apply btn bg-accent-400 text-white hover:bg-accent-500 hover:shadow-soft;
   }
 
   .card {
-    @apply bg-white rounded-sm shadow-soft border border-brand-150 p-5;
+    @apply bg-white rounded-xl shadow-soft border border-brand-150 p-5 transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
   }
 
   .input {
-    @apply w-full rounded-sm border border-brand-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-brand-300 focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink transition-colors;
+    @apply w-full rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-brand-300 focus:outline-none focus:ring-2 focus:ring-ink/10 focus:border-ink transition-colors;
   }
   .input[readonly] {
     @apply bg-brand-50 text-brand-500 cursor-not-allowed;
@@ -69,5 +86,13 @@
 
   .section-number {
     @apply text-xs font-medium text-brand-400;
+  }
+
+  /* Banner — bloque destacado con acento suave, para avisos o resúmenes. */
+  .banner {
+    @apply rounded-2xl border border-brand-150 bg-gradient-to-br from-white to-brand-50 p-5 shadow-soft transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
+  }
+  .banner-accent {
+    @apply rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-white p-5 shadow-soft;
   }
 }

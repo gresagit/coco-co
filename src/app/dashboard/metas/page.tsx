@@ -99,7 +99,7 @@ export default async function MetasPage() {
                 {producto.metasActivas.map((meta) => {
                   const pct = Math.min(100, Math.round((meta.escaneadas / meta.cantidadMeta) * 100));
                   return (
-                    <div key={meta.id} className="rounded-sm border border-brand-150 px-3 py-2">
+                    <div key={meta.id} className="rounded-lg border border-brand-150 px-3 py-2">
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span className="text-ink font-medium">
                           {meta.escaneadas} / {meta.cantidadMeta} piezas

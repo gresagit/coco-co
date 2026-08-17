@@ -61,6 +61,36 @@
       0 0 3px rgba(255, 255, 255, 0.5);
     animation: burbuja-subir var(--burbuja-duracion, 0.9s) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   }
+
+  /* Línea que sube y baja sobre el video, como en los lectores de códigos de
+     barra de las apps — así se ve claro que la cámara SÍ está buscando un
+     código activamente, no solo mostrando el video. */
+  @keyframes escaner-linea {
+    0% {
+      top: 6%;
+      opacity: 0;
+    }
+    8% {
+      opacity: 1;
+    }
+    92% {
+      opacity: 1;
+    }
+    100% {
+      top: 94%;
+      opacity: 0;
+    }
+  }
+  .escaner-linea {
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.9) 15%, rgba(239, 68, 68, 0.9) 85%, transparent);
+    box-shadow: 0 0 6px 1px rgba(239, 68, 68, 0.6);
+    animation: escaner-linea 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
 }
 
 @layer components {

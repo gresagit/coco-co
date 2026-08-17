@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { BrowserMultiFormatReader as BrowserMultiFormatReaderType } from "@zxing/browser";
+import { useEscanerCamara } from "@/lib/useEscanerCamara";
 
 type Registro = {
   folio: string;
@@ -16,15 +16,10 @@ export default function EscanerInventario() {
   const [enviando, setEnviando] = useState(false);
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [tally, setTally] = useState<Record<string, number>>({});
-  const [camaraActiva, setCamaraActiva] = useState(false);
-  const [errorCamara, setErrorCamara] = useState<string | null>(null);
 
   const [ultimoResultado, setUltimoResultado] = useState<Registro | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
-  const ultimoDecodificado = useRef<{ folio: string; hora: number }>({ folio: "", hora: 0 });
   const audioCtxRef = useRef<AudioContext | null>(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,49 +115,7 @@ export default function EscanerInventario() {
     }
   }
 
-  async function toggleCamara() {
-    if (camaraActiva) {
-      readerRef.current = null;
-      setCamaraActiva(false);
-      return;
-    }
-    setErrorCamara(null);
-    try {
-      const { BrowserMultiFormatReader } = await import("@zxing/browser");
-      const reader = new BrowserMultiFormatReader();
-      readerRef.current = reader;
-      setCamaraActiva(true);
-      // Se activa en el próximo render, cuando el <video> ya existe en el DOM.
-      setTimeout(async () => {
-        if (!videoRef.current) return;
-        try {
-          await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
-            if (!result) return;
-            const texto = result.getText();
-            const ahora = Date.now();
-            // Evita procesar el mismo código varias veces mientras sigue frente a la cámara.
-            if (texto === ultimoDecodificado.current.folio && ahora - ultimoDecodificado.current.hora < 2500) {
-              return;
-            }
-            ultimoDecodificado.current = { folio: texto, hora: ahora };
-            procesarFolio(texto);
-          });
-        } catch (err: any) {
-          setErrorCamara(err?.message || "No se pudo acceder a la cámara.");
-          setCamaraActiva(false);
-        }
-      }, 50);
-    } catch (err: any) {
-      setErrorCamara("No se pudo cargar el lector de cámara.");
-      setCamaraActiva(false);
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      readerRef.current = null;
-    };
-  }, []);
+  const { camaraActiva, errorCamara, buscandoEnCuadro, videoRef, toggleCamara } = useEscanerCamara(procesarFolio);
 
   const totalSesion = Object.values(tally).reduce((a, b) => a + b, 0);
 
@@ -222,8 +175,9 @@ export default function EscanerInventario() {
         )}
         {errorCamara && <p className="text-sm text-red-700 mt-2">{errorCamara}</p>}
         {camaraActiva && (
-          <div className="mt-4 max-w-sm relative">
+          <div className="mt-4 max-w-sm relative overflow-hidden rounded-lg">
             <video ref={videoRef} className="w-full rounded-lg border border-brand-150" muted playsInline />
+            {buscandoEnCuadro && !enviando && <div className="escaner-linea" />}
             {/* Marco guía + destello de color al detectar un código, para que
                 se note al instante incluso mirando la pantalla del celular. */}
             <div

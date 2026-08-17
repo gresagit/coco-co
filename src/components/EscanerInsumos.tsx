@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { BrowserMultiFormatReader as BrowserMultiFormatReaderType } from "@zxing/browser";
+import { useEscanerCamara } from "@/lib/useEscanerCamara";
 
 type InsumoEncontrado = {
   id: string;
@@ -20,8 +20,6 @@ export default function EscanerInsumos() {
   const router = useRouter();
   const [inputValue, setInputValue] = useState("");
   const [buscando, setBuscando] = useState(false);
-  const [camaraActiva, setCamaraActiva] = useState(false);
-  const [errorCamara, setErrorCamara] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
   const [encontrado, setEncontrado] = useState<InsumoEncontrado | null>(null);
   const [stock, setStock] = useState<Stock>(null);
@@ -31,19 +29,10 @@ export default function EscanerInsumos() {
   const [avisoDerrame, setAvisoDerrame] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
-  const ultimoDecodificado = useRef<{ codigo: string; hora: number }>({ codigo: "", hora: 0 });
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      readerRef.current = null;
-    };
   }, []);
 
   function avisarResultado(ok: boolean) {
@@ -111,41 +100,7 @@ export default function EscanerInsumos() {
     }
   }
 
-  async function toggleCamara() {
-    if (camaraActiva) {
-      readerRef.current = null;
-      setCamaraActiva(false);
-      return;
-    }
-    setErrorCamara(null);
-    try {
-      const { BrowserMultiFormatReader } = await import("@zxing/browser");
-      const reader = new BrowserMultiFormatReader();
-      readerRef.current = reader;
-      setCamaraActiva(true);
-      setTimeout(async () => {
-        if (!videoRef.current) return;
-        try {
-          await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
-            if (!result) return;
-            const texto = result.getText();
-            const ahora = Date.now();
-            if (texto === ultimoDecodificado.current.codigo && ahora - ultimoDecodificado.current.hora < 2500) {
-              return;
-            }
-            ultimoDecodificado.current = { codigo: texto, hora: ahora };
-            buscarCodigo(texto);
-          });
-        } catch (err: any) {
-          setErrorCamara(err?.message || "No se pudo acceder a la cámara.");
-          setCamaraActiva(false);
-        }
-      }, 50);
-    } catch {
-      setErrorCamara("No se pudo cargar el lector de cámara.");
-      setCamaraActiva(false);
-    }
-  }
+  const { camaraActiva, errorCamara, buscandoEnCuadro, videoRef, toggleCamara } = useEscanerCamara(buscarCodigo);
 
   async function registrarDerrame() {
     if (!encontrado) return;
@@ -206,8 +161,9 @@ export default function EscanerInsumos() {
         )}
         {errorCamara && <p className="text-sm text-red-700 mt-2">{errorCamara}</p>}
         {camaraActiva && (
-          <div className="mt-4 max-w-sm relative">
+          <div className="mt-4 max-w-sm relative overflow-hidden rounded-lg">
             <video ref={videoRef} className="w-full rounded-lg border border-brand-150" muted playsInline />
+            {buscandoEnCuadro && !buscando && <div className="escaner-linea" />}
             <div
               className={`pointer-events-none absolute inset-0 rounded-lg border-4 transition-colors duration-300 ${
                 encontrado ? "border-green-500" : mensajeError ? "border-red-500" : "border-transparent"

@@ -104,9 +104,9 @@ export default async function InsumosPage() {
             <a href="/dashboard/insumos/escanear" className="btn-primary text-sm">
               Escanear insumos
             </a>
-            <a href="/api/insumos/barcodes/pdf" target="_blank" rel="noreferrer" className="btn-secondary text-sm">
-              Descargar códigos (todos)
-            </a>
+            <Link href="/dashboard/insumos/codigos-barra" className="btn-secondary text-sm">
+              Imprimir códigos de barra
+            </Link>
           </div>
         </div>
       </div>

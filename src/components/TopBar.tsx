@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { dispararBurbujas } from "@/lib/burbujas";
 
 type Sucursal = { id: string; nombre: string };
 
@@ -51,8 +52,20 @@ export default function TopBar({
     router.refresh();
   }
 
+  // Cada click sobre un botón/enlace/selector de la barra de herramientas
+  // avienta unas burbujitas de jabón desde donde se hizo click — puro efecto
+  // visual, no cambia ninguna lógica de los controles.
+  function onClickToolbar(e: React.MouseEvent<HTMLElement>) {
+    const target = (e.target as HTMLElement).closest("button, summary, a");
+    if (!target) return;
+    dispararBurbujas(e.clientX, e.clientY);
+  }
+
   return (
-    <header className="h-16 border-b border-brand-150 bg-cream/95 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between gap-3 px-4 sm:px-6">
+    <header
+      onClickCapture={onClickToolbar}
+      className="h-16 border-b border-brand-150 bg-cream/95 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between gap-3 px-4 sm:px-6"
+    >
       {/* Botón de menú — solo visible en pantallas chicas, abre el sidebar */}
       <button
         type="button"

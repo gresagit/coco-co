@@ -21,6 +21,7 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [cantidadGlobal, setCantidadGlobal] = useState(CANTIDAD_DEFAULT);
   const [generando, setGenerando] = useState(false);
+  const [generandoId, setGenerandoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const visibles = useMemo(() => {
@@ -81,6 +82,27 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
 
   const totalEtiquetas = Array.from(seleccionados).reduce((acc, id) => acc + cantidadDe(id), 0);
 
+  // Genera el PDF para una lista de ids con su respectiva cantidad. La usan
+  // tanto el botón "Generar PDF" (selección múltiple) como el botón
+  // individual de cada fila (imprimir nada más ese insumo, ej. 14 códigos
+  // del aceite de coco sin tener que marcar/seleccionar nada más).
+  async function generarPdfPara(ids: string[]) {
+    const items = ids.map((id) => ({ id, copias: cantidadDe(id) }));
+    const res = await fetch("/api/insumos/barcodes/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.message || "No se pudo generar el PDF.");
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+
   async function generarPdf() {
     setError(null);
     if (seleccionados.size === 0) {
@@ -89,24 +111,25 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
     }
     setGenerando(true);
     try {
-      const items = Array.from(seleccionados).map((id) => ({ id, copias: cantidadDe(id) }));
-      const res = await fetch("/api/insumos/barcodes/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message || "No se pudo generar el PDF.");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noreferrer");
-      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      await generarPdfPara(Array.from(seleccionados));
     } catch (e: any) {
       setError(e.message || "No se pudo generar el PDF.");
     } finally {
       setGenerando(false);
+    }
+  }
+
+  // Imprime nada más un insumo, con la cantidad que tenga puesta esa fila —
+  // sin necesidad de marcarlo ni de tocar el resto de la selección.
+  async function generarPdfIndividual(id: string) {
+    setError(null);
+    setGenerandoId(id);
+    try {
+      await generarPdfPara([id]);
+    } catch (e: any) {
+      setError(e.message || "No se pudo generar el PDF.");
+    } finally {
+      setGenerandoId(null);
     }
   }
 
@@ -151,8 +174,8 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
           <div>
             <h2 className="font-semibold">Elige cuántos códigos imprimir</h2>
             <p className="text-xs text-brand-400">
-              Marca los insumos y ajusta la cantidad de copias de cada uno. Puedes fijar una cantidad para todos
-              los que selecciones.
+              Cambia la cantidad de cualquier fila y dale "Imprimir" para generar solo ese insumo (ej. 14 códigos
+              del aceite de coco), o marca varios con el checkbox y usa "Generar PDF" para hacerlos juntos.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -192,6 +215,7 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
                 <th>Marca</th>
                 <th>Tipo</th>
                 <th>Copias</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -211,18 +235,28 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
                         type="number"
                         min={1}
                         max={96}
-                        disabled={!marcado}
                         value={cantidadDe(i.id)}
                         onChange={(e) => setCantidad(i.id, Number(e.target.value))}
-                        className="input w-20 disabled:opacity-40"
+                        className="input w-20"
                       />
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => generarPdfIndividual(i.id)}
+                        disabled={generandoId === i.id}
+                        className="btn-secondary text-xs"
+                        title={`Imprimir solo ${cantidadDe(i.id)} código(s) de ${i.nombre}`}
+                      >
+                        {generandoId === i.id ? "Generando…" : "Imprimir"}
+                      </button>
                     </td>
                   </tr>
                 );
               })}
               {visibles.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-brand-400 text-sm py-4 text-center">
+                  <td colSpan={7} className="text-brand-400 text-sm py-4 text-center">
                     No hay insumos que coincidan con el filtro.
                   </td>
                 </tr>

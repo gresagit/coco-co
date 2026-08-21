@@ -11,7 +11,6 @@ async function generar(formData: FormData) {
     productoId: formData.get("producto_id") as string,
     sucursalId: formData.get("sucursal_id") as string,
     cantidad: Number(formData.get("cantidad")),
-    porcentajeRepuesto: Number(formData.get("porcentaje_repuesto") || 5),
     modo: formData.get("modo") as ModoGeneracion,
     loteId: (formData.get("lote_id") as string) || undefined,
     folioLoteNuevo: (formData.get("folio_lote_nuevo") as string) || undefined,
@@ -100,15 +99,9 @@ export default async function NuevaGeneracionPage({ searchParams }: { searchPara
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="label">Cantidad de códigos a imprimir</label>
-            <input name="cantidad" type="number" min="1" step="1" className="input" required />
-          </div>
-          <div>
-            <label className="label">% de etiquetas de repuesto</label>
-            <input name="porcentaje_repuesto" type="number" min="0" step="1" defaultValue={5} className="input" />
-          </div>
+        <div>
+          <label className="label">Cantidad de códigos a imprimir</label>
+          <input name="cantidad" type="number" min="1" step="1" className="input" required />
         </div>
 
         <button className="btn-primary">Generar y ver PDF</button>
@@ -117,6 +110,8 @@ export default async function NuevaGeneracionPage({ searchParams }: { searchPara
       <p className="text-xs text-brand-500">
         Cada código es un folio correlativo único por producto (ej. JAB-0001, JAB-0002...), formato Code128, listo
         para tu imprenta externa. Generar códigos aquí no mueve tu inventario — solo crea los folios/etiquetas.
+        Si alguna etiqueta ya impresa se daña, no hace falta generar de más "por si acaso": entra a esa tanda y usa
+        "Generar reemplazo" para reimprimir exactamente las que necesitas, con el mismo folio.
       </p>
     </div>
   );

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import Link from "next/link";
+import ReemplazoEtiquetas from "@/components/ReemplazoEtiquetas";
 
 export default async function DetalleGeneracionPage({ params }: { params: { id: string } }) {
   const db = supabaseAdmin();
@@ -17,6 +18,15 @@ export default async function DetalleGeneracionPage({ params }: { params: { id: 
     .eq("generacion_id", params.id)
     .order("folio_pieza");
 
+  const piezaIds = (piezas || []).map((p: any) => p.id);
+  const { data: reimpresiones } = piezaIds.length
+    ? await db
+        .from("reimpresiones_etiqueta")
+        .select("*, piezas(folio_pieza)")
+        .in("pieza_id", piezaIds)
+        .order("fecha", { ascending: false })
+    : { data: [] };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -31,18 +41,42 @@ export default async function DetalleGeneracionPage({ params }: { params: { id: 
           </p>
         </div>
         <a href={`/api/codigos-barra/${generacion.id}/pdf`} target="_blank" className="btn-primary">
-          Descargar PDF ({generacion.cantidad} + {generacion.porcentaje_repuesto}% repuesto)
+          Descargar PDF ({generacion.cantidad} etiquetas)
         </a>
       </div>
 
       <div className="card overflow-x-auto">
-        <h2 className="font-semibold mb-3">Folios generados ({piezas?.length || 0})</h2>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-          {(piezas || []).map((p: any) => (
-            <div key={p.id} className="font-mono bg-brand-50 rounded px-2 py-1 text-center">{p.folio_pieza}</div>
-          ))}
-        </div>
+        <h2 className="font-semibold mb-1">Generar reemplazo de etiquetas dañadas</h2>
+        <p className="text-sm text-brand-500 mb-4">
+          Elige exactamente cuáles se dañaron — una, varias sueltas o un rango — y descarga un PDF solo con esas,
+          con el mismo folio de siempre. Nada de porcentajes ni etiquetas de más "por si acaso".
+        </p>
+        <ReemplazoEtiquetas generacionId={generacion.id} piezas={(piezas || []) as any} />
       </div>
+
+      {(reimpresiones || []).length > 0 && (
+        <div className="card overflow-x-auto">
+          <h2 className="font-semibold mb-3">Historial de reemplazos</h2>
+          <table className="table-base">
+            <thead>
+              <tr>
+                <th>Folio</th>
+                <th>Motivo</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(reimpresiones || []).map((r: any) => (
+                <tr key={r.id}>
+                  <td className="font-mono text-xs">{r.piezas?.folio_pieza}</td>
+                  <td>{r.motivo || "—"}</td>
+                  <td className="text-xs text-brand-400">{new Date(r.fecha).toLocaleString("es-MX")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

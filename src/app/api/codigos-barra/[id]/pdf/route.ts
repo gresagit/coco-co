@@ -19,12 +19,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const folios = (piezas || []).map((p: any) => p.folio_pieza);
 
-  const porcentaje = Number(generacion.porcentaje_repuesto || 0);
-  const excedente = porcentaje > 0 ? Math.max(1, Math.ceil(folios.length * (porcentaje / 100))) : 0;
-  for (let i = 0; i < excedente; i++) {
-    folios.push(`${generacion.productos?.sku || "REPUESTO"}-REPUESTO-${i + 1}`);
-  }
-
   const bytes = await construirPdfEtiquetas(
     folios.map((f: string) => ({ folio: f, etiquetaSecundaria: generacion.productos?.sku })),
     { titulo: `${generacion.productos?.nombre || "Producto"} (${generacion.productos?.sku || ""})` }

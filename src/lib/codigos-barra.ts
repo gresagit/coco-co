@@ -13,12 +13,12 @@ export async function generarTandaCodigosBarra(params: {
   productoId: string;
   sucursalId: string;
   cantidad: number;
-  porcentajeRepuesto: number;
   modo: ModoGeneracion;
   loteId?: string;
   folioLoteNuevo?: string;
   generadoPor?: string;
   metaId?: string;
+  pedidoId?: string;
   // "Disponible" = ya está producido (flujo manual de hoy).
   // "Pendiente" = código impreso, aún no confirmado — lo confirma el escaneo.
   estadoInicial?: "Disponible" | "Pendiente";
@@ -59,9 +59,9 @@ export async function generarTandaCodigosBarra(params: {
       sucursal_id: params.sucursalId,
       lote_id: loteId,
       cantidad: params.cantidad,
-      porcentaje_repuesto: params.porcentajeRepuesto,
       generado_por: params.generadoPor || null,
       meta_id: params.metaId || null,
+      pedido_id: params.pedidoId || null,
     })
     .select()
     .single();
@@ -92,4 +92,70 @@ export async function generarTandaCodigosBarra(params: {
   }
 
   return generacion.id as string;
+}
+
+// Crea un "pedido de impresión" que agrupa varias tandas (una por producto)
+// generadas en la misma pasada, para poder descargarlas juntas.
+export async function crearPedidoImpresion(params: { sucursalId: string; generadoPor?: string }) {
+  const db = supabaseAdmin();
+  const { data, error } = await db
+    .from("pedidos_impresion")
+    .insert({ sucursal_id: params.sucursalId, generado_por: params.generadoPor || null })
+    .select()
+    .single();
+  if (error || !data) throw error || new Error("No se pudo crear el pedido de impresión");
+  return data.id as string;
+}
+
+// Genera de un jalón los códigos de barra de varios productos, cada uno con
+// su propia cantidad, agrupados bajo un mismo pedido de impresión. Siempre
+// en modo "sin_lote" (folios sueltos) — si algún producto necesita quedar
+// ligado a un lote específico, se genera aparte desde el flujo de un solo
+// producto.
+export async function generarPedidoMultiProducto(params: {
+  sucursalId: string;
+  items: { productoId: string; cantidad: number }[];
+  generadoPor?: string;
+}) {
+  const itemsValidos = params.items.filter((i) => i.productoId && i.cantidad > 0);
+  if (!itemsValidos.length) throw new Error("Agrega al menos un producto con cantidad mayor a 0");
+
+  const pedidoId = await crearPedidoImpresion({ sucursalId: params.sucursalId, generadoPor: params.generadoPor });
+
+  const generacionIds: string[] = [];
+  for (const item of itemsValidos) {
+    const generacionId = await generarTandaCodigosBarra({
+      productoId: item.productoId,
+      sucursalId: params.sucursalId,
+      cantidad: item.cantidad,
+      modo: "sin_lote",
+      generadoPor: params.generadoPor,
+      pedidoId,
+    });
+    generacionIds.push(generacionId);
+  }
+
+  return { pedidoId, generacionIds };
+}
+
+// Registra el reemplazo de etiquetas puntuales que se dañaron (una, varias
+// sueltas, o un rango). Mantiene el MISMO folio de cada pieza — no crea
+// códigos nuevos — porque el folio ya identifica a esa pieza física en el
+// inventario; solo queda constancia de que se volvió a imprimir y por qué.
+export async function registrarReemplazos(params: {
+  piezaIds: string[];
+  motivo?: string;
+  reimpresoPor?: string;
+}) {
+  const db = supabaseAdmin();
+  if (!params.piezaIds.length) return;
+
+  const filas = params.piezaIds.map((piezaId) => ({
+    pieza_id: piezaId,
+    motivo: params.motivo || "Etiqueta dañada",
+    reimpreso_por: params.reimpresoPor || null,
+  }));
+
+  const { error } = await db.from("reimpresiones_etiqueta").insert(filas);
+  if (error) throw error;
 }

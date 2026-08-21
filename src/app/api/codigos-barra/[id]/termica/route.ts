@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
+import { construirPdfEtiquetasTermica } from "@/lib/etiquetas-pdf";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const db = supabaseAdmin();
@@ -19,15 +19,14 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const folios = (piezas || []).map((p: any) => p.folio_pieza);
 
-  const bytes = await construirPdfEtiquetas(
-    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: generacion.productos?.sku })),
-    { titulo: `${generacion.productos?.nombre || "Producto"} (${generacion.productos?.sku || ""})` }
+  const bytes = await construirPdfEtiquetasTermica(
+    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: generacion.productos?.sku }))
   );
 
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="codigos-${generacion.productos?.sku || "producto"}-${params.id.slice(0, 8)}.pdf"`,
+      "Content-Disposition": `inline; filename="termica-${generacion.productos?.sku || "producto"}-${params.id.slice(0, 8)}.pdf"`,
     },
   });
 }

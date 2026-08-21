@@ -174,3 +174,75 @@ export async function construirPdfEtiquetas(
 
   return pdfDoc.save();
 }
+
+// Construye un PDF para impresora térmica de etiquetas (rollo continuo):
+// una etiqueta por página, tamaño chico (por defecto 50mm x 30mm — el
+// tamaño típico de rollo para producto), sin cuadrícula ni márgenes de hoja
+// carta, porque el driver de la impresora térmica ya trata cada "página"
+// como una etiqueta física que avanza el rollo.
+export async function construirPdfEtiquetasTermica(
+  items: EtiquetaItem[],
+  opciones: { anchoMm?: number; altoMm?: number } = {}
+): Promise<Uint8Array> {
+  const MM = 2.83465; // pt por mm
+  const anchoMm = opciones.anchoMm ?? 50;
+  const altoMm = opciones.altoMm ?? 30;
+  const pageW = anchoMm * MM;
+  const pageH = altoMm * MM;
+  const margin = 4;
+
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  for (const item of items) {
+    const page = pdfDoc.addPage([pageW, pageH]);
+    const maxW = pageW - margin * 2;
+    let cursorY = pageH - margin;
+
+    if (item.etiquetaSecundaria) {
+      const { texto, tamano } = ajustarTextoAAncho(fontBold, item.etiquetaSecundaria, maxW, 9);
+      const anchoTexto = fontBold.widthOfTextAtSize(texto, tamano);
+      cursorY -= tamano;
+      page.drawText(texto, {
+        x: (pageW - anchoTexto) / 2,
+        y: cursorY,
+        size: tamano,
+        font: fontBold,
+        color: rgb(0.15, 0.15, 0.15),
+      });
+      cursorY -= 3;
+    }
+
+    // Folio, abajo del todo (se dibuja primero para saber cuánto espacio le
+    // queda al código de barras arriba).
+    const { texto: folioTexto, tamano: folioTamano } = ajustarTextoAAncho(font, item.folio, maxW, 9);
+    const anchoFolio = font.widthOfTextAtSize(folioTexto, folioTamano);
+    const folioY = margin;
+
+    const png = await generarBarcodePNG(item.folio);
+    const img = await pdfDoc.embedPng(png);
+    const maxH = cursorY - margin - folioTamano - 4;
+    const scale = Math.min(maxW / img.width, maxH / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    const barcodeBottom = folioY + folioTamano + 4;
+
+    page.drawImage(img, {
+      x: (pageW - w) / 2,
+      y: barcodeBottom + Math.max(0, (maxH - h) / 2),
+      width: w,
+      height: h,
+    });
+
+    page.drawText(folioTexto, {
+      x: (pageW - anchoFolio) / 2,
+      y: folioY,
+      size: folioTamano,
+      font,
+      color: rgb(0.15, 0.15, 0.15),
+    });
+  }
+
+  return pdfDoc.save();
+}

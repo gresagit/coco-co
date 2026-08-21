@@ -29,15 +29,24 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
 
 1. Crea un proyecto nuevo en [supabase.com](https://supabase.com).
 2. Ve a **SQL Editor → New query**, pega el contenido de `supabase/schema.sql` y ejecútalo.
-   Esto crea todas las tablas, el usuario `Admin` con contraseña `cisco`, los 5 roles base
-   y una sucursal "Matriz" de ejemplo.
-3. Corre también `supabase/migration_002_generador_codigos_barra.sql` (habilita el módulo de
-   Generador de Códigos de Barra independiente de producción). Si ya tenías el proyecto
-   desplegado, solo pega y corre este archivo una vez — no borra ni afecta datos existentes.
+   Esto crea todas las tablas (incluida `sucursales`), el usuario `Admin` con contraseña `cisco`,
+   los 5 roles base y una sucursal "Matriz" de ejemplo. **Este paso es obligatorio y va primero** —
+   todas las migraciones de abajo dependen de tablas que crea este script (si las corres antes,
+   verás errores como `relation "sucursales" does not exist`).
+3. Corre, en este orden, cada uno de los siguientes archivos (pega el contenido completo de cada
+   uno en una query nueva y ejecútalo; ninguno borra datos existentes):
+   - `supabase/migration_002_generador_codigos_barra.sql` — Generador de Códigos de Barra
+   - `supabase/migration_003_metas_produccion.sql` — Metas de producción
+   - `supabase/migration_004_escaneo.sql` — Escaneo de inventario/insumos
+   - `supabase/migration_005_insumos_marca.sql` — Marca en insumos
+   - `supabase/migration_006_bom_julio2026.sql` — Ajustes de fórmulas (BOM)
+   - `supabase/migration_007_ventas.sql` — Sección Ventas (stock Shopify + punto de venta)
+   - `supabase/migration_008_quitar_repuesto.sql` — Quita el % de repuesto del generador de códigos
+   - `supabase/migration_009_pedidos_impresion.sql` — Pedidos de impresión con varios productos a la vez
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.
-4. En **Project Settings → API** copia:
+5. En **Project Settings → API** copia:
    - `Project URL` → variable `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public key` → variable `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role key` → variable `SUPABASE_SERVICE_ROLE_KEY` (¡mantenla secreta, nunca la

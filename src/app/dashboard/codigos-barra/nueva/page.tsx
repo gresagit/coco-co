@@ -22,11 +22,23 @@ async function generar(formData: FormData) {
     redirect("/dashboard/codigos-barra/nueva?error=vacio");
   }
 
-  const { pedidoId } = await generarPedidoMultiProducto({ sucursalId, items, generadoPor: user?.id });
+  let pedidoId: string;
+  try {
+    const resultado = await generarPedidoMultiProducto({ sucursalId, items, generadoPor: user?.id });
+    pedidoId = resultado.pedidoId;
+  } catch (err: any) {
+    const mensaje = encodeURIComponent(err?.message || "No se pudo generar los códigos.");
+    redirect(`/dashboard/codigos-barra/nueva?error=falla&detalle=${mensaje}`);
+  }
+
   redirect(`/dashboard/codigos-barra/pedidos/${pedidoId}`);
 }
 
-export default async function NuevaGeneracionPage({ searchParams }: { searchParams: { error?: string } }) {
+export default async function NuevaGeneracionPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; detalle?: string };
+}) {
   const db = supabaseAdmin();
   const { data: productos } = await db
     .from("productos")
@@ -49,6 +61,15 @@ export default async function NuevaGeneracionPage({ searchParams }: { searchPara
       {searchParams.error === "vacio" && (
         <div className="card !py-3 border-2 border-red-600 bg-red-50">
           <p className="text-sm text-red-800">Ponle una cantidad mayor a 0 a por lo menos un producto.</p>
+        </div>
+      )}
+
+      {searchParams.error === "falla" && (
+        <div className="card !py-3 border-2 border-red-600 bg-red-50">
+          <p className="text-sm text-red-800 font-medium">No se pudieron generar los códigos.</p>
+          <p className="text-sm text-red-700 mt-1">
+            {searchParams.detalle ? decodeURIComponent(searchParams.detalle) : "Intenta de nuevo."}
+          </p>
         </div>
       )}
 

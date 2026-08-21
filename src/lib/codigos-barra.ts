@@ -69,12 +69,49 @@ export async function generarTandaCodigosBarra(params: {
 
   const estadoInicial = params.estadoInicial || "Disponible";
 
+  // Aquí es donde puede tronar la generación si al producto le falta su
+  // "contador de folio" (por ejemplo, si el producto se dio de alta por
+  // fuera de la app — importación, SQL manual, seed). Antes de intentar
+  // generar folios, nos aseguramos de que exista; si no, lo creamos solos
+  // en vez de dejar que la función de la base de datos truene.
+  const { data: contador } = await db
+    .from("folio_contadores")
+    .select("producto_id")
+    .eq("producto_id", params.productoId)
+    .maybeSingle();
+
+  if (!contador) {
+    const { data: producto } = await db.from("productos").select("sku").eq("id", params.productoId).single();
+    const prefijo = (producto?.sku?.split("-")[0] || "PROD").toUpperCase();
+
+    // Si el producto ya tenía piezas generadas antes (por ejemplo, migradas
+    // a mano) partimos del número más alto que ya esté en uso, para no
+    // repetir un folio existente.
+    const { data: ultimaPieza } = await db
+      .from("piezas")
+      .select("folio_pieza")
+      .eq("producto_id", params.productoId)
+      .order("folio_pieza", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let ultimoNumero = 0;
+    const match = ultimaPieza?.folio_pieza?.match(/(\d+)$/);
+    if (match) ultimoNumero = parseInt(match[1], 10);
+
+    await db.from("folio_contadores").insert({ producto_id: params.productoId, prefijo, ultimo_numero: ultimoNumero });
+  }
+
   const piezas = [];
   for (let i = 0; i < params.cantidad; i++) {
     const { data: folioData, error: errFolio } = await db.rpc("siguiente_folio_producto", {
       p_producto_id: params.productoId,
     });
-    if (errFolio) throw errFolio;
+    if (errFolio) {
+      throw new Error(
+        `No se pudo generar el folio ${i + 1} de ${params.cantidad}: ${errFolio.message}`
+      );
+    }
     piezas.push({
       folio_pieza: folioData as string,
       lote_id: loteId,

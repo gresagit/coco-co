@@ -6,6 +6,18 @@ export type EtiquetaItem = {
   etiquetaSecundaria?: string; // ej. SKU o nombre corto para mostrar arriba del código
 };
 
+// Lee ancho/alto en mm desde query params, con límites razonables para que
+// no se pueda mandar un tamaño absurdo (0 o gigante) por accidente.
+export function parseTamanoTermica(params: URLSearchParams): { anchoMm: number; altoMm: number } {
+  const anchoMm = clamp(Number(params.get("ancho")) || 50, 15, 150);
+  const altoMm = clamp(Number(params.get("alto")) || 30, 10, 150);
+  return { anchoMm, altoMm };
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(Math.max(n, min), max);
+}
+
 // Reduce el tamaño de fuente hasta que el texto quepa en el ancho disponible,
 // sin cortar caracteres. Nunca baja de 5.5pt para que siga siendo legible;
 // si ni así cabe, ahí sí se trunca con "…".

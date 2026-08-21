@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { construirPdfEtiquetasTermica } from "@/lib/etiquetas-pdf";
+import { construirPdfEtiquetasTermica, parseTamanoTermica } from "@/lib/etiquetas-pdf";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const db = supabaseAdmin();
   const { data: generacion } = await db
     .from("generaciones_codigo_barra")
@@ -18,9 +18,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     .order("folio_pieza");
 
   const folios = (piezas || []).map((p: any) => p.folio_pieza);
+  const { anchoMm, altoMm } = parseTamanoTermica(req.nextUrl.searchParams);
 
   const bytes = await construirPdfEtiquetasTermica(
-    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: generacion.productos?.sku }))
+    folios.map((f: string) => ({ folio: f, etiquetaSecundaria: generacion.productos?.sku })),
+    { anchoMm, altoMm }
   );
 
   return new NextResponse(Buffer.from(bytes), {

@@ -43,6 +43,8 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
    - `supabase/migration_007_ventas.sql` — Sección Ventas (stock Shopify + punto de venta)
    - `supabase/migration_008_quitar_repuesto.sql` — Quita el % de repuesto del generador de códigos
    - `supabase/migration_009_pedidos_impresion.sql` — Pedidos de impresión con varios productos a la vez
+   - `supabase/migration_010_reparar_folio_contadores.sql` — Repara productos que les falte el contador de
+     folio para generar códigos de barra (por ejemplo, si algún producto se dio de alta fuera de la app)
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.

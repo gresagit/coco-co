@@ -7,21 +7,32 @@ import Link from "next/link";
 async function generar(formData: FormData) {
   "use server";
   const user = await getSessionUser();
+  const productoId = formData.get("producto_id") as string;
 
-  const generacionId = await generarTandaCodigosBarra({
-    productoId: formData.get("producto_id") as string,
-    sucursalId: formData.get("sucursal_id") as string,
-    cantidad: Number(formData.get("cantidad")),
-    modo: formData.get("modo") as ModoGeneracion,
-    loteId: (formData.get("lote_id") as string) || undefined,
-    folioLoteNuevo: (formData.get("folio_lote_nuevo") as string) || undefined,
-    generadoPor: user?.id,
-  });
+  let generacionId: string;
+  try {
+    generacionId = await generarTandaCodigosBarra({
+      productoId,
+      sucursalId: formData.get("sucursal_id") as string,
+      cantidad: Number(formData.get("cantidad")),
+      modo: formData.get("modo") as ModoGeneracion,
+      loteId: (formData.get("lote_id") as string) || undefined,
+      folioLoteNuevo: (formData.get("folio_lote_nuevo") as string) || undefined,
+      generadoPor: user?.id,
+    });
+  } catch (err: any) {
+    const mensaje = encodeURIComponent(err?.message || "No se pudo generar los códigos.");
+    redirect(`/dashboard/codigos-barra/nueva/lote?producto=${productoId}&error=falla&detalle=${mensaje}`);
+  }
 
   redirect(`/dashboard/codigos-barra/${generacionId}`);
 }
 
-export default async function NuevaGeneracionPage({ searchParams }: { searchParams: { producto?: string } }) {
+export default async function NuevaGeneracionPage({
+  searchParams,
+}: {
+  searchParams: { producto?: string; error?: string; detalle?: string };
+}) {
   const db = supabaseAdmin();
   const { data: productos } = await db.from("productos").select("id, sku, nombre").eq("activo", true).order("nombre");
   const { data: sucursales } = await db.from("sucursales").select("*").eq("activa", true).order("nombre");
@@ -47,6 +58,15 @@ export default async function NuevaGeneracionPage({ searchParams }: { searchPara
           Para un solo producto, cuando además necesitas ligar los folios a un lote de producción específico.
         </p>
       </div>
+
+      {searchParams.error === "falla" && (
+        <div className="card !py-3 border-2 border-red-600 bg-red-50">
+          <p className="text-sm text-red-800 font-medium">No se pudieron generar los códigos.</p>
+          <p className="text-sm text-red-700 mt-1">
+            {searchParams.detalle ? decodeURIComponent(searchParams.detalle) : "Intenta de nuevo."}
+          </p>
+        </div>
+      )}
 
       <form action={generar} className="card space-y-5">
         <div className="grid md:grid-cols-2 gap-4">

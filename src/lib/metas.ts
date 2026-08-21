@@ -170,6 +170,7 @@ export async function crearMetaProduccion(params: {
     productoId: params.productoId,
     sucursalId: params.sucursalId,
     cantidad: params.cantidadMeta,
+    porcentajeRepuesto: 0,
     modo: "sin_lote",
     metaId: meta.id,
     estadoInicial: "Pendiente",

@@ -13,6 +13,7 @@ export async function generarTandaCodigosBarra(params: {
   productoId: string;
   sucursalId: string;
   cantidad: number;
+  porcentajeRepuesto: number;
   modo: ModoGeneracion;
   loteId?: string;
   folioLoteNuevo?: string;
@@ -58,6 +59,7 @@ export async function generarTandaCodigosBarra(params: {
       sucursal_id: params.sucursalId,
       lote_id: loteId,
       cantidad: params.cantidad,
+      porcentaje_repuesto: params.porcentajeRepuesto,
       generado_por: params.generadoPor || null,
       meta_id: params.metaId || null,
     })
@@ -90,26 +92,4 @@ export async function generarTandaCodigosBarra(params: {
   }
 
   return generacion.id as string;
-}
-
-// Registra el reemplazo de etiquetas puntuales que se dañaron (una, varias
-// sueltas, o un rango). Mantiene el MISMO folio de cada pieza — no crea
-// códigos nuevos — porque el folio ya identifica a esa pieza física en el
-// inventario; solo queda constancia de que se volvió a imprimir y por qué.
-export async function registrarReemplazos(params: {
-  piezaIds: string[];
-  motivo?: string;
-  reimpresoPor?: string;
-}) {
-  const db = supabaseAdmin();
-  if (!params.piezaIds.length) return;
-
-  const filas = params.piezaIds.map((piezaId) => ({
-    pieza_id: piezaId,
-    motivo: params.motivo || "Etiqueta dañada",
-    reimpreso_por: params.reimpresoPor || null,
-  }));
-
-  const { error } = await db.from("reimpresiones_etiqueta").insert(filas);
-  if (error) throw error;
 }

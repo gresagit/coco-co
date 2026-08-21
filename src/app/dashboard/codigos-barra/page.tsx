@@ -31,6 +31,7 @@ export default async function CodigosBarraPage() {
               <th>Sucursal</th>
               <th>Lote</th>
               <th>Cantidad</th>
+              <th>Repuesto</th>
               <th></th>
             </tr>
           </thead>
@@ -42,6 +43,7 @@ export default async function CodigosBarraPage() {
                 <td>{g.sucursales?.nombre}</td>
                 <td className="font-mono text-xs">{g.lotes?.folio_lote || <span className="text-brand-400">Sin lote</span>}</td>
                 <td>{g.cantidad}</td>
+                <td>{g.porcentaje_repuesto}%</td>
                 <td>
                   <Link href={`/dashboard/codigos-barra/${g.id}`} className="text-brand-600 text-xs underline">
                     Ver / descargar PDF
@@ -50,7 +52,7 @@ export default async function CodigosBarraPage() {
               </tr>
             ))}
             {(generaciones || []).length === 0 && (
-              <tr><td colSpan={6} className="text-brand-400 text-sm py-4">Aún no has generado códigos de barra.</td></tr>
+              <tr><td colSpan={7} className="text-brand-400 text-sm py-4">Aún no has generado códigos de barra.</td></tr>
             )}
           </tbody>
         </table>

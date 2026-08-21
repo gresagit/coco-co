@@ -4,6 +4,9 @@ import Link from "next/link";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import { siguienteSkuProducto } from "@/lib/sku";
 import { getSucursalActualId } from "@/lib/auth";
+import type { SVGProps } from "react";
+import CollapsePanel from "@/components/CollapsePanel";
+import EscanerInventario from "@/components/EscanerInventario";
 
 async function crearProducto(formData: FormData) {
   "use server";
@@ -88,18 +91,21 @@ export default async function ProductosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="eyebrow mb-1">Catálogo · 01</p>
-          <h1 className="page-title">Producto terminado</h1>
-          <p className="page-subtitle">
-            El SKU se genera automáticamente a partir de la categoría. Costo y precio sugerido se calculan a partir del BOM.
-          </p>
-        </div>
-        <Link href="/dashboard/productos/escanear" className="btn-accent">
-          Escanear para agregar stock
-        </Link>
+      <div>
+        <p className="eyebrow mb-1">Catálogo · 01</p>
+        <h1 className="page-title">Producto terminado</h1>
+        <p className="page-subtitle">
+          El SKU se genera automáticamente a partir de la categoría. Costo y precio sugerido se calculan a partir del BOM.
+        </p>
       </div>
+
+      <CollapsePanel
+        title="Escanear código de barras"
+        description="Suma stock al instante con un lector Bluetooth o la cámara del teléfono."
+        icon={<IconScan className="w-[18px] h-[18px]" />}
+      >
+        <EscanerInventario embedded />
+      </CollapsePanel>
 
       {sucursalId && Object.keys(stockPorCategoria).length > 0 && (
         <div className="banner">
@@ -201,5 +207,17 @@ export default async function ProductosPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+function IconScan(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} {...props}>
+      <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 12h16" strokeLinecap="round" />
+    </svg>
   );
 }

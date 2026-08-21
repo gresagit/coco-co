@@ -17,11 +17,16 @@ const GROUPS: NavGroup[] = [
     label: "Catálogo",
     items: [
       { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
-      { href: "/dashboard/productos/escanear", label: "Escanear inventario", icon: IconScan },
       { href: "/dashboard/insumos", label: "Insumos", icon: IconLayers },
-      { href: "/dashboard/insumos/escanear", label: "Escanear insumos", icon: IconScan },
       { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
       { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
+    ],
+  },
+  {
+    label: "Ventas",
+    items: [
+      { href: "/dashboard/ventas/stock", label: "Stock Shopify", icon: IconCloud },
+      { href: "/dashboard/ventas/pos", label: "Ventas punto de venta", icon: IconCart },
     ],
   },
   {
@@ -263,14 +268,20 @@ function IconTarget(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-function IconScan(props: SVGProps<SVGSVGElement>) {
+function IconCloud(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base(props)}>
-      <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 12h16" strokeLinecap="round" />
+      <path d="M7 18.5a4 4 0 0 1-.6-7.95 5 5 0 0 1 9.7-1.8A4.5 4.5 0 0 1 17.5 18.5H7Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconCart(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3.5 4h2l1.2 11.2a1.6 1.6 0 0 0 1.6 1.4h8a1.6 1.6 0 0 0 1.58-1.36L19.5 8H6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9.5" cy="20" r="1.2" />
+      <circle cx="16.5" cy="20" r="1.2" />
     </svg>
   );
 }

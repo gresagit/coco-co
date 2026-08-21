@@ -11,7 +11,7 @@ type Registro = {
   hora: string;
 };
 
-export default function EscanerInventario() {
+export default function EscanerInventario({ embedded = false }: { embedded?: boolean }) {
   const [inputValue, setInputValue] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [registros, setRegistros] = useState<Registro[]>([]);
@@ -225,9 +225,11 @@ export default function EscanerInventario() {
         </div>
       </div>
 
-      <Link href="/dashboard/productos" className="text-sm text-brand-600 underline">
-        ← Volver al inventario de productos
-      </Link>
+      {!embedded && (
+        <Link href="/dashboard/productos" className="text-sm text-brand-600 underline">
+          ← Volver al inventario de productos
+        </Link>
+      )}
     </div>
   );
 }

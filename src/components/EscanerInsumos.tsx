@@ -16,7 +16,7 @@ type InsumoEncontrado = {
 
 type Stock = { cantidad_disponible: number; stock_minimo: number } | null;
 
-export default function EscanerInsumos() {
+export default function EscanerInsumos({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const [inputValue, setInputValue] = useState("");
   const [buscando, setBuscando] = useState(false);
@@ -258,9 +258,11 @@ export default function EscanerInsumos() {
         </div>
       )}
 
-      <Link href="/dashboard/insumos" className="text-sm text-brand-600 underline">
-        ← Volver al catálogo de insumos
-      </Link>
+      {!embedded && (
+        <Link href="/dashboard/insumos" className="text-sm text-brand-600 underline">
+          ← Volver al catálogo de insumos
+        </Link>
+      )}
     </div>
   );
 }

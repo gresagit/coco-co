@@ -3,6 +3,9 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { siguienteCodigoInsumo } from "@/lib/sku";
 import { getSucursalActualId } from "@/lib/auth";
+import type { SVGProps } from "react";
+import CollapsePanel from "@/components/CollapsePanel";
+import EscanerInsumos from "@/components/EscanerInsumos";
 
 async function crearInsumo(formData: FormData) {
   "use server";
@@ -101,15 +104,20 @@ export default async function InsumosPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href="/dashboard/insumos/escanear" className="btn-primary text-sm">
-              Escanear insumos
-            </a>
             <Link href="/dashboard/insumos/codigos-barra" className="btn-secondary text-sm">
               Imprimir códigos de barra
             </Link>
           </div>
         </div>
       </div>
+
+      <CollapsePanel
+        title="Escanear insumos"
+        description="Lee un código con lector Bluetooth o cámara para registrar un derrame o abrir la ficha completa."
+        icon={<IconScan className="w-[18px] h-[18px]" />}
+      >
+        <EscanerInsumos embedded />
+      </CollapsePanel>
 
       <div className="card">
         <h2 className="font-semibold mb-3">Nuevo insumo</h2>
@@ -217,5 +225,17 @@ export default async function InsumosPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+function IconScan(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} {...props}>
+      <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 12h16" strokeLinecap="round" />
+    </svg>
   );
 }

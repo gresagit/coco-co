@@ -19,8 +19,8 @@ export async function generarTandaCodigosBarra(params: {
   generadoPor?: string;
   metaId?: string;
   pedidoId?: string;
-  // "Disponible" = ya está producido (flujo manual de hoy).
-  // "Pendiente" = código impreso, aún no confirmado — lo confirma el escaneo.
+  // "Disponible" = ya está producido (se debe indicar a propósito).
+  // "Pendiente" (default) = código impreso, aún no confirmado — lo confirma el escaneo.
   estadoInicial?: "Disponible" | "Pendiente";
 }) {
   const db = supabaseAdmin();
@@ -67,7 +67,12 @@ export async function generarTandaCodigosBarra(params: {
     .single();
   if (errGen || !generacion) throw errGen || new Error("No se pudo crear la generación");
 
-  const estadoInicial = params.estadoInicial || "Disponible";
+  // Por default, un código recién generado NO está producido todavía — solo
+  // es una etiqueta lista para imprimir. Queda "Pendiente" hasta que se
+  // escanea (ahí es cuando se descuentan insumos y sube el stock). Si algún
+  // caso de verdad necesita marcarlo como ya producido, debe pasar
+  // estadoInicial: "Disponible" explícitamente.
+  const estadoInicial = params.estadoInicial || "Pendiente";
 
   // Aquí es donde puede tronar la generación si al producto le falta su
   // "contador de folio" (por ejemplo, si el producto se dio de alta por

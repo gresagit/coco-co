@@ -6,6 +6,7 @@ import { getSucursalActualId } from "@/lib/auth";
 import type { SVGProps } from "react";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInsumos from "@/components/EscanerInsumos";
+import InsumoTipoUnidad from "@/components/InsumoTipoUnidad";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearInsumo(formData: FormData) {
@@ -144,25 +145,7 @@ export default async function InsumosPage() {
             <label className="label">Marca (opcional)</label>
             <input name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
           </div>
-          <div>
-            <label className="label">Tipo</label>
-            <select name="tipo" className="input" required>
-              <option>Materia Prima</option>
-              <option>Empaque</option>
-              <option>Etiqueta</option>
-              <option>Producto Intermedio</option>
-            </select>
-            <p className="text-xs text-brand-400 mt-1">Define el prefijo del código (ej. Empaque → EMP-0001).</p>
-          </div>
-          <div>
-            <label className="label">Unidad de medida</label>
-            <select name="unidad_medida" className="input" required>
-              <option value="kg">kg</option>
-              <option value="L">L</option>
-              <option value="pz">pz</option>
-              <option value="m">m</option>
-            </select>
-          </div>
+          <InsumoTipoUnidad />
           <div>
             <label className="label">Costo unitario actual</label>
             <input name="costo_unitario_actual" type="number" step="0.0001" className="input" defaultValue={0} />

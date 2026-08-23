@@ -6,6 +6,7 @@ import { getSucursalActualId } from "@/lib/auth";
 import type { SVGProps } from "react";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInsumos from "@/components/EscanerInsumos";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearInsumo(formData: FormData) {
   "use server";
@@ -69,6 +70,13 @@ async function crearInsumo(formData: FormData) {
         notas: "Cantidad inicial capturada al crear el insumo",
       });
     }
+
+    await registrarAuditoria({
+      accion: "crear_insumo",
+      entidad: "insumos",
+      entidadId: insumo.id,
+      detalle: { codigo_interno: insumo.codigo_interno, nombre: insumo.nombre, tipo },
+    });
   }
   revalidatePath("/dashboard/insumos");
 }

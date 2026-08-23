@@ -159,7 +159,7 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
             <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" /> Buscando insumo…
           </p>
         )}
-        {errorCamara && <p className="text-sm text-red-700 mt-2">{errorCamara}</p>}
+        {errorCamara && <p className="text-sm text-red-700 dark:text-red-300 mt-2">{errorCamara}</p>}
         {camaraActiva && (
           <div className="mt-4 max-w-sm relative overflow-hidden rounded-lg">
             <video ref={videoRef} className="w-full rounded-lg border border-brand-150" muted playsInline />
@@ -176,10 +176,10 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
 
       {/* Aviso grande: no encontrado */}
       {mensajeError && !encontrado && (
-        <div role="status" aria-live="assertive" className="card !py-4 flex items-center gap-3 border-2 border-red-600 bg-red-50">
+        <div role="status" aria-live="assertive" className="card !py-4 flex items-center gap-3 border-2 border-red-600 bg-red-50 dark:bg-red-950/40">
           <span className="shrink-0 w-9 h-9 rounded-full bg-red-600 text-white text-lg font-bold flex items-center justify-center">✕</span>
           <div>
-            <p className="font-semibold text-red-800">No se encontró el insumo</p>
+            <p className="font-semibold text-red-800 dark:text-red-300">No se encontró el insumo</p>
             <p className="text-sm text-ink">{mensajeError}</p>
           </div>
         </div>
@@ -187,11 +187,11 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
 
       {/* Ficha rápida del insumo encontrado, con acciones directas */}
       {encontrado && (
-        <div role="status" aria-live="assertive" className="card !py-5 border-2 border-green-600 bg-green-50/40 space-y-4">
+        <div role="status" aria-live="assertive" className="card !py-5 border-2 border-green-600 bg-green-50 dark:bg-green-950/40/40 space-y-4">
           <div className="flex items-start gap-3">
             <span className="shrink-0 w-9 h-9 rounded-full bg-green-600 text-white text-lg font-bold flex items-center justify-center">✓</span>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-green-800">¡Insumo encontrado!</p>
+              <p className="font-semibold text-green-800 dark:text-green-300">¡Insumo encontrado!</p>
               <h2 className="font-serif text-lg text-ink truncate">{encontrado.nombre}</h2>
               <p className="text-sm text-brand-500">
                 <span className="font-mono text-xs">{encontrado.codigo_interno}</span>

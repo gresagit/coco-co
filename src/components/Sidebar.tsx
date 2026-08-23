@@ -4,66 +4,77 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { SVGProps } from "react";
 import { dispararBurbujas } from "@/lib/burbujas";
+import { esAdministrador } from "@/lib/roles";
 
 type NavItem = { href: string; label: string; icon: (props: SVGProps<SVGSVGElement>) => JSX.Element };
 type NavGroup = { label: string; items: NavItem[] };
 
-const GROUPS: NavGroup[] = [
-  {
-    label: "",
-    items: [{ href: "/dashboard", label: "Inicio", icon: IconHome }],
-  },
-  {
-    label: "Catálogo",
-    items: [
-      { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
-      { href: "/dashboard/insumos", label: "Insumos", icon: IconLayers },
-      { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
-      { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
-    ],
-  },
-  {
-    label: "Ventas",
-    items: [
-      { href: "/dashboard/ventas/stock", label: "Stock Shopify", icon: IconCloud },
-      { href: "/dashboard/ventas/pos", label: "Ventas punto de venta", icon: IconCart },
-    ],
-  },
-  {
-    label: "Operación",
-    items: [
-      { href: "/dashboard/produccion", label: "Producción", icon: IconFactory },
-      { href: "/dashboard/movimientos", label: "Movimientos", icon: IconSwap },
-      { href: "/dashboard/alertas", label: "Alertas", icon: IconBell },
-    ],
-  },
-  {
-    label: "Compras",
-    items: [
-      { href: "/dashboard/proveedores", label: "Proveedores", icon: IconTruck },
-      { href: "/dashboard/ordenes-compra", label: "Órdenes de compra", icon: IconDoc },
-    ],
-  },
-  {
-    label: "Administración",
-    items: [
-      { href: "/dashboard/metas", label: "Metas de producción", icon: IconTarget },
-      { href: "/dashboard/sucursales", label: "Sucursales", icon: IconStore },
-      { href: "/dashboard/usuarios", label: "Usuarios y roles", icon: IconUsers },
-    ],
-  },
-];
+function construirGrupos(esAdmin: boolean): NavGroup[] {
+  const administracionItems: NavItem[] = [
+    { href: "/dashboard/metas", label: "Metas de producción", icon: IconTarget },
+    { href: "/dashboard/sucursales", label: "Sucursales", icon: IconStore },
+    { href: "/dashboard/usuarios", label: "Usuarios y roles", icon: IconUsers },
+  ];
+  if (esAdmin) {
+    administracionItems.push({ href: "/dashboard/auditoria", label: "Auditoría", icon: IconShield });
+  }
+
+  return [
+    {
+      label: "",
+      items: [{ href: "/dashboard", label: "Inicio", icon: IconHome }],
+    },
+    {
+      label: "Catálogo",
+      items: [
+        { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
+        { href: "/dashboard/insumos", label: "Insumos", icon: IconLayers },
+        { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
+        { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
+      ],
+    },
+    {
+      label: "Ventas",
+      items: [
+        { href: "/dashboard/ventas/stock", label: "Stock Shopify", icon: IconCloud },
+        { href: "/dashboard/ventas/pos", label: "Ventas punto de venta", icon: IconCart },
+      ],
+    },
+    {
+      label: "Operación",
+      items: [
+        { href: "/dashboard/produccion", label: "Producción", icon: IconFactory },
+        { href: "/dashboard/movimientos", label: "Movimientos", icon: IconSwap },
+        { href: "/dashboard/alertas", label: "Alertas", icon: IconBell },
+      ],
+    },
+    {
+      label: "Compras",
+      items: [
+        { href: "/dashboard/proveedores", label: "Proveedores", icon: IconTruck },
+        { href: "/dashboard/ordenes-compra", label: "Órdenes de compra", icon: IconDoc },
+      ],
+    },
+    {
+      label: "Administración",
+      items: administracionItems,
+    },
+  ];
+}
 
 export default function Sidebar({
   nombre,
+  roles = [],
   open = false,
   onClose,
 }: {
   nombre: string;
+  roles?: string[];
   open?: boolean;
   onClose?: () => void;
 }) {
   const pathname = usePathname();
+  const GROUPS = construirGrupos(esAdministrador(roles));
 
   // Mismo efecto de burbujitas de jabón que la barra superior, ahora al
   // hacer click en cualquier link/botón del menú lateral.
@@ -76,7 +87,7 @@ export default function Sidebar({
   return (
     <aside
       onClickCapture={onClickSidebar}
-      className={`w-64 shrink-0 bg-white border-r border-brand-150 flex flex-col min-h-screen
+      className={`w-64 shrink-0 bg-surface border-r border-brand-150 flex flex-col min-h-screen
         fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-out
         lg:static lg:translate-x-0
         ${open ? "translate-x-0 shadow-soft" : "-translate-x-full"}`}
@@ -282,6 +293,15 @@ function IconCart(props: SVGProps<SVGSVGElement>) {
       <path d="M3.5 4h2l1.2 11.2a1.6 1.6 0 0 0 1.6 1.4h8a1.6 1.6 0 0 0 1.58-1.36L19.5 8H6" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="9.5" cy="20" r="1.2" />
       <circle cx="16.5" cy="20" r="1.2" />
+    </svg>
+  );
+}
+
+function IconShield(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3.5 5 6v5.5c0 4.2 2.9 7.4 7 9 4.1-1.6 7-4.8 7-9V6l-7-2.5Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m9 12 2 2 4-4.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

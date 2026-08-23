@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearTransferencia(formData: FormData) {
   "use server";
@@ -21,7 +22,7 @@ async function crearTransferencia(formData: FormData) {
 
   await db.from(tabla).update({ cantidad_disponible: Number(stockOrigen.cantidad_disponible) - cantidad }).eq("id", stockOrigen.id);
 
-  await db.from("movimientos").insert({
+  const { data: mov } = await db.from("movimientos").insert({
     tipo: "Transferencia",
     origen_tipo: tipoItem,
     producto_id: tipoItem === "Producto" ? itemId : null,
@@ -30,6 +31,13 @@ async function crearTransferencia(formData: FormData) {
     sucursal_destino_id: destinoId,
     cantidad,
     estado: "En tránsito",
+  }).select().single();
+
+  await registrarAuditoria({
+    accion: "crear_transferencia",
+    entidad: "movimientos",
+    entidadId: mov?.id,
+    detalle: { tipo_item: tipoItem, item_id: itemId, cantidad, sucursal_origen_id: origenId, sucursal_destino_id: destinoId },
   });
 
   revalidatePath("/dashboard/movimientos");
@@ -54,6 +62,11 @@ async function confirmarRecepcion(movimientoId: string) {
   }
 
   await db.from("movimientos").update({ estado: "Recibida" }).eq("id", movimientoId);
+  await registrarAuditoria({
+    accion: "confirmar_recepcion_transferencia",
+    entidad: "movimientos",
+    entidadId: movimientoId,
+  });
   revalidatePath("/dashboard/movimientos");
 }
 

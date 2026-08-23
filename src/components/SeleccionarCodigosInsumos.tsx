@@ -159,7 +159,7 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                   activo
                     ? "bg-ink text-cream border-ink"
-                    : "bg-white text-brand-500 border-brand-200 hover:border-brand-400"
+                    : "bg-surface text-brand-500 border-brand-200 hover:border-brand-400"
                 }`}
               >
                 {tipo}
@@ -207,7 +207,7 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
 
         <div className="overflow-x-auto max-h-[420px] overflow-y-auto border border-brand-150 rounded-lg">
           <table className="table-base">
-            <thead className="sticky top-0 bg-white">
+            <thead className="sticky top-0 bg-surface">
               <tr>
                 <th></th>
                 <th>Código</th>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
 import { registrarReemplazos } from "@/lib/codigos-barra";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 // Marca puntualmente qué folios se van a reimprimir (uno, varios sueltos, o
 // un rango — lo que haya llegado ya resuelto a piezaIds desde el cliente) y
@@ -31,6 +32,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   await registrarReemplazos({ piezaIds: idsValidos, motivo, reimpresoPor: user?.id });
+
+  await registrarAuditoria({
+    accion: "registrar_reemplazo_etiquetas",
+    entidad: "codigos_barra_generaciones",
+    entidadId: params.id,
+    detalle: { pieza_ids: idsValidos, motivo },
+  });
 
   return NextResponse.json({ ok: true, piezaIds: idsValidos });
 }

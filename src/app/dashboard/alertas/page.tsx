@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearConfig(formData: FormData) {
   "use server";
@@ -10,6 +11,11 @@ async function crearConfig(formData: FormData) {
     canal: formData.get("canal"),
     frecuencia: formData.get("frecuencia"),
   });
+  await registrarAuditoria({
+    accion: "crear_regla_alerta",
+    entidad: "alertas_config",
+    detalle: { tipo_alerta: formData.get("tipo_alerta"), canal: formData.get("canal") },
+  });
   revalidatePath("/dashboard/alertas");
 }
 
@@ -17,6 +23,11 @@ async function eliminarConfig(id: string) {
   "use server";
   const db = supabaseAdmin();
   await db.from("alertas_config").delete().eq("id", id);
+  await registrarAuditoria({
+    accion: "eliminar_regla_alerta",
+    entidad: "alertas_config",
+    entidadId: id,
+  });
   revalidatePath("/dashboard/alertas");
 }
 

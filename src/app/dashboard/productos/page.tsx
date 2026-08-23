@@ -1,12 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import Link from "next/link";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import { siguienteSkuProducto } from "@/lib/sku";
 import { getSucursalActualId } from "@/lib/auth";
+import { registrarAuditoria } from "@/lib/auditoria";
 import type { SVGProps } from "react";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInventario from "@/components/EscanerInventario";
+import ProductosTabla from "@/components/ProductosTabla";
 
 async function crearProducto(formData: FormData) {
   "use server";
@@ -51,8 +52,72 @@ async function crearProducto(formData: FormData) {
         sucursales.map((s: any) => ({ producto_id: producto.id, sucursal_id: s.id, stock_minimo: 0, cantidad_disponible: 0 }))
       );
     }
+
+    await registrarAuditoria({
+      accion: "crear_producto",
+      entidad: "productos",
+      entidadId: producto.id,
+      detalle: { sku: producto.sku, nombre: producto.nombre, categoria: categoriaNombre },
+    });
   }
   revalidatePath("/dashboard/productos");
+}
+
+// Edita nombre, categoría (permite crear una nueva al vuelo) y margen deseado
+// de un producto ya existente. Se usa desde el modal "Editar" de la tabla.
+async function editarProducto(formData: FormData) {
+  "use server";
+  const db = supabaseAdmin();
+  const productoId = formData.get("producto_id") as string;
+  if (!productoId) return;
+
+  const nombre = (formData.get("nombre") as string)?.trim();
+  let categoriaId = formData.get("categoria_id") as string;
+  const categoriaNueva = (formData.get("categoria_nueva") as string)?.trim();
+  const margenRaw = formData.get("margen") as string;
+
+  if (categoriaNueva) {
+    // Si ya existe una categoría con ese nombre (sin importar mayúsculas), la
+    // reutiliza en vez de crear un duplicado.
+    const { data: existente } = await db
+      .from("categorias")
+      .select("id")
+      .ilike("nombre", categoriaNueva)
+      .maybeSingle();
+
+    if (existente) {
+      categoriaId = existente.id;
+    } else {
+      const { data: cat } = await db.from("categorias").insert({ nombre: categoriaNueva }).select().single();
+      if (cat) {
+        categoriaId = cat.id;
+        await registrarAuditoria({
+          accion: "crear_categoria",
+          entidad: "categorias",
+          entidadId: cat.id,
+          detalle: { nombre: categoriaNueva, origen: "edición de producto" },
+        });
+      }
+    }
+  }
+
+  const cambios: Record<string, unknown> = {};
+  if (nombre) cambios.nombre = nombre;
+  if (categoriaId) cambios.categoria_id = categoriaId;
+  if (margenRaw !== null && margenRaw !== "") cambios.porcentaje_margen_deseado = Number(margenRaw);
+
+  if (Object.keys(cambios).length > 0) {
+    await db.from("productos").update(cambios).eq("id", productoId);
+    await registrarAuditoria({
+      accion: "editar_producto",
+      entidad: "productos",
+      entidadId: productoId,
+      detalle: cambios,
+    });
+  }
+
+  revalidatePath("/dashboard/productos");
+  revalidatePath(`/dashboard/productos/${productoId}`);
 }
 
 export default async function ProductosPage() {
@@ -112,7 +177,7 @@ export default async function ProductosPage() {
           <h2 className="font-semibold mb-3">Stock por categoría — esta sucursal</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(stockPorCategoria).map(([nombre, cantidad]) => (
-              <div key={nombre} className="rounded-lg border border-brand-150 bg-white px-3 py-2.5 transition-transform hover:-translate-y-0.5">
+              <div key={nombre} className="rounded-lg border border-brand-150 bg-surface px-3 py-2.5 transition-transform hover:-translate-y-0.5">
                 <p className="text-xs text-brand-400 uppercase tracking-wide truncate">{nombre}</p>
                 <p className="font-serif text-2xl text-ink mt-0.5">{cantidad}</p>
               </div>
@@ -168,44 +233,7 @@ export default async function ProductosPage() {
         </form>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="table-base">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Stock</th>
-              <th>Costo (auto)</th>
-              <th>Precio sugerido</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {conCosteo.map((p: any) => (
-              <tr key={p.id}>
-                <td className="font-mono text-xs">{p.sku}</td>
-                <td className="font-medium">{p.nombre}</td>
-                <td>{p.categorias?.nombre || "—"}</td>
-                <td className="font-medium">{p.stock}</td>
-                <td>${p.costo.toFixed(2)}</td>
-                <td>
-                  ${p.precio.toFixed(2)}
-                  {p.precio_venta_override && <span className="text-xs text-brand-400 ml-1">(manual)</span>}
-                </td>
-                <td className="space-x-3">
-                  <Link href={`/dashboard/productos/${p.id}`} className="text-brand-600 text-xs underline">
-                    Detalle / stock
-                  </Link>
-                  <Link href={`/dashboard/bom?producto=${p.id}`} className="text-brand-600 text-xs underline">
-                    Editar fórmula
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ProductosTabla productos={conCosteo} categorias={categorias || []} editarProducto={editarProducto} />
     </div>
   );
 }

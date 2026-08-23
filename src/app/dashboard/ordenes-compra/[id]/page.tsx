@@ -1,11 +1,18 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function cambiarEstado(id: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
   await db.from("ordenes_compra").update({ estado: formData.get("estado") }).eq("id", id);
+  await registrarAuditoria({
+    accion: "cambiar_estado_orden_compra",
+    entidad: "ordenes_compra",
+    entidadId: id,
+    detalle: { estado: formData.get("estado") },
+  });
   revalidatePath(`/dashboard/ordenes-compra/${id}`);
 }
 
@@ -66,6 +73,14 @@ async function recibirMercancia(id: string, formData: FormData) {
 
   const nuevoEstado = totalRecibido >= totalPedido ? "Recibida total" : totalRecibido > 0 ? "Recibida parcial" : orden.estado;
   await db.from("ordenes_compra").update({ estado: nuevoEstado }).eq("id", id);
+
+  await registrarAuditoria({
+    accion: "recibir_mercancia_orden_compra",
+    entidad: "ordenes_compra",
+    entidadId: id,
+    sucursalId: orden.sucursal_id,
+    detalle: { folio: orden.folio, estado: nuevoEstado, total_recibido: totalRecibido },
+  });
 
   revalidatePath(`/dashboard/ordenes-compra/${id}`);
 }

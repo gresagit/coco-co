@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearOrdenProduccion(formData: FormData) {
   "use server";
@@ -23,7 +24,16 @@ async function crearOrdenProduccion(formData: FormData) {
     .select()
     .single();
 
-  if (!error && orden) redirect(`/dashboard/produccion/${orden.id}`);
+  if (!error && orden) {
+    await registrarAuditoria({
+      accion: "crear_orden_produccion",
+      entidad: "ordenes_produccion",
+      entidadId: orden.id,
+      sucursalId: orden.sucursal_id,
+      detalle: { folio, producto_id: productoId, cantidad_planeada: orden.cantidad_planeada },
+    });
+    redirect(`/dashboard/produccion/${orden.id}`);
+  }
 }
 
 export default async function NuevaOrdenProduccionPage() {

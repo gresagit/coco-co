@@ -1,13 +1,20 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearSucursal(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
-  await db.from("sucursales").insert({
+  const { data: sucursal } = await db.from("sucursales").insert({
     nombre: formData.get("nombre"),
     direccion: formData.get("direccion"),
     responsable: formData.get("responsable"),
+  }).select().single();
+  await registrarAuditoria({
+    accion: "crear_sucursal",
+    entidad: "sucursales",
+    entidadId: sucursal?.id,
+    detalle: { nombre: formData.get("nombre") },
   });
   revalidatePath("/dashboard/sucursales");
 }
@@ -16,6 +23,11 @@ async function toggleActiva(id: string, activa: boolean) {
   "use server";
   const db = supabaseAdmin();
   await db.from("sucursales").update({ activa: !activa }).eq("id", id);
+  await registrarAuditoria({
+    accion: activa ? "desactivar_sucursal" : "activar_sucursal",
+    entidad: "sucursales",
+    entidadId: id,
+  });
   revalidatePath("/dashboard/sucursales");
 }
 

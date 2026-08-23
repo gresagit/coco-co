@@ -69,8 +69,8 @@ export default function ShopifyStockSync({ conectado }: { conectado: boolean }) 
       </div>
 
       {error && (
-        <div className="card !py-4 border-2 border-red-600 bg-red-50">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="card !py-4 border-2 border-red-600 bg-red-50 dark:bg-red-950/40">
+          <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
         </div>
       )}
 

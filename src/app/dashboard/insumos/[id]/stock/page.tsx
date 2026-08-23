@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function agregarEntrada(insumoId: string, formData: FormData) {
   "use server";
@@ -48,6 +49,14 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
     notas: "Registrada desde ficha de insumo",
   });
 
+  await registrarAuditoria({
+    accion: "agregar_entrada_insumo",
+    entidad: "insumos",
+    entidadId: insumoId,
+    sucursalId,
+    detalle: { cantidad, folio_lote: folioLote || null },
+  });
+
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
 }
 
@@ -64,6 +73,12 @@ async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
       costo_unitario_actual: Number(formData.get("costo_unitario_actual") || 0),
     })
     .eq("id", insumoId);
+  await registrarAuditoria({
+    accion: "editar_insumo",
+    entidad: "insumos",
+    entidadId: insumoId,
+    detalle: { nombre: formData.get("nombre"), tipo: formData.get("tipo") },
+  });
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
   revalidatePath("/dashboard/insumos");
 }
@@ -78,6 +93,13 @@ async function actualizarStockMinimo(insumoId: string, formData: FormData) {
     .update({ stock_minimo: stockMinimo })
     .eq("insumo_id", insumoId)
     .eq("sucursal_id", sucursalId);
+  await registrarAuditoria({
+    accion: "actualizar_stock_minimo_insumo",
+    entidad: "insumos",
+    entidadId: insumoId,
+    sucursalId,
+    detalle: { stock_minimo: stockMinimo },
+  });
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
 }
 
@@ -112,6 +134,14 @@ async function ajusteManual(insumoId: string, formData: FormData) {
     cantidad,
     referencia: "Ajuste manual",
     notas: "Registrado manualmente desde ficha de insumo",
+  });
+
+  await registrarAuditoria({
+    accion: "ajuste_manual_insumo",
+    entidad: "insumos",
+    entidadId: insumoId,
+    sucursalId,
+    detalle: { tipo, cantidad },
   });
 
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);

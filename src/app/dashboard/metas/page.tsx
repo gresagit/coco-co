@@ -2,18 +2,29 @@ import { getSessionUser, getSucursalActualId } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { obtenerPanoramaProduccion, crearMetaProduccion } from "@/lib/metas";
 import { revalidatePath } from "next/cache";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearMeta(formData: FormData) {
   "use server";
   const user = await getSessionUser();
   const sucursalId = formData.get("sucursal_id") as string;
 
+  const productoId = formData.get("producto_id") as string;
+  const cantidadMeta = Number(formData.get("cantidad_meta"));
   await crearMetaProduccion({
-    productoId: formData.get("producto_id") as string,
+    productoId,
     sucursalId,
-    cantidadMeta: Number(formData.get("cantidad_meta")),
+    cantidadMeta,
     fechaLimite: (formData.get("fecha_limite") as string) || undefined,
     creadoPor: user?.id,
+  });
+
+  await registrarAuditoria({
+    accion: "crear_meta_produccion",
+    entidad: "productos",
+    entidadId: productoId,
+    sucursalId,
+    detalle: { cantidad_meta: cantidadMeta },
   });
 
   revalidatePath("/dashboard/metas");

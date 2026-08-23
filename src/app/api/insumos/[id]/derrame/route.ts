@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 // Registra una salida rápida de insumo (derrame, merma, uso no planeado)
 // justo después de escanear su código de barras — sin tener que abrir la
@@ -65,6 +66,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     motivo,
     usuario_id: user.id,
     notas: `Registrado desde el escáner de insumos (${motivo}).`,
+  });
+
+  await registrarAuditoria({
+    accion: "registrar_derrame_insumo",
+    entidad: "insumos",
+    entidadId: params.id,
+    sucursalId,
+    detalle: { cantidad, motivo },
   });
 
   return NextResponse.json({

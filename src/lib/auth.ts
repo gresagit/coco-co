@@ -45,13 +45,34 @@ export async function login(usuario: string, password: string) {
     .maybeSingle();
 
   if (error || !user || !user.activo) {
+    await db.from("auditoria").insert({
+      usuario_id: user?.id ?? null,
+      accion: "login_fallido",
+      entidad: "usuarios",
+      detalle: { usuario },
+    });
     return { ok: false as const, message: "Usuario o contraseña incorrectos." };
   }
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
+    await db.from("auditoria").insert({
+      usuario_id: user.id,
+      accion: "login_fallido",
+      entidad: "usuarios",
+      entidad_id: user.id,
+      detalle: { usuario },
+    });
     return { ok: false as const, message: "Usuario o contraseña incorrectos." };
   }
+
+  await db.from("auditoria").insert({
+    usuario_id: user.id,
+    accion: "login",
+    entidad: "usuarios",
+    entidad_id: user.id,
+    detalle: { usuario },
+  });
 
   const payload = JSON.stringify({ id: user.id, t: Date.now() });
   const token = sign(Buffer.from(payload).toString("base64url"));
@@ -67,7 +88,19 @@ export async function login(usuario: string, password: string) {
   return { ok: true as const };
 }
 
-export function logout() {
+export async function logout() {
+  const user = await getSessionUser();
+  if (user) {
+    const db = supabaseAdmin();
+    await db.from("auditoria").insert({
+      usuario_id: user.id,
+      sucursal_id: getSucursalActualId(),
+      accion: "logout",
+      entidad: "usuarios",
+      entidad_id: user.id,
+      detalle: { usuario: user.usuario },
+    });
+  }
   cookies().delete(COOKIE_NAME);
 }
 

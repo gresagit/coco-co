@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
 import { confirmarPiezaPorFolio } from "@/lib/escaneo";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
@@ -22,5 +23,13 @@ export async function POST(req: NextRequest) {
   }
 
   const resultado = await confirmarPiezaPorFolio(folio, sucursalId, user.id);
+  if (resultado.ok) {
+    await registrarAuditoria({
+      accion: "escanear_pieza",
+      entidad: "piezas",
+      sucursalId,
+      detalle: { folio: resultado.folio, producto_sku: resultado.productoSku },
+    });
+  }
   return NextResponse.json(resultado);
 }

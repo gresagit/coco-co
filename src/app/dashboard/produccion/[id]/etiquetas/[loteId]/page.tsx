@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function marcarReimpresa(piezaId: string, formData: FormData) {
   "use server";
@@ -8,6 +9,12 @@ async function marcarReimpresa(piezaId: string, formData: FormData) {
   await db.from("reimpresiones_etiqueta").insert({
     pieza_id: piezaId,
     motivo: formData.get("motivo"),
+  });
+  await registrarAuditoria({
+    accion: "reimprimir_etiqueta",
+    entidad: "piezas",
+    entidadId: piezaId,
+    detalle: { motivo: formData.get("motivo") },
   });
   revalidatePath(`.`);
 }

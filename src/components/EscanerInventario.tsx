@@ -128,7 +128,7 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
           role="status"
           aria-live="assertive"
           className={`card !py-4 flex items-center gap-3 border-2 transition-colors ${
-            ultimoResultado.ok ? "border-green-600 bg-green-50" : "border-red-600 bg-red-50"
+            ultimoResultado.ok ? "border-green-600 bg-green-50 dark:bg-green-950/40" : "border-red-600 bg-red-50 dark:bg-red-950/40"
           }`}
         >
           <span
@@ -139,7 +139,7 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
             {ultimoResultado.ok ? "✓" : "✕"}
           </span>
           <div className="min-w-0">
-            <p className={`font-semibold ${ultimoResultado.ok ? "text-green-800" : "text-red-800"}`}>
+            <p className={`font-semibold ${ultimoResultado.ok ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300"}`}>
               {ultimoResultado.ok ? "¡Escaneado correctamente!" : "No se pudo escanear"}
             </p>
             <p className="text-sm text-ink truncate">
@@ -173,7 +173,7 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
             <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" /> Procesando escaneo…
           </p>
         )}
-        {errorCamara && <p className="text-sm text-red-700 mt-2">{errorCamara}</p>}
+        {errorCamara && <p className="text-sm text-red-700 dark:text-red-300 mt-2">{errorCamara}</p>}
         {camaraActiva && (
           <div className="mt-4 max-w-sm relative overflow-hidden rounded-lg">
             <video ref={videoRef} className="w-full rounded-lg border border-brand-150" muted playsInline />
@@ -217,7 +217,7 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
                 <li key={i} className="flex items-center justify-between text-sm gap-2">
                   <span className="font-mono text-xs text-brand-400 shrink-0">{r.hora}</span>
                   <span className="font-mono text-xs text-brand-500 truncate">{r.folio}</span>
-                  <span className={`text-xs shrink-0 ${r.ok ? "text-green-700" : "text-red-700"}`}>{r.mensaje}</span>
+                  <span className={`text-xs shrink-0 ${r.ok ? "text-green-700" : "text-red-700 dark:text-red-300"}`}>{r.mensaje}</span>
                 </li>
               ))}
             </ul>

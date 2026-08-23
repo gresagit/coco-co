@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { siguienteFolioOC } from "@/lib/folios";
 import { redirect } from "next/navigation";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearOrden(formData: FormData) {
   "use server";
@@ -47,6 +48,14 @@ async function crearOrden(formData: FormData) {
     await db.from("orden_compra_items").insert(items);
     await db.from("ordenes_compra").update({ total }).eq("id", orden.id);
   }
+
+  await registrarAuditoria({
+    accion: "crear_orden_compra",
+    entidad: "ordenes_compra",
+    entidadId: orden.id,
+    sucursalId: sucursalId,
+    detalle: { folio, proveedor_id: proveedorId, total, items: items.length },
+  });
 
   redirect(`/dashboard/ordenes-compra/${orden.id}`);
 }

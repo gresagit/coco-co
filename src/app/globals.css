@@ -3,6 +3,75 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Modo claro — mismos valores que la paleta original. Formato "R G B"
+       (sin comas) para que funcione con la sintaxis rgb(var(--x) / <alpha-value>)
+       de Tailwind, incluyendo modificadores de opacidad como bg-ink/40. */
+    --color-cream: 241 239 234;
+    --color-ink: 23 21 15;
+    --color-surface: 255 255 255;
+
+    --color-brand-50: 241 239 234;
+    --color-brand-100: 231 227 218;
+    --color-brand-150: 224 219 207;
+    --color-brand-200: 214 208 194;
+    --color-brand-300: 185 176 154;
+    --color-brand-400: 143 133 113;
+    --color-brand-500: 107 98 80;
+    --color-brand-600: 74 68 54;
+    --color-brand-700: 51 47 38;
+    --color-brand-800: 36 33 25;
+    --color-brand-900: 23 21 15;
+
+    --color-accent-50: 251 241 234;
+    --color-accent-100: 244 220 201;
+    --color-accent-200: 232 186 149;
+    --color-accent-300: 217 152 96;
+    --color-accent-400: 196 122 60;
+    --color-accent-500: 168 99 44;
+    --color-accent-600: 138 79 35;
+    --color-accent-700: 107 61 28;
+  }
+
+  .dark {
+    /* Modo oscuro — la escala brand/accent se invierte (50 pasa a ser el tono
+       más oscuro) para que bg-brand-50/border-brand-150/text-brand-400, etc.
+       en cualquier página se vean correctos automáticamente. */
+    --color-cream: 19 18 15;
+    --color-ink: 237 233 224;
+    --color-surface: 30 29 25;
+
+    --color-brand-50: 32 30 25;
+    --color-brand-100: 40 38 32;
+    --color-brand-150: 47 44 37;
+    --color-brand-200: 60 56 47;
+    --color-brand-300: 88 82 68;
+    --color-brand-400: 140 131 113;
+    --color-brand-500: 170 161 143;
+    --color-brand-600: 197 190 175;
+    --color-brand-700: 216 211 200;
+    --color-brand-800: 230 226 218;
+    --color-brand-900: 241 239 234;
+
+    --color-accent-50: 42 32 22;
+    --color-accent-100: 74 53 30;
+    --color-accent-200: 107 61 28;
+    --color-accent-300: 138 79 35;
+    --color-accent-400: 196 122 60;
+    --color-accent-500: 217 152 96;
+    --color-accent-600: 232 186 149;
+    --color-accent-700: 244 220 201;
+  }
+
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+}
+
+@layer base {
   h1, h2, h3, .font-display {
     @apply font-serif;
   }
@@ -121,11 +190,11 @@
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-soft border border-brand-150 p-5 transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
+    @apply bg-surface rounded-xl shadow-soft border border-brand-150 p-5 transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
   }
 
   .input {
-    @apply w-full rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-brand-300 focus:outline-none focus:ring-2 focus:ring-ink/10 focus:border-ink transition-colors;
+    @apply w-full rounded-lg border border-brand-200 bg-surface px-3 py-2 text-sm text-ink placeholder:text-brand-300 focus:outline-none focus:ring-2 focus:ring-ink/10 focus:border-ink transition-colors;
   }
   .input[readonly] {
     @apply bg-brand-50 text-brand-500 cursor-not-allowed;
@@ -148,9 +217,9 @@
     @apply hover:bg-brand-50/60 transition-colors;
   }
 
-  .badge-verde { @apply bg-transparent border border-green-700/30 text-green-800 px-2 py-0.5 rounded-full text-xs font-medium; }
+  .badge-verde { @apply bg-transparent border border-green-700/30 dark:border-green-400/40 text-green-800 dark:text-green-400 px-2 py-0.5 rounded-full text-xs font-medium; }
   .badge-amarillo { @apply bg-transparent border border-accent-500/40 text-accent-600 px-2 py-0.5 rounded-full text-xs font-medium; }
-  .badge-rojo { @apply bg-transparent border border-red-700/30 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium; }
+  .badge-rojo { @apply bg-transparent border border-red-700/30 dark:border-red-400/40 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full text-xs font-medium; }
 
   .section-number {
     @apply text-xs font-medium text-brand-400;
@@ -158,9 +227,9 @@
 
   /* Banner — bloque destacado con acento suave, para avisos o resúmenes. */
   .banner {
-    @apply rounded-2xl border border-brand-150 bg-gradient-to-br from-white to-brand-50 p-5 shadow-soft transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
+    @apply rounded-2xl border border-brand-150 bg-gradient-to-br from-surface to-brand-50 p-5 shadow-soft transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
   }
   .banner-accent {
-    @apply rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-white p-5 shadow-soft;
+    @apply rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-surface p-5 shadow-soft;
   }
 }

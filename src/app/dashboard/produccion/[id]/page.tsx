@@ -3,17 +3,26 @@ import { procesarReporteAvance } from "@/lib/produccion";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function reportarAvance(ordenId: string, formData: FormData) {
   "use server";
   const user = await getSessionUser();
+  const cantidadProducida = Number(formData.get("cantidad_producida") || 0);
+  const cantidadMerma = Number(formData.get("cantidad_merma") || 0);
   await procesarReporteAvance({
     ordenProduccionId: ordenId,
     fecha: (formData.get("fecha") as string) || new Date().toISOString().slice(0, 10),
-    cantidadProducida: Number(formData.get("cantidad_producida") || 0),
-    cantidadMerma: Number(formData.get("cantidad_merma") || 0),
+    cantidadProducida,
+    cantidadMerma,
     notas: formData.get("notas") as string,
     reportadoPor: user?.id,
+  });
+  await registrarAuditoria({
+    accion: "reportar_avance_produccion",
+    entidad: "ordenes_produccion",
+    entidadId: ordenId,
+    detalle: { cantidad_producida: cantidadProducida, cantidad_merma: cantidadMerma },
   });
   revalidatePath(`/dashboard/produccion/${ordenId}`);
 }
@@ -22,6 +31,11 @@ async function cerrarOrden(ordenId: string) {
   "use server";
   const db = supabaseAdmin();
   await db.from("ordenes_produccion").update({ estado: "Cerrada" }).eq("id", ordenId);
+  await registrarAuditoria({
+    accion: "cerrar_orden_produccion",
+    entidad: "ordenes_produccion",
+    entidadId: ordenId,
+  });
   revalidatePath(`/dashboard/produccion/${ordenId}`);
 }
 

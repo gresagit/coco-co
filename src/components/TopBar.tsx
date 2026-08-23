@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { dispararBurbujas } from "@/lib/burbujas";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type Sucursal = { id: string; nombre: string };
 
@@ -81,13 +82,13 @@ export default function TopBar({
       {/* Selector de tienda / sucursal */}
       {sucursales.length > 0 && (
         <details ref={sucursalDetailsRef} className="relative">
-          <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-lg border border-brand-200 bg-white px-2.5 sm:px-3 py-1.5 text-sm hover:border-brand-400 transition-colors">
+          <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-lg border border-brand-200 bg-surface px-2.5 sm:px-3 py-1.5 text-sm hover:border-brand-400 transition-colors">
             <IconStore />
             <span className="text-brand-500 hidden sm:inline">Tienda:</span>
             <span className="font-medium text-ink">{sucursalActual?.nombre || "—"}</span>
             <IconChevron />
           </summary>
-          <div className="absolute right-0 mt-2 w-56 bg-white border border-brand-150 rounded-lg shadow-soft py-1 z-30 animate-fade-in-up">
+          <div className="absolute right-0 mt-2 w-56 bg-surface border border-brand-150 rounded-lg shadow-soft py-1 z-30 animate-fade-in-up">
             {sucursales.map((s) => (
               <button
                 key={s.id}
@@ -105,16 +106,19 @@ export default function TopBar({
         </details>
       )}
 
+      {/* Modo claro / oscuro */}
+      <ThemeToggle />
+
       {/* Selector de perfil / usuario */}
       <details ref={perfilDetailsRef} className="relative">
-        <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-lg border border-brand-200 bg-white pl-1.5 pr-2.5 sm:pr-3 py-1.5 hover:border-brand-400 transition-colors">
+        <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-lg border border-brand-200 bg-surface pl-1.5 pr-2.5 sm:pr-3 py-1.5 hover:border-brand-400 transition-colors">
           <span className="w-7 h-7 rounded-full bg-ink text-cream text-xs font-medium flex items-center justify-center">
             {iniciales || "?"}
           </span>
           <span className="text-sm font-medium text-ink hidden sm:inline">{nombre}</span>
           <IconChevron />
         </summary>
-        <div className="absolute right-0 mt-2 w-60 bg-white border border-brand-150 rounded-lg shadow-soft py-1 z-30 animate-fade-in-up">
+        <div className="absolute right-0 mt-2 w-60 bg-surface border border-brand-150 rounded-lg shadow-soft py-1 z-30 animate-fade-in-up">
           <div className="px-3 py-2 border-b border-brand-100">
             <p className="text-sm font-medium text-ink">{nombre}</p>
             <p className="text-xs text-brand-400">@{usuario}</p>
@@ -128,6 +132,14 @@ export default function TopBar({
           >
             Usuarios y roles
           </a>
+          {roles.includes("Administrador") && (
+            <a
+              href="/dashboard/auditoria"
+              className="block px-3 py-2 text-sm text-brand-600 hover:bg-brand-50 transition-colors"
+            >
+              Auditoría
+            </a>
+          )}
           <button
             onClick={onLogout}
             className="block w-full text-left px-3 py-2 text-sm text-red-700 hover:bg-brand-50 transition-colors"

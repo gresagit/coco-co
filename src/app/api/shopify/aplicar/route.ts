@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 // Aplica la cantidad de Shopify como nuevo stock local de un producto ya
 // emparejado por SKU, en la sucursal actual. Deja rastro en "movimientos"
@@ -58,6 +59,14 @@ export async function POST(req: NextRequest) {
       notas: `Ajuste de stock local a partir del inventario de Shopify (${anterior} → ${cantidadShopify}).`,
     });
   }
+
+  await registrarAuditoria({
+    accion: "aplicar_ajuste_shopify",
+    entidad: "producto_stock",
+    entidadId: productoId,
+    sucursalId,
+    detalle: { anterior, nuevo: cantidadShopify, diferencia },
+  });
 
   return NextResponse.json({ ok: true, nuevaCantidad: cantidadShopify });
 }

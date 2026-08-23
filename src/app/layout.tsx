@@ -24,6 +24,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${sans.variable} ${serif.variable}`}>
+      <head>
+        <script
+          // Se ejecuta antes de pintar la página para que no haya un
+          // "flash" de modo claro justo antes de aplicar modo oscuro.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('coco-theme');var dark=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(dark)document.documentElement.classList.add('dark');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="bg-cream text-ink min-h-screen font-sans antialiased">{children}</body>
     </html>
   );

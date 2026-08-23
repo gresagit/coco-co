@@ -1,35 +1,42 @@
 import type { Config } from "tailwindcss";
 const config: Config = {
+  darkMode: "class",
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
         // Paleta neutra tipo editorial (crema / carbón), con un solo acento cálido.
+        // Los valores viven en variables CSS (ver globals.css) para poder
+        // invertirlos completos en modo oscuro con la clase `.dark` en <html>,
+        // sin tener que tocar `bg-brand-50`, `text-ink`, etc. en cada página.
         brand: {
-          50: "#F1EFEA",
-          100: "#e7e3da",
-          200: "#d6d0c2",
-          150: "#e0dbcf",
-          300: "#b9b09a",
-          400: "#8f8571",
-          500: "#6b6250",
-          600: "#4a4436",
-          700: "#332f26",
-          800: "#242119",
-          900: "#17150f",
+          50: "rgb(var(--color-brand-50) / <alpha-value>)",
+          100: "rgb(var(--color-brand-100) / <alpha-value>)",
+          150: "rgb(var(--color-brand-150) / <alpha-value>)",
+          200: "rgb(var(--color-brand-200) / <alpha-value>)",
+          300: "rgb(var(--color-brand-300) / <alpha-value>)",
+          400: "rgb(var(--color-brand-400) / <alpha-value>)",
+          500: "rgb(var(--color-brand-500) / <alpha-value>)",
+          600: "rgb(var(--color-brand-600) / <alpha-value>)",
+          700: "rgb(var(--color-brand-700) / <alpha-value>)",
+          800: "rgb(var(--color-brand-800) / <alpha-value>)",
+          900: "rgb(var(--color-brand-900) / <alpha-value>)",
         },
         accent: {
-          50: "#fbf1ea",
-          100: "#f4dcc9",
-          200: "#e8ba95",
-          300: "#d99860",
-          400: "#c47a3c",
-          500: "#a8632c",
-          600: "#8a4f23",
-          700: "#6b3d1c",
+          50: "rgb(var(--color-accent-50) / <alpha-value>)",
+          100: "rgb(var(--color-accent-100) / <alpha-value>)",
+          200: "rgb(var(--color-accent-200) / <alpha-value>)",
+          300: "rgb(var(--color-accent-300) / <alpha-value>)",
+          400: "rgb(var(--color-accent-400) / <alpha-value>)",
+          500: "rgb(var(--color-accent-500) / <alpha-value>)",
+          600: "rgb(var(--color-accent-600) / <alpha-value>)",
+          700: "rgb(var(--color-accent-700) / <alpha-value>)",
         },
-        ink: "#17150f",
-        cream: "#F1EFEA",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        cream: "rgb(var(--color-cream) / <alpha-value>)",
+        // Reemplaza los `bg-white` de tarjetas/inputs/menús — blanco puro en
+        // modo claro, gris carbón ligeramente más claro que el fondo en modo oscuro.
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

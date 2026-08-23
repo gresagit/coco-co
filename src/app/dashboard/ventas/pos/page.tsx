@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function registrarVenta(formData: FormData) {
   "use server";
@@ -56,6 +57,14 @@ async function registrarVenta(formData: FormData) {
     referencia: folioPos ? `Venta POS ${folioPos}` : "Venta POS",
     usuario_id: user.id,
     notas: notas || "Venta registrada desde punto de venta",
+  });
+
+  await registrarAuditoria({
+    accion: "registrar_venta_pos",
+    entidad: "ventas_pos",
+    entidadId: productoId,
+    sucursalId,
+    detalle: { cantidad, total, medio_pago: medioPago, folio_pos: folioPos },
   });
 
   revalidatePath("/dashboard/ventas/pos");

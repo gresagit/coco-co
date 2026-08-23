@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { generarPedidoMultiProducto } from "@/lib/codigos-barra";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function generar(formData: FormData) {
   "use server";
@@ -30,6 +31,14 @@ async function generar(formData: FormData) {
     const mensaje = encodeURIComponent(err?.message || "No se pudo generar los códigos.");
     redirect(`/dashboard/codigos-barra/nueva?error=falla&detalle=${mensaje}`);
   }
+
+  await registrarAuditoria({
+    accion: "generar_codigos_barra",
+    entidad: "codigos_barra_pedidos",
+    entidadId: pedidoId,
+    sucursalId,
+    detalle: { items },
+  });
 
   redirect(`/dashboard/codigos-barra/pedidos/${pedidoId}`);
 }
@@ -59,15 +68,15 @@ export default async function NuevaGeneracionPage({
       </div>
 
       {searchParams.error === "vacio" && (
-        <div className="card !py-3 border-2 border-red-600 bg-red-50">
-          <p className="text-sm text-red-800">Ponle una cantidad mayor a 0 a por lo menos un producto.</p>
+        <div className="card !py-3 border-2 border-red-600 bg-red-50 dark:bg-red-950/40">
+          <p className="text-sm text-red-800 dark:text-red-300">Ponle una cantidad mayor a 0 a por lo menos un producto.</p>
         </div>
       )}
 
       {searchParams.error === "falla" && (
-        <div className="card !py-3 border-2 border-red-600 bg-red-50">
-          <p className="text-sm text-red-800 font-medium">No se pudieron generar los códigos.</p>
-          <p className="text-sm text-red-700 mt-1">
+        <div className="card !py-3 border-2 border-red-600 bg-red-50 dark:bg-red-950/40">
+          <p className="text-sm text-red-800 dark:text-red-300 font-medium">No se pudieron generar los códigos.</p>
+          <p className="text-sm text-red-700 dark:text-red-300 mt-1">
             {searchParams.detalle ? decodeURIComponent(searchParams.detalle) : "Intenta de nuevo."}
           </p>
         </div>

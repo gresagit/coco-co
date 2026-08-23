@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import ShopifyStockSync from "@/components/ShopifyStockSync";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function guardarConfig(formData: FormData) {
   "use server";
@@ -14,6 +15,12 @@ async function guardarConfig(formData: FormData) {
   if (accessToken) update.access_token = accessToken;
 
   await db.from("shopify_config").upsert({ id: "default", ...update });
+  // Nunca se guarda el access token en el detalle de auditoría — es un secreto.
+  await registrarAuditoria({
+    accion: "guardar_config_shopify",
+    entidad: "shopify_config",
+    detalle: { dominio, token_actualizado: !!accessToken },
+  });
   revalidatePath("/dashboard/ventas/stock");
 }
 

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearUsuario(formData: FormData) {
   "use server";
@@ -27,6 +28,13 @@ async function crearUsuario(formData: FormData) {
     if (sucursalIds.length && formData.get("acceso_todas") !== "on") {
       await db.from("usuario_sucursales").insert(sucursalIds.map((sid) => ({ usuario_id: usuario.id, sucursal_id: sid })));
     }
+
+    await registrarAuditoria({
+      accion: "crear_usuario",
+      entidad: "usuarios",
+      entidadId: usuario.id,
+      detalle: { usuario: usuario.usuario, nombre_completo: usuario.nombre_completo },
+    });
   }
   revalidatePath("/dashboard/usuarios");
 }
@@ -38,6 +46,11 @@ async function cambiarPassword(usuarioId: string, formData: FormData) {
   if (!nueva || nueva.length < 4) return;
   const hash = await bcrypt.hash(nueva, 10);
   await db.from("usuarios").update({ password_hash: hash }).eq("id", usuarioId);
+  await registrarAuditoria({
+    accion: "cambiar_password",
+    entidad: "usuarios",
+    entidadId: usuarioId,
+  });
   revalidatePath("/dashboard/usuarios");
 }
 
@@ -45,19 +58,30 @@ async function toggleActivo(usuarioId: string, activo: boolean) {
   "use server";
   const db = supabaseAdmin();
   await db.from("usuarios").update({ activo: !activo }).eq("id", usuarioId);
+  await registrarAuditoria({
+    accion: activo ? "desactivar_usuario" : "activar_usuario",
+    entidad: "usuarios",
+    entidadId: usuarioId,
+  });
   revalidatePath("/dashboard/usuarios");
 }
 
 async function crearRolPersonalizado(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
-  await db.from("roles").insert({
+  const { data: rol } = await db.from("roles").insert({
     nombre: formData.get("nombre"),
     es_base: false,
     temporal: formData.get("temporal") === "on",
     vigente_desde: formData.get("vigente_desde") || null,
     vigente_hasta: formData.get("vigente_hasta") || null,
     permisos: {},
+  }).select().single();
+  await registrarAuditoria({
+    accion: "crear_rol",
+    entidad: "roles",
+    entidadId: rol?.id,
+    detalle: { nombre: formData.get("nombre") },
   });
   revalidatePath("/dashboard/usuarios");
 }

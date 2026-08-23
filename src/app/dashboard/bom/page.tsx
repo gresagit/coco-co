@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function agregarItemBom(formData: FormData) {
   "use server";
@@ -16,6 +17,12 @@ async function agregarItemBom(formData: FormData) {
       cantidad_por_unidad: cantidad,
       unidad,
     });
+    await registrarAuditoria({
+      accion: "agregar_componente_bom",
+      entidad: "bom",
+      entidadId: productoId,
+      detalle: { tipo: "insumo", insumo_id: formData.get("insumo_id"), cantidad, unidad },
+    });
   } else {
     const insumoProductoId = formData.get("insumo_producto_id") as string;
     if (insumoProductoId === productoId) {
@@ -29,6 +36,12 @@ async function agregarItemBom(formData: FormData) {
       cantidad_por_unidad: cantidad,
       unidad,
     });
+    await registrarAuditoria({
+      accion: "agregar_componente_bom",
+      entidad: "bom",
+      entidadId: productoId,
+      detalle: { tipo: "producto_anidado", insumo_producto_id: insumoProductoId, cantidad, unidad },
+    });
   }
   revalidatePath("/dashboard/bom");
 }
@@ -37,6 +50,11 @@ async function eliminarItemBom(id: string) {
   "use server";
   const db = supabaseAdmin();
   await db.from("bom").delete().eq("id", id);
+  await registrarAuditoria({
+    accion: "eliminar_componente_bom",
+    entidad: "bom",
+    entidadId: id,
+  });
   revalidatePath("/dashboard/bom");
 }
 

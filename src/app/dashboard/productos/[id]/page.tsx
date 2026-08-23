@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function actualizarStockMinimo(productoId: string, formData: FormData) {
   "use server";
@@ -13,6 +14,12 @@ async function actualizarStockMinimo(productoId: string, formData: FormData) {
     .update({ stock_minimo: stockMinimo })
     .eq("producto_id", productoId)
     .eq("sucursal_id", sucursalId);
+  await registrarAuditoria({
+    accion: "actualizar_stock_minimo",
+    entidad: "producto_stock",
+    entidadId: productoId,
+    detalle: { sucursal_id: sucursalId, stock_minimo: stockMinimo },
+  });
   revalidatePath(`/dashboard/productos/${productoId}`);
 }
 
@@ -24,6 +31,12 @@ async function actualizarPrecioManual(productoId: string, formData: FormData) {
     .from("productos")
     .update({ precio_venta_override: val ? Number(val) : null })
     .eq("id", productoId);
+  await registrarAuditoria({
+    accion: "actualizar_precio_manual",
+    entidad: "productos",
+    entidadId: productoId,
+    detalle: { precio_venta_override: val ? Number(val) : null },
+  });
   revalidatePath(`/dashboard/productos/${productoId}`);
 }
 

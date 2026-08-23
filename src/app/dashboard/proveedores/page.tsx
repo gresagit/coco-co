@@ -1,10 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearProveedor(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
-  await db.from("proveedores").insert({
+  const { data: proveedor } = await db.from("proveedores").insert({
     nombre: formData.get("nombre"),
     contacto: formData.get("contacto"),
     telefono: formData.get("telefono"),
@@ -12,6 +13,12 @@ async function crearProveedor(formData: FormData) {
     tiempo_entrega_dias: Number(formData.get("tiempo_entrega_dias") || 0) || null,
     condiciones_pago: formData.get("condiciones_pago"),
     pedido_minimo: Number(formData.get("pedido_minimo") || 0) || null,
+  }).select().single();
+  await registrarAuditoria({
+    accion: "crear_proveedor",
+    entidad: "proveedores",
+    entidadId: proveedor?.id,
+    detalle: { nombre: formData.get("nombre") },
   });
   revalidatePath("/dashboard/proveedores");
 }
@@ -24,6 +31,11 @@ async function asociarInsumo(formData: FormData) {
     insumo_id: formData.get("insumo_id"),
     precio_historico: Number(formData.get("precio_historico") || 0) || null,
     es_preferido: formData.get("es_preferido") === "on",
+  });
+  await registrarAuditoria({
+    accion: "asociar_insumo_proveedor",
+    entidad: "insumo_proveedores",
+    detalle: { proveedor_id: formData.get("proveedor_id"), insumo_id: formData.get("insumo_id") },
   });
   revalidatePath("/dashboard/proveedores");
 }

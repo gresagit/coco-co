@@ -29,7 +29,7 @@ export default function DashboardChrome({
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar nombre={nombre} open={menuAbierto} onClose={() => setMenuAbierto(false)} />
+      <Sidebar nombre={nombre} roles={roles} open={menuAbierto} onClose={() => setMenuAbierto(false)} />
 
       {/* Fondo oscuro detrás del menú cuando está abierto en móvil */}
       {menuAbierto && (

@@ -42,11 +42,11 @@ async function asociarInsumo(formData: FormData) {
 
 export default async function ProveedoresPage() {
   const db = supabaseAdmin();
-  const { data: proveedores } = await db.from("proveedores").select("*").order("nombre");
-  const { data: insumos } = await db.from("insumos").select("id, codigo_interno, nombre").order("nombre");
-  const { data: relaciones } = await db
-    .from("insumo_proveedores")
-    .select("*, insumos(nombre), proveedores(nombre)");
+  const [{ data: proveedores }, { data: insumos }, { data: relaciones }] = await Promise.all([
+    db.from("proveedores").select("*").order("nombre"),
+    db.from("insumos").select("id, codigo_interno, nombre").order("nombre"),
+    db.from("insumo_proveedores").select("*, insumos(nombre), proveedores(nombre)"),
+  ]);
 
   return (
     <div className="space-y-6">

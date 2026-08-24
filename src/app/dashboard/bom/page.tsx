@@ -87,17 +87,15 @@ async function eliminarItemBom(id: string) {
 
 export default async function BomPage({ searchParams }: { searchParams: { producto?: string } }) {
   const db = supabaseAdmin();
-  const { data: productos } = await db.from("productos").select("id, sku, nombre").order("nombre");
-  const { data: insumos } = await db
-    .from("insumos")
-    .select("id, codigo_interno, nombre, unidad_medida, costo_unitario_actual")
-    .eq("activo", true)
-    .order("nombre");
-  const { data: productosIntermedios } = await db
-    .from("productos")
-    .select("id, sku, nombre, unidad_venta")
-    .eq("es_insumo_de_otro", true)
-    .order("nombre");
+  const [{ data: productos }, { data: insumos }, { data: productosIntermedios }] = await Promise.all([
+    db.from("productos").select("id, sku, nombre").order("nombre"),
+    db
+      .from("insumos")
+      .select("id, codigo_interno, nombre, unidad_medida, costo_unitario_actual")
+      .eq("activo", true)
+      .order("nombre"),
+    db.from("productos").select("id, sku, nombre, unidad_venta").eq("es_insumo_de_otro", true).order("nombre"),
+  ]);
 
   const productoSel = searchParams.producto || productos?.[0]?.id;
 

@@ -62,9 +62,11 @@ async function crearOrden(formData: FormData) {
 
 export default async function NuevaOrdenCompraPage({ searchParams }: { searchParams: { insumo?: string } }) {
   const db = supabaseAdmin();
-  const { data: proveedores } = await db.from("proveedores").select("*").eq("activo", true).order("nombre");
-  const { data: sucursales } = await db.from("sucursales").select("*").eq("activa", true).order("nombre");
-  const { data: insumos } = await db.from("insumos").select("id, codigo_interno, nombre, costo_unitario_actual").order("nombre");
+  const [{ data: proveedores }, { data: sucursales }, { data: insumos }] = await Promise.all([
+    db.from("proveedores").select("*").eq("activo", true).order("nombre"),
+    db.from("sucursales").select("*").eq("activa", true).order("nombre"),
+    db.from("insumos").select("id, codigo_interno, nombre, costo_unitario_actual").order("nombre"),
+  ]);
 
   return (
     <div className="space-y-6">

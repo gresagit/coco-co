@@ -69,9 +69,6 @@ export default async function AuditoriaPage({
 
   const db = supabaseAdmin();
 
-  const { data: usuarios } = await db.from("usuarios").select("id, usuario, nombre_completo").order("nombre_completo");
-  const { data: sucursales } = await db.from("sucursales").select("id, nombre").order("nombre");
-
   let query = db
     .from("auditoria")
     .select("*, usuarios(usuario, nombre_completo), sucursales(nombre)")
@@ -84,10 +81,13 @@ export default async function AuditoriaPage({
   if (searchParams.desde) query = query.gte("fecha", `${searchParams.desde}T00:00:00`);
   if (searchParams.hasta) query = query.lte("fecha", `${searchParams.hasta}T23:59:59`);
 
-  const { data: eventos } = await query;
-
-  // Para el filtro de "Acción" — lista de acciones distintas ya usadas.
-  const { data: accionesDistintas } = await db.from("auditoria").select("accion").limit(1000);
+  const [{ data: usuarios }, { data: sucursales }, { data: eventos }, { data: accionesDistintas }] = await Promise.all([
+    db.from("usuarios").select("id, usuario, nombre_completo").order("nombre_completo"),
+    db.from("sucursales").select("id, nombre").order("nombre"),
+    query,
+    // Para el filtro de "Acción" — lista de acciones distintas ya usadas.
+    db.from("auditoria").select("accion").limit(1000),
+  ]);
   const accionesUnicas = Array.from(new Set((accionesDistintas || []).map((a: any) => a.accion))).sort();
 
   return (

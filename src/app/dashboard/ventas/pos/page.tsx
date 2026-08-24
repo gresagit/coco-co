@@ -74,21 +74,21 @@ export default async function VentasPosPage() {
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
 
-  const { data: productos } = await db.from("productos").select("id, sku, nombre").order("nombre");
+  const [{ data: productos }, { data: sucursal }, { data: ventasData }] = await Promise.all([
+    db.from("productos").select("id, sku, nombre").order("nombre"),
+    sucursalId ? db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle() : Promise.resolve({ data: null as any }),
+    sucursalId
+      ? db
+          .from("ventas_pos")
+          .select("*, productos(nombre, sku)")
+          .eq("sucursal_id", sucursalId)
+          .order("creado_en", { ascending: false })
+          .limit(50)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
 
-  let ventas: any[] = [];
-  let sucursalNombre = "";
-  if (sucursalId) {
-    const { data: sucursal } = await db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle();
-    sucursalNombre = sucursal?.nombre || "";
-    const { data } = await db
-      .from("ventas_pos")
-      .select("*, productos(nombre, sku)")
-      .eq("sucursal_id", sucursalId)
-      .order("creado_en", { ascending: false })
-      .limit(50);
-    ventas = data || [];
-  }
+  const ventas = ventasData || [];
+  const sucursalNombre = sucursal?.nombre || "";
 
   const hoy = new Date().toDateString();
   const totalHoy = ventas

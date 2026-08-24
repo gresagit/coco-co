@@ -72,15 +72,16 @@ async function confirmarRecepcion(movimientoId: string) {
 
 export default async function MovimientosPage() {
   const db = supabaseAdmin();
-  const { data: sucursales } = await db.from("sucursales").select("*").eq("activa", true).order("nombre");
-  const { data: productos } = await db.from("productos").select("id, sku, nombre").order("nombre");
-  const { data: insumos } = await db.from("insumos").select("id, codigo_interno, nombre").order("nombre");
-
-  const { data: movimientos } = await db
-    .from("movimientos")
-    .select("*, productos(nombre), insumos(nombre), sucursales(nombre), origen:sucursal_origen_id(nombre), destino:sucursal_destino_id(nombre)")
-    .order("fecha", { ascending: false })
-    .limit(100);
+  const [{ data: sucursales }, { data: productos }, { data: insumos }, { data: movimientos }] = await Promise.all([
+    db.from("sucursales").select("*").eq("activa", true).order("nombre"),
+    db.from("productos").select("id, sku, nombre").order("nombre"),
+    db.from("insumos").select("id, codigo_interno, nombre").order("nombre"),
+    db
+      .from("movimientos")
+      .select("*, productos(nombre), insumos(nombre), sucursales(nombre), origen:sucursal_origen_id(nombre), destino:sucursal_destino_id(nombre)")
+      .order("fecha", { ascending: false })
+      .limit(100),
+  ]);
 
   return (
     <div className="space-y-6">

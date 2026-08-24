@@ -122,22 +122,19 @@ async function editarProducto(formData: FormData) {
 
 export default async function ProductosPage() {
   const db = supabaseAdmin();
-  const { data: productos } = await db
-    .from("productos")
-    .select("*, categorias(nombre)")
-    .order("nombre");
-  const { data: categorias } = await db.from("categorias").select("*").order("nombre");
-
   const sucursalId = getSucursalActualId();
+
+  const [{ data: productos }, { data: categorias }, { data: stockRows }] = await Promise.all([
+    db.from("productos").select("*, categorias(nombre)").order("nombre"),
+    db.from("categorias").select("*").order("nombre"),
+    sucursalId
+      ? db.from("producto_stock").select("producto_id, cantidad_disponible").eq("sucursal_id", sucursalId)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
   const stockPorProducto: Record<string, number> = {};
-  if (sucursalId) {
-    const { data: stockRows } = await db
-      .from("producto_stock")
-      .select("producto_id, cantidad_disponible")
-      .eq("sucursal_id", sucursalId);
-    for (const row of stockRows || []) {
-      stockPorProducto[row.producto_id] = Number(row.cantidad_disponible);
-    }
+  for (const row of stockRows || []) {
+    stockPorProducto[row.producto_id] = Number(row.cantidad_disponible);
   }
 
   const conCosteo = await Promise.all(

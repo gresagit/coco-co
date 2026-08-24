@@ -38,8 +38,10 @@ async function crearOrdenProduccion(formData: FormData) {
 
 export default async function NuevaOrdenProduccionPage() {
   const db = supabaseAdmin();
-  const { data: productos } = await db.from("productos").select("id, sku, nombre").eq("activo", true).order("nombre");
-  const { data: sucursales } = await db.from("sucursales").select("*").eq("activa", true).order("nombre");
+  const [{ data: productos }, { data: sucursales }] = await Promise.all([
+    db.from("productos").select("id, sku, nombre").eq("activo", true).order("nombre"),
+    db.from("sucursales").select("*").eq("activa", true).order("nombre"),
+  ]);
 
   return (
     <div className="space-y-6">

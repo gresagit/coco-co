@@ -33,15 +33,12 @@ async function eliminarConfig(id: string) {
 
 export default async function AlertasPage() {
   const db = supabaseAdmin();
-  const { data: roles } = await db.from("roles").select("*").order("nombre");
-  const { data: configs } = await db.from("alertas_config").select("*, roles(nombre)").order("tipo_alerta");
-
-  const { data: insumoStock } = await db
-    .from("insumo_stock")
-    .select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)");
-  const { data: productoStock } = await db
-    .from("producto_stock")
-    .select("cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)");
+  const [{ data: roles }, { data: configs }, { data: insumoStock }, { data: productoStock }] = await Promise.all([
+    db.from("roles").select("*").order("nombre"),
+    db.from("alertas_config").select("*, roles(nombre)").order("tipo_alerta"),
+    db.from("insumo_stock").select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)"),
+    db.from("producto_stock").select("cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)"),
+  ]);
 
   const activasInsumo = (insumoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
   const activasProducto = (productoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);

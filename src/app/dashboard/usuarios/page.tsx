@@ -88,10 +88,12 @@ async function crearRolPersonalizado(formData: FormData) {
 
 export default async function UsuariosPage() {
   const db = supabaseAdmin();
-  const { data: usuarios } = await db.from("usuarios").select("*").order("created_at");
-  const { data: roles } = await db.from("roles").select("*").order("nombre");
-  const { data: sucursales } = await db.from("sucursales").select("*").eq("activa", true).order("nombre");
-  const { data: usuarioRoles } = await db.from("usuario_roles").select("usuario_id, roles(nombre)");
+  const [{ data: usuarios }, { data: roles }, { data: sucursales }, { data: usuarioRoles }] = await Promise.all([
+    db.from("usuarios").select("*").order("created_at"),
+    db.from("roles").select("*").order("nombre"),
+    db.from("sucursales").select("*").eq("activa", true).order("nombre"),
+    db.from("usuario_roles").select("usuario_id, roles(nombre)"),
+  ]);
 
   const rolesPorUsuario: Record<string, string[]> = {};
   (usuarioRoles || []).forEach((ur: any) => {

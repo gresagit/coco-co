@@ -84,21 +84,20 @@ async function crearInsumo(formData: FormData) {
 
 export default async function InsumosPage() {
   const db = supabaseAdmin();
-  const { data: insumos } = await db.from("insumos").select("*").order("nombre");
-
   const sucursalId = getSucursalActualId();
-  let sucursalNombre = "";
+
+  const [{ data: insumos }, { data: sucursal }, { data: stockRows }] = await Promise.all([
+    db.from("insumos").select("*").order("nombre"),
+    sucursalId ? db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle() : Promise.resolve({ data: null as any }),
+    sucursalId
+      ? db.from("insumo_stock").select("insumo_id, cantidad_disponible").eq("sucursal_id", sucursalId)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const sucursalNombre = sucursal?.nombre || "";
   const stockPorInsumo: Record<string, number> = {};
-  if (sucursalId) {
-    const { data: sucursal } = await db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle();
-    sucursalNombre = sucursal?.nombre || "";
-    const { data: stockRows } = await db
-      .from("insumo_stock")
-      .select("insumo_id, cantidad_disponible")
-      .eq("sucursal_id", sucursalId);
-    for (const row of stockRows || []) {
-      stockPorInsumo[row.insumo_id] = Number(row.cantidad_disponible);
-    }
+  for (const row of stockRows || []) {
+    stockPorInsumo[row.insumo_id] = Number(row.cantidad_disponible);
   }
 
   return (

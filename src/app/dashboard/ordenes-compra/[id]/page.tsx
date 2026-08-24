@@ -87,15 +87,10 @@ async function recibirMercancia(id: string, formData: FormData) {
 
 export default async function DetalleOrdenCompraPage({ params }: { params: { id: string } }) {
   const db = supabaseAdmin();
-  const { data: orden } = await db
-    .from("ordenes_compra")
-    .select("*, proveedores(*), sucursales(nombre)")
-    .eq("id", params.id)
-    .single();
-  const { data: items } = await db
-    .from("orden_compra_items")
-    .select("*, insumos(nombre, codigo_interno, unidad_medida)")
-    .eq("orden_compra_id", params.id);
+  const [{ data: orden }, { data: items }] = await Promise.all([
+    db.from("ordenes_compra").select("*, proveedores(*), sucursales(nombre)").eq("id", params.id).single(),
+    db.from("orden_compra_items").select("*, insumos(nombre, codigo_interno, unidad_medida)").eq("orden_compra_id", params.id),
+  ]);
 
   if (!orden) return <p>Orden no encontrada.</p>;
 

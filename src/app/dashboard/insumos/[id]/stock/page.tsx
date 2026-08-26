@@ -89,7 +89,6 @@ async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
       marca: (formData.get("marca") as string)?.trim() || null,
       tipo: formData.get("tipo"),
       unidad_medida: formData.get("unidad_medida"),
-      costo_unitario_actual: Number(formData.get("costo_unitario_actual") || 0),
     })
     .eq("id", insumoId);
   await registrarAuditoria({
@@ -246,13 +245,10 @@ export default async function InsumoStockPage({ params }: { params: { id: string
           </div>
           <div>
             <label className="label">Costo unitario actual</label>
-            <input
-              name="costo_unitario_actual"
-              type="number"
-              step="0.0001"
-              defaultValue={insumo?.costo_unitario_actual}
-              className="input"
-            />
+            <output className="input block bg-brand-50" aria-label="Costo unitario actual">
+              ${Number(insumo?.costo_unitario_actual || 0).toFixed(4)} / {insumo?.unidad_medida}
+            </output>
+            <p className="text-xs text-brand-400 mt-1">Se calcula con el costo total pagado dividido entre la cantidad recibida.</p>
           </div>
           <div className="flex items-end">
             <button className="btn-primary w-full sm:w-auto">Guardar cambios</button>

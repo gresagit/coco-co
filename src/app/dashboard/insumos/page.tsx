@@ -7,6 +7,7 @@ import type { SVGProps } from "react";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInsumos from "@/components/EscanerInsumos";
 import InsumoTipoUnidad from "@/components/InsumoTipoUnidad";
+import CostoInicialInsumo from "@/components/CostoInicialInsumo";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearInsumo(formData: FormData) {
@@ -17,6 +18,8 @@ async function crearInsumo(formData: FormData) {
   const codigoInterno = await siguienteCodigoInsumo(tipo);
   const controlaCaducidad = formData.get("controla_caducidad") === "on";
   const cantidadInicial = Number(formData.get("cantidad_inicial") || 0);
+  const costoTotalInicial = Number(formData.get("costo_total_inicial") || 0);
+  const costoUnitario = cantidadInicial > 0 && costoTotalInicial > 0 ? costoTotalInicial / cantidadInicial : null;
   const fechaCaducidad = (formData.get("fecha_caducidad") as string) || null;
 
   const { data: insumo, error } = await db
@@ -28,7 +31,7 @@ async function crearInsumo(formData: FormData) {
       tipo,
       unidad_medida: formData.get("unidad_medida"),
       controla_caducidad: controlaCaducidad,
-      costo_unitario_actual: Number(formData.get("costo_unitario_actual") || 0),
+      costo_unitario_actual: costoUnitario || 0,
     })
     .select()
     .single();
@@ -54,6 +57,8 @@ async function crearInsumo(formData: FormData) {
           fecha_caducidad: fechaCaducidad,
           cantidad_inicial: cantidadInicial,
           cantidad_restante: cantidadInicial,
+          costo_total: costoTotalInicial || null,
+          costo_unitario: costoUnitario,
         });
       }
       await db
@@ -67,6 +72,8 @@ async function crearInsumo(formData: FormData) {
         insumo_id: insumo.id,
         sucursal_id: sucursalActualId,
         cantidad: cantidadInicial,
+        costo_total: costoTotalInicial || null,
+        costo_unitario: costoUnitario,
         referencia: "Alta inicial",
         notas: "Cantidad inicial capturada al crear el insumo",
       });
@@ -145,16 +152,7 @@ export default async function InsumosPage() {
             <input name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
           </div>
           <InsumoTipoUnidad />
-          <div>
-            <label className="label">Costo unitario actual</label>
-            <input name="costo_unitario_actual" type="number" step="0.0001" className="input" defaultValue={0} />
-          </div>
-          <div>
-            <label className="label">
-              Cantidad inicial {sucursalNombre && <span className="text-brand-400 font-normal">({sucursalNombre})</span>}
-            </label>
-            <input name="cantidad_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 100" defaultValue={0} />
-          </div>
+          <CostoInicialInsumo sucursalNombre={sucursalNombre} />
           <div>
             <label className="label">Fecha de caducidad (si aplica)</label>
             <input name="fecha_caducidad" type="date" className="input" />

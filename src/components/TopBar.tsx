@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { dispararBurbujas } from "@/lib/burbujas";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -23,6 +23,7 @@ export default function TopBar({
   onMenuClick?: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [cambiando, setCambiando] = useState(false);
   const sucursalDetailsRef = useRef<HTMLDetailsElement>(null);
   const perfilDetailsRef = useRef<HTMLDetailsElement>(null);
@@ -53,6 +54,15 @@ export default function TopBar({
     router.refresh();
   }
 
+  function volver() {
+    const origenInterno = document.referrer.startsWith(window.location.origin);
+    if (origenInterno && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/dashboard");
+  }
+
   // Cada click sobre un botón/enlace/selector de la barra de herramientas
   // avienta unas burbujitas de jabón desde donde se hizo click — puro efecto
   // visual, no cambia ninguna lógica de los controles.
@@ -67,6 +77,19 @@ export default function TopBar({
       onClickCapture={onClickToolbar}
       className="h-16 border-b border-brand-150 bg-cream/95 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between gap-3 px-4 sm:px-6"
     >
+      {pathname !== "/dashboard" && (
+        <button
+          type="button"
+          onClick={volver}
+          aria-label="Regresar a la página anterior"
+          title="Regresar"
+          className="text-ink p-1.5 rounded-lg hover:bg-brand-100 transition-colors"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M19 12H5M11 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
       {/* Botón de menú — solo visible en pantallas chicas, abre el sidebar */}
       <button
         type="button"

@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { siguienteFolioOC } from "@/lib/folios";
 import { redirect } from "next/navigation";
 import { registrarAuditoria } from "@/lib/auditoria";
+import ItemsOrdenCompra from "@/components/ItemsOrdenCompra";
 
 async function crearOrden(formData: FormData) {
   "use server";
@@ -65,7 +66,7 @@ export default async function NuevaOrdenCompraPage({ searchParams }: { searchPar
   const [{ data: proveedores }, { data: sucursales }, { data: insumos }] = await Promise.all([
     db.from("proveedores").select("*").eq("activo", true).order("nombre"),
     db.from("sucursales").select("*").eq("activa", true).order("nombre"),
-    db.from("insumos").select("id, codigo_interno, nombre, costo_unitario_actual").order("nombre"),
+    db.from("insumos").select("id, codigo_interno, nombre, unidad_medida").order("nombre"),
   ]);
 
   return (
@@ -101,25 +102,14 @@ export default async function NuevaOrdenCompraPage({ searchParams }: { searchPar
         </div>
 
         <div>
-          <h2 className="font-semibold mb-2">Insumos solicitados</h2>
-          <p className="text-xs text-brand-500 mb-3">Agrega tantas filas como necesites (se guardan todas las que tengan cantidad {'>'} 0).</p>
-          <div className="space-y-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-2 pb-3 sm:pb-0 border-b sm:border-b-0 border-brand-100">
-                <select name="insumo_id" className="input" defaultValue="">
-                  <option value="">— Insumo —</option>
-                  {(insumos || []).map((ins: any) => (
-                    <option key={ins.id} value={ins.id} data-costo={ins.costo_unitario_actual}>
-                      {ins.codigo_interno} — {ins.nombre}
-                    </option>
-                  ))}
-                </select>
-                <input name="cantidad" type="number" step="0.01" className="input sm:!w-28" placeholder="Cantidad" />
-                <input name="costo_unitario" type="number" step="0.0001" className="input sm:!w-32" placeholder="Costo unitario" />
-                <div className="text-xs text-brand-400 flex items-center sm:justify-center">fila {i + 1}</div>
-              </div>
-            ))}
-          </div>
+          <ItemsOrdenCompra
+            insumos={(insumos || []).map((ins: any) => ({
+              id: ins.id,
+              codigo_interno: ins.codigo_interno,
+              nombre: ins.nombre,
+              unidad_medida: ins.unidad_medida,
+            }))}
+          />
         </div>
 
         <button className="btn-primary">Crear orden de compra</button>

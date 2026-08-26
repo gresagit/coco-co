@@ -102,9 +102,18 @@ async function recibirMercancia(id: string, formData: FormData) {
         insumo_id: item.insumo_id,
         sucursal_id: orden.sucursal_id,
         cantidad: cantidadRecibidaAhora,
+        costo_total: Number(item.costo_unitario) * cantidadRecibidaAhora || null,
+        costo_unitario: Number(item.costo_unitario) || null,
         referencia: orden.folio,
         notas: "Recepción de orden de compra",
       });
+
+      // El costo por unidad de esta orden de compra (calculado al crearla a
+      // partir de lo pagado en total) se vuelve el costo de referencia del
+      // insumo, para costeo de fórmulas/BOM y precio sugerido.
+      if (Number(item.costo_unitario) > 0) {
+        await db.from("insumos").update({ costo_unitario_actual: item.costo_unitario }).eq("id", item.insumo_id);
+      }
     }
   }
 

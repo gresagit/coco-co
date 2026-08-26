@@ -2,17 +2,24 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { registrarAuditoria } from "@/lib/auditoria";
+import EntradaInsumoForm from "@/components/EntradaInsumoForm";
 
 async function agregarEntrada(insumoId: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const cantidad = Number(formData.get("cantidad"));
+  const costoTotal = Number(formData.get("costo_total") || 0);
   const fechaCaducidad = (formData.get("fecha_caducidad") as string) || null;
   const folioLote = (formData.get("folio_lote") as string)?.trim();
 
   const { data: insumo } = await db.from("insumos").select("*").eq("id", insumoId).single();
   if (!insumo || !cantidad || cantidad <= 0) return;
+
+  // Costo por unidad (kg, L, pieza, etc.) a partir de lo realmente pagado:
+  // qué se compró (este insumo), cuánto se compró (cantidad) y cuánto costó
+  // en total (costo_total). Ej. 100 kg por $200 => $20.00 por kg.
+  const costoUnitario = costoTotal > 0 ? costoTotal / cantidad : null;
 
   if (insumo.controla_caducidad) {
     const folio = folioLote || `${insumo.codigo_interno}-${new Date().toISOString().slice(0, 10)}`;
@@ -23,6 +30,8 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
       fecha_caducidad: fechaCaducidad,
       cantidad_inicial: cantidad,
       cantidad_restante: cantidad,
+      costo_total: costoTotal || null,
+      costo_unitario: costoUnitario,
     });
   }
 
@@ -45,19 +54,29 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
     insumo_id: insumoId,
     sucursal_id: sucursalId,
     cantidad,
+    costo_total: costoTotal || null,
+    costo_unitario: costoUnitario,
     referencia: insumo.controla_caducidad ? "Entrada con lote" : "Entrada",
     notas: "Registrada desde ficha de insumo",
   });
+
+  // El costo por unidad de esta compra se vuelve el costo de referencia del
+  // insumo (el que se usa para costear fórmulas/BOM y precio sugerido),
+  // porque refleja lo que realmente se acaba de pagar.
+  if (costoUnitario !== null) {
+    await db.from("insumos").update({ costo_unitario_actual: costoUnitario }).eq("id", insumoId);
+  }
 
   await registrarAuditoria({
     accion: "agregar_entrada_insumo",
     entidad: "insumos",
     entidadId: insumoId,
     sucursalId,
-    detalle: { cantidad, folio_lote: folioLote || null },
+    detalle: { cantidad, costo_total: costoTotal || null, costo_unitario: costoUnitario, folio_lote: folioLote || null },
   });
 
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
+  revalidatePath("/dashboard/insumos");
 }
 
 async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
@@ -270,20 +289,13 @@ export default async function InsumoStockPage({ params }: { params: { id: string
               </div>
 
               <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-brand-100">
-                <form action={agregarEntrada.bind(null, params.id)} className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-brand-400">Agregar cantidad (compra o carga inicial)</p>
-                  <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
-                  <div className="flex flex-wrap gap-2">
-                    <input name="cantidad" type="number" step="0.01" min={0.01} placeholder="Cantidad" className="input !w-28" required />
-                    {insumo?.controla_caducidad && (
-                      <>
-                        <input name="fecha_caducidad" type="date" className="input !w-40" />
-                        <input name="folio_lote" placeholder="Folio de lote (opcional)" className="input !w-44" />
-                      </>
-                    )}
-                    <button className="btn-primary text-xs">Agregar</button>
-                  </div>
-                </form>
+                <EntradaInsumoForm
+                  insumoId={params.id}
+                  sucursalId={s.sucursal_id}
+                  unidadMedida={insumo?.unidad_medida || "u."}
+                  controlaCaducidad={!!insumo?.controla_caducidad}
+                  agregarEntrada={agregarEntrada}
+                />
 
                 <form action={ajusteManual.bind(null, params.id)} className="space-y-2">
                   <p className="text-xs font-medium uppercase tracking-wide text-brand-400">Corregir cantidad (salida o ajuste)</p>
@@ -311,6 +323,7 @@ export default async function InsumoStockPage({ params }: { params: { id: string
                           <th>Folio</th>
                           <th>Caduca</th>
                           <th>Restante</th>
+                          <th>Costo por unidad</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -320,6 +333,11 @@ export default async function InsumoStockPage({ params }: { params: { id: string
                             <td>{l.fecha_caducidad || "—"}</td>
                             <td>
                               {l.cantidad_restante} {insumo?.unidad_medida}
+                            </td>
+                            <td>
+                              {l.costo_unitario != null
+                                ? `$${Number(l.costo_unitario).toFixed(4)} / ${insumo?.unidad_medida}`
+                                : "—"}
                             </td>
                           </tr>
                         ))}

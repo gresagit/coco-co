@@ -49,6 +49,8 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
      y órdenes de compra
    - `supabase/migration_012_ventas_carrito.sql` — Permite registrar varios productos en una misma venta
      (carrito) desde el punto de venta
+   - `supabase/migration_013_costo_por_unidad.sql` — Guarda el costo total pagado y el costo por unidad
+     calculado (kg, L, pieza, etc.) en cada entrada de insumo
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.

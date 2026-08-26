@@ -10,6 +10,12 @@ const ESTADO_COLOR: Record<string, string> = {
   Cancelada: "badge-rojo",
 };
 
+const APROBACION_COLOR: Record<string, string> = {
+  Pendiente: "badge-amarillo",
+  Aprobada: "badge-verde",
+  Rechazada: "badge-rojo",
+};
+
 export default async function OrdenesCompraPage() {
   const db = supabaseAdmin();
   const { data: ordenes } = await db
@@ -32,7 +38,7 @@ export default async function OrdenesCompraPage() {
         <table className="table-base">
           <thead>
             <tr>
-              <th>Folio</th><th>Proveedor</th><th>Sucursal</th><th>Emisión</th><th>Entrega esperada</th><th>Total</th><th>Estado</th><th></th>
+              <th>Folio</th><th>Proveedor</th><th>Sucursal</th><th>Emisión</th><th>Entrega esperada</th><th>Total</th><th>Estado</th><th>Visto bueno</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -45,13 +51,14 @@ export default async function OrdenesCompraPage() {
                 <td>{o.fecha_entrega_esperada || "—"}</td>
                 <td>${Number(o.total).toFixed(2)}</td>
                 <td><span className={ESTADO_COLOR[o.estado] || "badge-amarillo"}>{o.estado}</span></td>
+                <td><span className={APROBACION_COLOR[o.aprobacion_estado] || "badge-amarillo"}>{o.aprobacion_estado}</span></td>
                 <td>
                   <Link href={`/dashboard/ordenes-compra/${o.id}`} className="text-brand-600 text-xs underline">Ver / gestionar</Link>
                 </td>
               </tr>
             ))}
             {(ordenes || []).length === 0 && (
-              <tr><td colSpan={8} className="text-brand-400 text-sm py-4">Aún no hay órdenes de compra.</td></tr>
+              <tr><td colSpan={9} className="text-brand-400 text-sm py-4">Aún no hay órdenes de compra.</td></tr>
             )}
           </tbody>
         </table>

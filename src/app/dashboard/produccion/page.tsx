@@ -1,6 +1,12 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import Link from "next/link";
 
+const APROBACION_COLOR: Record<string, string> = {
+  Pendiente: "badge-amarillo",
+  Aprobada: "badge-verde",
+  Rechazada: "badge-rojo",
+};
+
 export default async function ProduccionPage() {
   const db = supabaseAdmin();
   const { data: ordenes } = await db
@@ -22,7 +28,7 @@ export default async function ProduccionPage() {
       <div className="card overflow-x-auto">
         <table className="table-base">
           <thead>
-            <tr><th>Folio</th><th>Producto</th><th>Sucursal</th><th>Cant. planeada</th><th>Frecuencia reporte</th><th>Estado</th><th></th></tr>
+            <tr><th>Folio</th><th>Producto</th><th>Sucursal</th><th>Cant. planeada</th><th>Frecuencia reporte</th><th>Estado</th><th>Visto bueno</th><th></th></tr>
           </thead>
           <tbody>
             {(ordenes || []).map((o: any) => (
@@ -33,11 +39,12 @@ export default async function ProduccionPage() {
                 <td>{o.cantidad_planeada}</td>
                 <td>{o.frecuencia_reporte}</td>
                 <td><span className="badge-amarillo">{o.estado}</span></td>
+                <td><span className={APROBACION_COLOR[o.aprobacion_estado] || "badge-amarillo"}>{o.aprobacion_estado}</span></td>
                 <td><Link href={`/dashboard/produccion/${o.id}`} className="text-brand-600 text-xs underline">Ver / reportar avance</Link></td>
               </tr>
             ))}
             {(ordenes || []).length === 0 && (
-              <tr><td colSpan={7} className="text-brand-400 text-sm py-4">Aún no hay órdenes de producción.</td></tr>
+              <tr><td colSpan={8} className="text-brand-400 text-sm py-4">Aún no hay órdenes de producción.</td></tr>
             )}
           </tbody>
         </table>

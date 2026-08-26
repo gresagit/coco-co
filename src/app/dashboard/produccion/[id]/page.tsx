@@ -3,10 +3,46 @@ import { procesarReporteAvance } from "@/lib/produccion";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
+import { esAdministrador } from "@/lib/roles";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { resolverAprobacion } from "@/lib/aprobaciones";
+
+async function aprobarOrden(ordenId: string, formData: FormData) {
+  "use server";
+  await resolverAprobacion({
+    tabla: "ordenes_produccion",
+    id: ordenId,
+    decision: "Aprobada",
+    comentario: formData.get("comentario") as string,
+  });
+  revalidatePath(`/dashboard/produccion/${ordenId}`);
+  revalidatePath("/dashboard/produccion");
+}
+
+async function rechazarOrden(ordenId: string, formData: FormData) {
+  "use server";
+  await resolverAprobacion({
+    tabla: "ordenes_produccion",
+    id: ordenId,
+    decision: "Rechazada",
+    comentario: formData.get("comentario") as string,
+  });
+  revalidatePath(`/dashboard/produccion/${ordenId}`);
+  revalidatePath("/dashboard/produccion");
+}
 
 async function reportarAvance(ordenId: string, formData: FormData) {
   "use server";
+  const db = supabaseAdmin();
+  const { data: ordenActual } = await db
+    .from("ordenes_produccion")
+    .select("aprobacion_estado")
+    .eq("id", ordenId)
+    .single();
+  if (ordenActual?.aprobacion_estado !== "Aprobada") {
+    throw new Error("Esta orden todavía no tiene el visto bueno del administrador.");
+  }
+
   const user = await getSessionUser();
   const cantidadProducida = Number(formData.get("cantidad_producida") || 0);
   const cantidadMerma = Number(formData.get("cantidad_merma") || 0);
@@ -41,9 +77,11 @@ async function cerrarOrden(ordenId: string) {
 
 export default async function DetalleProduccionPage({ params }: { params: { id: string } }) {
   const db = supabaseAdmin();
+  const user = await getSessionUser();
+  const esAdmin = esAdministrador(user?.roles);
   const { data: orden } = await db
     .from("ordenes_produccion")
-    .select("*, productos(nombre, sku), sucursales(nombre)")
+    .select("*, productos(nombre, sku), sucursales(nombre), aprobador:aprobado_por(nombre_completo)")
     .eq("id", params.id)
     .single();
   const { data: reportes } = await db
@@ -76,7 +114,57 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
         <div className="card"><p className="text-brand-500 text-sm">Estado</p><p className="text-2xl font-bold">{orden.estado}</p></div>
       </div>
 
-      {orden.estado !== "Cerrada" && (
+      <div className="card">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="font-semibold">Visto bueno del administrador</h2>
+            <p className="text-sm mt-1">
+              Estado:{" "}
+              <span
+                className={
+                  orden.aprobacion_estado === "Aprobada"
+                    ? "badge-verde"
+                    : orden.aprobacion_estado === "Rechazada"
+                    ? "badge-rojo"
+                    : "badge-amarillo"
+                }
+              >
+                {orden.aprobacion_estado}
+              </span>
+            </p>
+            {orden.aprobacion_estado !== "Pendiente" && (
+              <p className="text-xs text-brand-400 mt-1">
+                {orden.aprobacion_estado} por {orden.aprobador?.nombre_completo || "—"}
+                {orden.aprobado_en ? ` · ${new Date(orden.aprobado_en).toLocaleString()}` : ""}
+                {orden.comentario_aprobacion ? ` · "${orden.comentario_aprobacion}"` : ""}
+              </p>
+            )}
+          </div>
+        </div>
+        {orden.aprobacion_estado === "Pendiente" && !esAdmin && (
+          <p className="text-xs text-accent-600 mt-3">
+            Esta orden todavía no tiene el visto bueno del administrador. No se puede reportar avance hasta que sea aprobada.
+          </p>
+        )}
+        {esAdmin && orden.aprobacion_estado === "Pendiente" && (
+          <form className="grid md:grid-cols-3 gap-3 items-end mt-3">
+            <div className="md:col-span-2">
+              <label className="label">Comentario (opcional)</label>
+              <input name="comentario" className="input" placeholder="Ej. Ajustar cantidad antes de producir" />
+            </div>
+            <div className="flex gap-2">
+              <button formAction={aprobarOrden.bind(null, orden.id)} className="btn-primary">
+                Dar visto bueno
+              </button>
+              <button formAction={rechazarOrden.bind(null, orden.id)} className="btn-secondary">
+                Rechazar
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {orden.estado !== "Cerrada" && orden.aprobacion_estado === "Aprobada" && (
         <div className="card">
           <h2 className="font-semibold mb-3">Reportar avance</h2>
           <form action={reportarAvance.bind(null, orden.id)} className="grid md:grid-cols-4 gap-3 items-end">

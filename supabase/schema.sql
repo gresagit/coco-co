@@ -191,6 +191,10 @@ create table ordenes_produccion (
   cantidad_planeada numeric(14,4) not null,
   frecuencia_reporte text not null default 'semanal' check (frecuencia_reporte in ('diario','semanal','mensual')),
   estado text not null default 'Abierta' check (estado in ('Abierta','En proceso','Cerrada','Cancelada')),
+  aprobacion_estado text not null default 'Pendiente' check (aprobacion_estado in ('Pendiente','Aprobada','Rechazada')),
+  aprobado_por uuid references usuarios(id),
+  aprobado_en timestamptz,
+  comentario_aprobacion text,
   creado_por uuid references usuarios(id),
   created_at timestamptz not null default now()
 );
@@ -283,6 +287,10 @@ create table ordenes_compra (
   fecha_entrega_esperada date,
   condiciones_pago text,
   estado text not null default 'Borrador' check (estado in ('Borrador','Enviada','Confirmada por proveedor','Recibida total','Recibida parcial','Cancelada')),
+  aprobacion_estado text not null default 'Pendiente' check (aprobacion_estado in ('Pendiente','Aprobada','Rechazada')),
+  aprobado_por uuid references usuarios(id),
+  aprobado_en timestamptz,
+  comentario_aprobacion text,
   total numeric(14,2) not null default 0,
   generado_por uuid references usuarios(id),
   created_at timestamptz not null default now()

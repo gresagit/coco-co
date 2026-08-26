@@ -45,6 +45,10 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
    - `supabase/migration_009_pedidos_impresion.sql` — Pedidos de impresión con varios productos a la vez
    - `supabase/migration_010_reparar_folio_contadores.sql` — Repara productos que les falte el contador de
      folio para generar códigos de barra (por ejemplo, si algún producto se dio de alta fuera de la app)
+   - `supabase/migration_011_aprobaciones.sql` — Visto bueno del Administrador para órdenes de producción
+     y órdenes de compra
+   - `supabase/migration_012_ventas_carrito.sql` — Permite registrar varios productos en una misma venta
+     (carrito) desde el punto de venta
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.

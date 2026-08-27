@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { SVGProps } from "react";
 import { dispararBurbujas } from "@/lib/burbujas";
-import { esAdministrador } from "@/lib/roles";
+import { APARTADOS_SISTEMA, esAdministrador, tienePermiso, type Permisos } from "@/lib/roles";
 
 type NavItem = { href: string; label: string; icon: (props: SVGProps<SVGSVGElement>) => JSX.Element };
 type NavGroup = { label: string; items: NavItem[] };
 
-function construirGrupos(esAdmin: boolean): NavGroup[] {
+function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
   const administracionItems: NavItem[] = [
     { href: "/dashboard/metas", label: "Metas de producción", icon: IconTarget },
     { href: "/dashboard/sucursales", label: "Sucursales", icon: IconStore },
@@ -19,7 +19,7 @@ function construirGrupos(esAdmin: boolean): NavGroup[] {
     administracionItems.push({ href: "/dashboard/auditoria", label: "Auditoría", icon: IconShield });
   }
 
-  return [
+  const grupos: NavGroup[] = [
     {
       label: "",
       items: [{ href: "/dashboard", label: "Inicio", icon: IconHome }],
@@ -60,21 +60,33 @@ function construirGrupos(esAdmin: boolean): NavGroup[] {
       items: administracionItems,
     },
   ];
+  if (esAdmin) return grupos;
+  return grupos
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        const apartado = APARTADOS_SISTEMA.find((entry) => item.href === entry.ruta);
+        return !apartado || tienePermiso(permisos, apartado.clave);
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 export default function Sidebar({
   nombre,
   roles = [],
+  permisos = {},
   open = false,
   onClose,
 }: {
   nombre: string;
   roles?: string[];
+  permisos?: Permisos;
   open?: boolean;
   onClose?: () => void;
 }) {
   const pathname = usePathname();
-  const GROUPS = construirGrupos(esAdministrador(roles));
+  const GROUPS = construirGrupos(esAdministrador(roles), permisos);
 
   // Mismo efecto de burbujitas de jabón que la barra superior, ahora al
   // hacer click en cualquier link/botón del menú lateral.

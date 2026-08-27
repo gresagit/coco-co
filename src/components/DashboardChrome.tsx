@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
+import type { Permisos } from "@/lib/roles";
 
 type Sucursal = { id: string; nombre: string };
 
@@ -16,6 +17,7 @@ export default function DashboardChrome({
   roles,
   sucursales,
   sucursalActualId,
+  permisos,
   children,
 }: {
   nombre: string;
@@ -23,13 +25,14 @@ export default function DashboardChrome({
   roles: string[];
   sucursales: Sucursal[];
   sucursalActualId: string | null;
+  permisos: Permisos;
   children: React.ReactNode;
 }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar nombre={nombre} roles={roles} open={menuAbierto} onClose={() => setMenuAbierto(false)} />
+      <Sidebar nombre={nombre} roles={roles} permisos={permisos} open={menuAbierto} onClose={() => setMenuAbierto(false)} />
 
       {/* Fondo oscuro detrás del menú cuando está abierto en móvil */}
       {menuAbierto && (
@@ -48,6 +51,7 @@ export default function DashboardChrome({
           sucursales={sucursales}
           sucursalActualId={sucursalActualId}
           onMenuClick={() => setMenuAbierto(true)}
+          permisos={permisos}
         />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0">{children}</main>
       </div>

@@ -21,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       roles={user.roles}
       sucursales={sucursales || []}
       sucursalActualId={getSucursalActualId()}
+      permisos={user.permisos}
     >
       {children}
     </DashboardChrome>

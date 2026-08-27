@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { dispararBurbujas } from "@/lib/burbujas";
 import ThemeToggle from "@/components/ThemeToggle";
+import type { Permisos } from "@/lib/roles";
 
 type Sucursal = { id: string; nombre: string };
 
@@ -14,6 +15,7 @@ export default function TopBar({
   sucursales,
   sucursalActualId,
   onMenuClick,
+  permisos,
 }: {
   nombre: string;
   usuario: string;
@@ -21,6 +23,7 @@ export default function TopBar({
   sucursales: Sucursal[];
   sucursalActualId: string | null;
   onMenuClick?: () => void;
+  permisos: Permisos;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -151,6 +154,7 @@ export default function TopBar({
           </div>
           <a
             href="/dashboard/usuarios"
+            hidden={!roles.includes("Administrador") && !permisos.usuarios?.includes("ver")}
             className="block px-3 py-2 text-sm text-brand-600 hover:bg-brand-50 transition-colors"
           >
             Usuarios y roles

@@ -2,12 +2,16 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { APARTADOS_SISTEMA } from "@/lib/roles";
 
 async function crearUsuario(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
   const password = formData.get("password") as string;
   const hash = await bcrypt.hash(password, 10);
+  const permisos = Object.fromEntries(
+    (formData.getAll("apartado") as string[]).map((apartado) => [apartado, ["ver"]])
+  );
 
   const { data: usuario, error } = await db
     .from("usuarios")
@@ -16,6 +20,7 @@ async function crearUsuario(formData: FormData) {
       nombre_completo: formData.get("nombre_completo"),
       password_hash: hash,
       acceso_todas_sucursales: formData.get("acceso_todas") === "on",
+      permisos,
     })
     .select()
     .single();
@@ -131,6 +136,18 @@ export default async function UsuariosPage() {
               {(sucursales || []).map((s: any) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
             </select>
           </div>
+          <fieldset className="md:col-span-3 border border-brand-150 rounded-lg p-3">
+            <legend className="px-1 text-sm font-medium text-ink">Apartados que puede ver</legend>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-1">
+              {APARTADOS_SISTEMA.map((apartado) => (
+                <label key={apartado.clave} className="flex items-center gap-2 text-sm text-brand-600">
+                  <input type="checkbox" name="apartado" value={apartado.clave} />
+                  <span>{apartado.etiqueta}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-brand-400 mt-2">Los apartados no seleccionados no aparecerán en su menú.</p>
+          </fieldset>
           <div className="md:col-span-3"><button className="btn-primary">Crear usuario</button></div>
         </form>
       </div>
@@ -148,8 +165,8 @@ export default async function UsuariosPage() {
           <div className="md:col-span-4"><button className="btn-primary">Crear rol</button></div>
         </form>
         <p className="text-xs text-brand-500 mt-2">
-          Los permisos granulares por módulo/acción se definen editando la columna JSON <code>permisos</code> del rol
-          (directamente en Supabase o desde una futura pantalla de detalle de rol).
+          Los permisos de visualización del usuario se seleccionan en el formulario. Los permisos del rol asignado se
+          conservan y se suman a esta selección.
         </p>
       </div>
 

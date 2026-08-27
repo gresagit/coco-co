@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import type { Permisos } from "@/lib/roles";
 
 const COOKIE_NAME = "cococo_session";
 const SUCURSAL_COOKIE_NAME = "cococo_sucursal_actual";
@@ -13,6 +14,7 @@ export type SessionUser = {
   roles: string[];
   acceso_todas_sucursales: boolean;
   sucursales: string[]; // ids de sucursal permitidas
+  permisos: Permisos;
 };
 
 function secret() {
@@ -121,7 +123,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const db = supabaseAdmin();
   const { data: user } = await db
     .from("usuarios")
-    .select("id, usuario, nombre_completo, activo, acceso_todas_sucursales")
+    .select("id, usuario, nombre_completo, activo, acceso_todas_sucursales, permisos")
     .eq("id", userId)
     .maybeSingle();
 
@@ -129,13 +131,24 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   const { data: roleRows } = await db
     .from("usuario_roles")
-    .select("roles(nombre)")
+    .select("roles(nombre, permisos)")
     .eq("usuario_id", user.id);
 
   const { data: sucRows } = await db
     .from("usuario_sucursales")
     .select("sucursal_id")
     .eq("usuario_id", user.id);
+
+  const permisos: Permisos = {};
+  for (const row of roleRows || []) {
+    const rolePermisos = (row as any).roles?.permisos || {};
+    for (const [apartado, acciones] of Object.entries(rolePermisos)) {
+      permisos[apartado] = Array.from(new Set([...(permisos[apartado] || []), ...(Array.isArray(acciones) ? acciones : [])]));
+    }
+  }
+  for (const [apartado, acciones] of Object.entries((user as any).permisos || {})) {
+    permisos[apartado] = Array.from(new Set([...(permisos[apartado] || []), ...(Array.isArray(acciones) ? acciones : [])]));
+  }
 
   return {
     id: user.id,
@@ -144,6 +157,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     acceso_todas_sucursales: user.acceso_todas_sucursales,
     roles: (roleRows || []).map((r: any) => r.roles?.nombre).filter(Boolean),
     sucursales: (sucRows || []).map((s: any) => s.sucursal_id),
+    permisos,
   };
 }
 

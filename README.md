@@ -54,6 +54,7 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
    - `supabase/migration_014_folios_ventas.sql` — Genera folios automáticos por sucursal para tickets del punto de venta
   - `supabase/migration_015_produccion_etapas.sql` — Agrega fecha estimada y distingue productos intermedios de productos listos para venta
   - `supabase/migration_016_permisos_usuarios.sql` — Permite seleccionar los apartados visibles para cada usuario
+  - `supabase/migration_017_canales_venta.sql` — Prepara configuraciones y mapeos de productos para Mercado Libre y Amazon
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.

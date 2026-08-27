@@ -5,7 +5,7 @@ export const APARTADOS_SISTEMA = [
   { clave: "insumos", etiqueta: "Insumos", grupo: "Catálogo", ruta: "/dashboard/insumos" },
   { clave: "bom", etiqueta: "Fórmulas (BOM)", grupo: "Catálogo", ruta: "/dashboard/bom" },
   { clave: "codigos_barra", etiqueta: "Códigos de barra", grupo: "Catálogo", ruta: "/dashboard/codigos-barra" },
-  { clave: "ventas_stock", etiqueta: "Stock Shopify", grupo: "Ventas", ruta: "/dashboard/ventas/stock" },
+  { clave: "ventas_stock", etiqueta: "Stock de canales de venta", grupo: "Ventas", ruta: "/dashboard/ventas/stock" },
   { clave: "ventas_pos", etiqueta: "Ventas punto de venta", grupo: "Ventas", ruta: "/dashboard/ventas/pos" },
   { clave: "produccion", etiqueta: "Producción", grupo: "Operación", ruta: "/dashboard/produccion" },
   { clave: "movimientos", etiqueta: "Movimientos", grupo: "Operación", ruta: "/dashboard/movimientos" },

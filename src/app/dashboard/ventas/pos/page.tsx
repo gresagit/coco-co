@@ -3,9 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import VentaCarrito from "@/components/VentaCarrito";
 
-type ItemCarrito = { producto_id: string; cantidad: number; precio_unitario: number };
+type ItemCarrito = { producto_id: string; cantidad: number };
 
 /**
  * Registra una venta con uno o varios productos (carrito) en una sola
@@ -17,7 +18,7 @@ type ItemCarrito = { producto_id: string; cantidad: number; precio_unitario: num
  *    solo insert/upsert de todas las filas, en vez de un round-trip a la
  *    base de datos por cada producto del carrito.
  */
-async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean; message?: string }> {
+async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean; message?: string; folio?: string }> {
   "use server";
   const user = await getSessionUser();
   const sucursalId = getSucursalActualId();
@@ -38,12 +39,30 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
   }
 
   const medioPago = (formData.get("medio_pago") as string) || "Efectivo";
-  const folioPos = (formData.get("folio_pos") as string)?.trim() || null;
   const notas = (formData.get("notas") as string)?.trim() || null;
 
   const db = supabaseAdmin();
   const ventaGrupoId = randomUUID();
   const productoIds = Array.from(new Set(items.map((it) => it.producto_id)));
+
+  const { data: productos, error: errProductos } = await db
+    .from("productos")
+    .select("id, precio_venta_override, porcentaje_margen_deseado")
+    .in("id", productoIds);
+  if (errProductos || !productos || productos.length !== productoIds.length) {
+    return { ok: false, message: "Uno de los productos ya no está disponible." };
+  }
+
+  const precios = new Map<string, number>();
+  for (const producto of productos) {
+    const costo = await calcularCostoProducto(producto.id);
+    precios.set(producto.id, producto.precio_venta_override ?? precioSugerido(costo, Number(producto.porcentaje_margen_deseado || 0)));
+  }
+
+  const { data: folioPos, error: errFolio } = await db.rpc("siguiente_folio_venta", { p_sucursal_id: sucursalId });
+  if (errFolio || !folioPos) {
+    return { ok: false, message: "No se pudo generar el folio de la venta." };
+  }
 
   // 1 sola consulta para el stock actual de todos los productos del carrito
   const { data: stockRows, error: errStockActual } = await db
@@ -76,11 +95,11 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
   const lineasVenta = items.map((it) => ({
     sucursal_id: sucursalId,
     producto_id: it.producto_id,
-    cantidad: it.cantidad,
-    precio_unitario: it.precio_unitario,
-    total: Number(it.cantidad) * Number(it.precio_unitario),
+       cantidad: it.cantidad,
+       precio_unitario: precios.get(it.producto_id) || 0,
+    total: Number(it.cantidad) * (precios.get(it.producto_id) || 0),
     medio_pago: medioPago,
-    folio_pos: folioPos,
+    folio_pos: folioPos as string,
     notas,
     registrada_por: user.id,
     venta_grupo_id: ventaGrupoId,
@@ -92,7 +111,7 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
     producto_id: it.producto_id,
     sucursal_id: sucursalId,
     cantidad: it.cantidad,
-    referencia: folioPos ? `Venta POS ${folioPos}` : "Venta POS",
+       referencia: `Venta POS ${folioPos}`,
     usuario_id: user.id,
     notas: notas || "Venta registrada desde punto de venta",
   }));
@@ -122,7 +141,7 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
   });
 
   revalidatePath("/dashboard/ventas/pos");
-  return { ok: true };
+  return { ok: true, folio: folioPos as string };
 }
 
 export default async function VentasPosPage() {
@@ -130,7 +149,7 @@ export default async function VentasPosPage() {
   const sucursalId = getSucursalActualId();
 
   const [{ data: productos }, { data: sucursal }, { data: ventasData }] = await Promise.all([
-    db.from("productos").select("id, sku, nombre").order("nombre"),
+    db.from("productos").select("id, sku, nombre, precio_venta_override, porcentaje_margen_deseado").order("nombre"),
     sucursalId ? db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle() : Promise.resolve({ data: null as any }),
     sucursalId
       ? db
@@ -144,6 +163,13 @@ export default async function VentasPosPage() {
 
   const ventas = ventasData || [];
   const sucursalNombre = sucursal?.nombre || "";
+  const productosConPrecio = await Promise.all((productos || []).map(async (producto: any) => ({
+    ...producto,
+    precio_venta: producto.precio_venta_override ?? precioSugerido(
+      await calcularCostoProducto(producto.id),
+      Number(producto.porcentaje_margen_deseado || 0)
+    ),
+  })));
 
   const hoy = new Date().toDateString();
   const totalHoy = ventas
@@ -210,7 +236,7 @@ export default async function VentasPosPage() {
         <>
           <div className="card">
             <h2 className="font-semibold mb-3">Nueva venta</h2>
-            <VentaCarrito productos={productos || []} registrarVentaCarrito={registrarVentaCarrito} />
+            <VentaCarrito productos={productosConPrecio} registrarVentaCarrito={registrarVentaCarrito} />
           </div>
 
           <div className="card overflow-x-auto">
@@ -223,6 +249,7 @@ export default async function VentasPosPage() {
                   <th>Total</th>
                   <th>Medio de pago</th>
                   <th>Folio</th>
+                  <th>Imprimir</th>
                 </tr>
               </thead>
               <tbody>
@@ -247,6 +274,12 @@ export default async function VentasPosPage() {
                       <td className="font-medium">${t.total.toFixed(2)}</td>
                       <td>{t.medioPago || "—"}</td>
                       <td className="font-mono text-xs">{t.folioPos || "—"}</td>
+                      <td>
+                        <div className="flex gap-2 whitespace-nowrap">
+                          <a href={`/api/ventas/pos/${t.grupoId}/pdf?formato=ticket`} target="_blank" className="text-brand-600 text-xs underline">Ticket</a>
+                          <a href={`/api/ventas/pos/${t.grupoId}/pdf?formato=carta`} target="_blank" className="text-brand-600 text-xs underline">Carta</a>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}

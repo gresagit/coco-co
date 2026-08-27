@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 
-type Producto = { id: string; sku: string; nombre: string };
+type Producto = { id: string; sku: string; nombre: string; precio_venta: number };
 
 type LineaCarrito = {
   producto_id: string;
@@ -12,7 +12,7 @@ type LineaCarrito = {
   precio_unitario: number;
 };
 
-type ResultadoVenta = { ok: boolean; message?: string };
+type ResultadoVenta = { ok: boolean; message?: string; folio?: string };
 
 export default function VentaCarrito({
   productos,
@@ -24,9 +24,7 @@ export default function VentaCarrito({
   const [carrito, setCarrito] = useState<LineaCarrito[]>([]);
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("");
-  const [precio, setPrecio] = useState("");
   const [medioPago, setMedioPago] = useState("Efectivo");
-  const [folioPos, setFolioPos] = useState("");
   const [notas, setNotas] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
@@ -43,7 +41,6 @@ export default function VentaCarrito({
     setExito(null);
     const prod = productosPorId.get(productoId);
     const cant = Number(cantidad);
-    const prec = Number(precio || 0);
 
     if (!prod) {
       setError("Selecciona un producto para agregar.");
@@ -53,24 +50,18 @@ export default function VentaCarrito({
       setError("La cantidad debe ser mayor a 0.");
       return;
     }
-    if (prec < 0) {
-      setError("El precio unitario no puede ser negativo.");
-      return;
-    }
-
     setCarrito((prev) => {
-      const idx = prev.findIndex((l) => l.producto_id === prod.id && l.precio_unitario === prec);
+      const idx = prev.findIndex((l) => l.producto_id === prod.id);
       if (idx >= 0) {
         const copia = [...prev];
         copia[idx] = { ...copia[idx], cantidad: copia[idx].cantidad + cant };
         return copia;
       }
-      return [...prev, { producto_id: prod.id, nombre: prod.nombre, sku: prod.sku, cantidad: cant, precio_unitario: prec }];
+      return [...prev, { producto_id: prod.id, nombre: prod.nombre, sku: prod.sku, cantidad: cant, precio_unitario: prod.precio_venta }];
     });
 
     setProductoId("");
     setCantidad("");
-    setPrecio("");
   }
 
   function quitarLinea(index: number) {
@@ -100,10 +91,8 @@ export default function VentaCarrito({
     formData.set("items_json", JSON.stringify(carrito.map((l) => ({
       producto_id: l.producto_id,
       cantidad: l.cantidad,
-      precio_unitario: l.precio_unitario,
     }))));
     formData.set("medio_pago", medioPago);
-    formData.set("folio_pos", folioPos);
     formData.set("notas", notas);
 
     startTransition(async () => {
@@ -113,9 +102,8 @@ export default function VentaCarrito({
         return;
       }
       setCarrito([]);
-      setFolioPos("");
       setNotas("");
-      setExito("Venta registrada correctamente.");
+      setExito(`Venta ${res.folio || ""} registrada correctamente.`);
     });
   }
 
@@ -146,14 +134,11 @@ export default function VentaCarrito({
         </div>
         <div>
           <label className="label">Precio unitario</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            className="input"
-            value={precio}
-            onChange={(e) => setPrecio(e.target.value)}
-          />
+          <p className="input bg-brand-50 text-ink">
+            {productosPorId.get(productoId)?.precio_venta
+              ? `$${productosPorId.get(productoId)!.precio_venta.toFixed(2)}`
+              : "Se calcula automáticamente"}
+          </p>
         </div>
         <div className="md:col-span-4">
           <button type="button" onClick={agregarLinea} className="btn-secondary">
@@ -211,10 +196,6 @@ export default function VentaCarrito({
             <option>Transferencia</option>
             <option>Otro</option>
           </select>
-        </div>
-        <div>
-          <label className="label">Folio / ticket (opcional)</label>
-          <input className="input" value={folioPos} onChange={(e) => setFolioPos(e.target.value)} placeholder="Ej. número de ticket" />
         </div>
         <div>
           <label className="label">Notas (opcional)</label>

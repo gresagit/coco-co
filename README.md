@@ -52,6 +52,7 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
    - `supabase/migration_013_costo_por_unidad.sql` — Guarda el costo total pagado y el costo por unidad
      calculado (kg, L, pieza, etc.) en cada entrada de insumo
    - `supabase/migration_014_folios_ventas.sql` — Genera folios automáticos por sucursal para tickets del punto de venta
+  - `supabase/migration_015_produccion_etapas.sql` — Agrega fecha estimada y distingue productos intermedios de productos listos para venta
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.

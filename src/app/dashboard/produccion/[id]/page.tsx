@@ -36,7 +36,7 @@ async function reportarAvance(ordenId: string, formData: FormData) {
   const db = supabaseAdmin();
   const { data: ordenActual } = await db
     .from("ordenes_produccion")
-    .select("aprobacion_estado")
+    .select("aprobacion_estado, cantidad_planeada")
     .eq("id", ordenId)
     .single();
   if (ordenActual?.aprobacion_estado !== "Aprobada") {
@@ -46,6 +46,17 @@ async function reportarAvance(ordenId: string, formData: FormData) {
   const user = await getSessionUser();
   const cantidadProducida = Number(formData.get("cantidad_producida") || 0);
   const cantidadMerma = Number(formData.get("cantidad_merma") || 0);
+  if (cantidadProducida <= 0 || cantidadMerma < 0) {
+    throw new Error("La cantidad producida debe ser mayor a cero y la merma no puede ser negativa.");
+  }
+  const { data: reportesPrevios } = await db
+    .from("reportes_avance")
+    .select("cantidad_producida, cantidad_merma")
+    .eq("orden_produccion_id", ordenId);
+  const producidoPrevio = (reportesPrevios || []).reduce((total, reporte) => total + Number(reporte.cantidad_producida), 0);
+  if (producidoPrevio + cantidadProducida + cantidadMerma > Number(ordenActual.cantidad_planeada)) {
+    throw new Error("El avance acumulado no puede superar la cantidad planeada de la orden.");
+  }
   await procesarReporteAvance({
     ordenProduccionId: ordenId,
     fecha: (formData.get("fecha") as string) || new Date().toISOString().slice(0, 10),
@@ -60,6 +71,7 @@ async function reportarAvance(ordenId: string, formData: FormData) {
     entidadId: ordenId,
     detalle: { cantidad_producida: cantidadProducida, cantidad_merma: cantidadMerma },
   });
+  await db.from("ordenes_produccion").update({ estado: "En proceso" }).eq("id", ordenId);
   revalidatePath(`/dashboard/produccion/${ordenId}`);
 }
 
@@ -81,7 +93,7 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
   const esAdmin = esAdministrador(user?.roles);
   const { data: orden } = await db
     .from("ordenes_produccion")
-    .select("*, productos(nombre, sku), sucursales(nombre), aprobador:aprobado_por(nombre_completo)")
+    .select("*, productos(nombre, sku, tipo_producto), sucursales(nombre), aprobador:aprobado_por(nombre_completo)")
     .eq("id", params.id)
     .single();
   const { data: reportes } = await db
@@ -89,6 +101,11 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
     .select("*, lotes(folio_lote)")
     .eq("orden_produccion_id", params.id)
     .order("created_at", { ascending: false });
+  const { data: receta } = await db
+    .from("bom")
+    .select("cantidad_por_unidad, unidad, insumos(nombre, codigo_interno, tipo), insumo_producto:insumo_producto_id(nombre, sku, tipo_producto)")
+    .eq("producto_id", params.id)
+    .order("id");
   const { data: lotes } = await db
     .from("lotes")
     .select("*, piezas(count)")
@@ -104,7 +121,10 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
       <div>
         <Link href="/dashboard/produccion" className="text-brand-600 text-sm underline">← Volver</Link>
         <h1 className="text-2xl font-bold mt-2">{orden.folio}</h1>
-        <p className="text-brand-500">{orden.productos?.sku} — {orden.productos?.nombre} · {orden.sucursales?.nombre}</p>
+        <p className="text-brand-500">
+          {orden.productos?.sku} — {orden.productos?.nombre} · {orden.sucursales?.nombre} · {orden.productos?.tipo_producto === "intermedio" ? "Producto intermedio" : "Producto terminado listo para venta"}
+        </p>
+        <p className="text-sm text-brand-500 mt-1">Fecha estimada: <b>{orden.fecha_estimada || "No definida"}</b></p>
       </div>
 
       <div className="grid md:grid-cols-4 gap-4">
@@ -189,11 +209,31 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
             </div>
           </form>
           <p className="text-xs text-brand-500 mt-2">
-            Al registrar, el sistema genera un lote y las piezas individuales (folio correlativo), descuenta insumos
-            del BOM proporcionalmente (producido + merma) y suma al inventario de producto terminado.
+            Al registrar, el sistema descuenta la receta proporcionalmente. El resultado queda en inventario como
+            {orden.productos?.tipo_producto === "intermedio" ? " producto intermedio para futuras recetas." : " producto terminado listo para venta."}
           </p>
         </div>
       )}
+
+      <div className="card overflow-x-auto">
+        <h2 className="font-semibold mb-3">Receta / materiales requeridos por unidad</h2>
+        {receta?.length ? (
+          <table className="table-base">
+            <thead><tr><th>Componente</th><th>Tipo</th><th>Cantidad por unidad</th><th>Unidad</th></tr></thead>
+            <tbody>
+              {receta.map((item: any, index: number) => {
+                const esProducto = !!item.insumo_producto;
+                return <tr key={index}>
+                  <td>{esProducto ? `${item.insumo_producto.sku} — ${item.insumo_producto.nombre}` : `${item.insumos?.codigo_interno || ""} ${item.insumos?.nombre || "—"}`}</td>
+                  <td>{esProducto ? (item.insumo_producto.tipo_producto === "intermedio" ? "Producto intermedio" : "Producto terminado") : item.insumos?.tipo || "Insumo"}</td>
+                  <td>{item.cantidad_por_unidad}</td>
+                  <td>{item.unidad}</td>
+                </tr>;
+              })}
+            </tbody>
+          </table>
+        ) : <p className="text-sm text-brand-400">Este producto todavía no tiene receta configurada.</p>}
+      </div>
 
       <div className="card overflow-x-auto">
         <h2 className="font-semibold mb-3">Historial de reportes de avance</h2>

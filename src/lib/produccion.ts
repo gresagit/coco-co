@@ -119,6 +119,13 @@ export async function procesarReporteAvance(params: {
       .from("producto_stock")
       .update({ cantidad_disponible: Number(prodStock.cantidad_disponible) + Number(params.cantidadProducida) })
       .eq("id", prodStock.id);
+  } else {
+    await db.from("producto_stock").insert({
+      producto_id: orden.producto_id,
+      sucursal_id: orden.sucursal_id,
+      stock_minimo: 0,
+      cantidad_disponible: Number(params.cantidadProducida),
+    });
   }
 
   await db.from("movimientos").insert({

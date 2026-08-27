@@ -18,6 +18,7 @@ async function crearOrdenProduccion(formData: FormData) {
       producto_id: productoId,
       sucursal_id: formData.get("sucursal_id"),
       cantidad_planeada: Number(formData.get("cantidad_planeada")),
+      fecha_estimada: formData.get("fecha_estimada") || null,
       frecuencia_reporte: formData.get("frecuencia_reporte"),
       estado: "Abierta",
     })
@@ -39,7 +40,7 @@ async function crearOrdenProduccion(formData: FormData) {
 export default async function NuevaOrdenProduccionPage() {
   const db = supabaseAdmin();
   const [{ data: productos }, { data: sucursales }] = await Promise.all([
-    db.from("productos").select("id, sku, nombre").eq("activo", true).order("nombre"),
+    db.from("productos").select("id, sku, nombre, tipo_producto").eq("activo", true).order("nombre"),
     db.from("sucursales").select("*").eq("activa", true).order("nombre"),
   ]);
 
@@ -50,7 +51,7 @@ export default async function NuevaOrdenProduccionPage() {
         <div>
           <label className="label">Producto a fabricar</label>
           <select name="producto_id" className="input" required>
-            {(productos || []).map((p: any) => <option key={p.id} value={p.id}>{p.sku} — {p.nombre}</option>)}
+            {(productos || []).map((p: any) => <option key={p.id} value={p.id}>{p.sku} — {p.nombre} ({p.tipo_producto === "intermedio" ? "Intermedio" : "Listo para venta"})</option>)}
           </select>
         </div>
         <div>
@@ -70,6 +71,10 @@ export default async function NuevaOrdenProduccionPage() {
             <option value="semanal">Semanal</option>
             <option value="mensual">Mensual</option>
           </select>
+        </div>
+        <div>
+          <label className="label">Fecha estimada de terminación</label>
+          <input name="fecha_estimada" type="date" className="input" required />
         </div>
         <div className="md:col-span-2">
           <button className="btn-primary">Crear orden de producción</button>

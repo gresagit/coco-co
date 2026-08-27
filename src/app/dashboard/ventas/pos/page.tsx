@@ -149,7 +149,7 @@ export default async function VentasPosPage() {
   const sucursalId = getSucursalActualId();
 
   const [{ data: productos }, { data: sucursal }, { data: ventasData }] = await Promise.all([
-    db.from("productos").select("id, sku, nombre, precio_venta_override, porcentaje_margen_deseado").order("nombre"),
+    db.from("productos").select("id, sku, nombre, tipo_producto, precio_venta_override, porcentaje_margen_deseado").eq("tipo_producto", "vendible").order("nombre"),
     sucursalId ? db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle() : Promise.resolve({ data: null as any }),
     sucursalId
       ? db

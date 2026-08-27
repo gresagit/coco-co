@@ -36,6 +36,7 @@ async function crearProducto(formData: FormData) {
       presentacion: formData.get("presentacion"),
       unidad_venta: formData.get("unidad_venta"),
       porcentaje_margen_deseado: Number(formData.get("margen") || 0.3),
+      tipo_producto: formData.get("tipo_producto") || "vendible",
       es_insumo_de_otro: formData.get("es_insumo_de_otro") === "on",
     })
     .select()
@@ -223,6 +224,13 @@ export default async function ProductosPage() {
           <div className="flex items-center gap-2 pt-6">
             <input type="checkbox" name="es_insumo_de_otro" id="anidado" />
             <label htmlFor="anidado" className="text-sm">¿Es también insumo de otro producto?</label>
+          </div>
+          <div>
+            <label className="label">Tipo de producto</label>
+            <select name="tipo_producto" className="input" defaultValue="vendible">
+              <option value="vendible">Producto terminado listo para venta</option>
+              <option value="intermedio">Producto intermedio para otra receta</option>
+            </select>
           </div>
           <div className="md:col-span-3">
             <button className="btn-primary">Agregar producto</button>

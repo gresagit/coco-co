@@ -20,6 +20,7 @@ export default function BomAgregarInsumo({
   agregarInsumoBom: (formData: FormData) => Promise<void>;
 }) {
   const [insumoId, setInsumoId] = useState(insumosDisponibles[0]?.id || "");
+  const [busqueda, setBusqueda] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -27,6 +28,13 @@ export default function BomAgregarInsumo({
     () => insumosDisponibles.find((i) => i.id === insumoId),
     [insumoId, insumosDisponibles]
   );
+  const insumosFiltrados = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+    if (!texto) return insumosDisponibles;
+    return insumosDisponibles.filter((i) =>
+      `${i.nombre} ${i.codigo_interno} ${i.unidad_medida}`.toLowerCase().includes(texto)
+    );
+  }, [busqueda, insumosDisponibles]);
 
   if (insumosDisponibles.length === 0) {
     return (
@@ -64,19 +72,42 @@ export default function BomAgregarInsumo({
         <input type="hidden" name="producto_id" value={productoId} />
         <div>
           <label className="label">Insumo</label>
-          <select
-            name="insumo_id"
+          <input type="hidden" name="insumo_id" value={insumoId} />
+          <input
+            type="search"
             className="input"
-            value={insumoId}
-            onChange={(e) => setInsumoId(e.target.value)}
-            required
-          >
-            {insumosDisponibles.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.codigo_interno} — {i.nombre}
-              </option>
-            ))}
-          </select>
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Busca por nombre, clave o unidad..."
+            aria-label="Buscar insumo por nombre, clave o unidad"
+          />
+          <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-brand-150 bg-surface" role="listbox" aria-label="Resultados de insumos">
+            {insumosFiltrados.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-brand-400">No encontramos ese insumo.</p>
+            ) : (
+              insumosFiltrados.map((i) => (
+                <button
+                  key={i.id}
+                  type="button"
+                  role="option"
+                  aria-selected={i.id === insumoId}
+                  onClick={() => {
+                    setInsumoId(i.id);
+                    setBusqueda(i.nombre);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm border-b border-brand-100 last:border-0 hover:bg-brand-50 transition-colors ${
+                    i.id === insumoId ? "bg-brand-50 text-ink font-medium" : "text-brand-600"
+                  }`}
+                >
+                  <span className="block">{i.nombre}</span>
+                  <span className="block text-xs text-brand-400">{i.codigo_interno} · {i.unidad_medida}</span>
+                </button>
+              ))
+            )}
+          </div>
+          <p className="mt-1 text-xs text-brand-400">
+            Seleccionado: <span className="text-ink">{insumoSeleccionado?.nombre || "ninguno"}</span>
+          </p>
         </div>
         <div>
           <label className="label">Cantidad por unidad</label>

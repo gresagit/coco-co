@@ -56,6 +56,10 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
       ],
     },
     {
+      label: "Análisis",
+      items: [{ href: "/dashboard/reportes", label: "Reportes y gráficos", icon: IconChart }],
+    },
+    {
       label: "Administración",
       items: administracionItems,
     },
@@ -171,6 +175,15 @@ function IconHome(props: SVGProps<SVGSVGElement>) {
       <path d="M4 11.5 12 4l8 7.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M6 10v9h12v-9" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M10 19v-5h4v5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChart(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 19.5h16M6.5 17v-5M11.5 17V7M16.5 17v-9" strokeLinecap="round" />
+      <path d="m5 9 5-4 5 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

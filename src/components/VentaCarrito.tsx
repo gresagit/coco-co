@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 
 type Producto = { id: string; sku: string; nombre: string; precio_venta: number };
 
+type TipoCliente = "ocasional" | "mayorista";
+
 type LineaCarrito = {
   producto_id: string;
   nombre: string;
@@ -24,6 +26,17 @@ export default function VentaCarrito({
   const [carrito, setCarrito] = useState<LineaCarrito[]>([]);
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("");
+  const [clienteTipo, setClienteTipo] = useState<TipoCliente>("ocasional");
+  const [clienteNombre, setClienteNombre] = useState("");
+  const [clienteApellido, setClienteApellido] = useState("");
+  const [clienteTelefono, setClienteTelefono] = useState("");
+  const [clienteEmpresa, setClienteEmpresa] = useState("");
+  const [clienteResponsable, setClienteResponsable] = useState("");
+  const [clienteTelefonoResponsable, setClienteTelefonoResponsable] = useState("");
+  const [clienteCorreoResponsable, setClienteCorreoResponsable] = useState("");
+  const [clienteLugarOrigen, setClienteLugarOrigen] = useState("");
+  const [clienteVolumenCompra, setClienteVolumenCompra] = useState("");
+  const [clienteProductosInteres, setClienteProductosInteres] = useState("");
   const [medioPago, setMedioPago] = useState("Efectivo");
   const [notas, setNotas] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +105,17 @@ export default function VentaCarrito({
       producto_id: l.producto_id,
       cantidad: l.cantidad,
     }))));
+    formData.set("cliente_tipo", clienteTipo);
+    formData.set("cliente_nombre", clienteNombre);
+    formData.set("cliente_apellido", clienteApellido);
+    formData.set("cliente_telefono", clienteTelefono);
+    formData.set("cliente_empresa", clienteEmpresa);
+    formData.set("cliente_responsable", clienteResponsable);
+    formData.set("cliente_telefono_responsable", clienteTelefonoResponsable);
+    formData.set("cliente_correo_responsable", clienteCorreoResponsable);
+    formData.set("cliente_lugar_origen", clienteLugarOrigen);
+    formData.set("cliente_volumen_compra", clienteVolumenCompra);
+    formData.set("cliente_productos_interes", clienteProductosInteres);
     formData.set("medio_pago", medioPago);
     formData.set("notas", notas);
 
@@ -102,6 +126,16 @@ export default function VentaCarrito({
         return;
       }
       setCarrito([]);
+      setClienteNombre("");
+      setClienteApellido("");
+      setClienteTelefono("");
+      setClienteEmpresa("");
+      setClienteResponsable("");
+      setClienteTelefonoResponsable("");
+      setClienteCorreoResponsable("");
+      setClienteLugarOrigen("");
+      setClienteVolumenCompra("");
+      setClienteProductosInteres("");
       setNotas("");
       setExito(`Venta ${res.folio || ""} registrada correctamente.`);
     });
@@ -186,6 +220,70 @@ export default function VentaCarrito({
           </table>
         </div>
       )}
+
+      <div className="space-y-3 border border-brand-100 rounded-xl p-3 bg-brand-50/40">
+        <div>
+          <label className="label">Tipo de cliente</label>
+          <div className="flex gap-4 mt-1">
+            <label className="inline-flex items-center gap-2 text-sm text-ink">
+              <input type="radio" name="cliente_tipo" value="ocasional" checked={clienteTipo === "ocasional"} onChange={() => setClienteTipo("ocasional")} />
+              Ocasional
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-ink">
+              <input type="radio" name="cliente_tipo" value="mayorista" checked={clienteTipo === "mayorista"} onChange={() => setClienteTipo("mayorista")} />
+              Mayorista
+            </label>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-3">
+          <div>
+            <label className="label">Nombre</label>
+            <input className="input" value={clienteNombre} onChange={(e) => setClienteNombre(e.target.value)} placeholder="Ej. Ana" />
+          </div>
+          <div>
+            <label className="label">Apellido</label>
+            <input className="input" value={clienteApellido} onChange={(e) => setClienteApellido(e.target.value)} placeholder="Ej. López" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="label">Teléfono</label>
+            <input className="input" value={clienteTelefono} onChange={(e) => setClienteTelefono(e.target.value)} placeholder="Ej. 555 123 4567" />
+          </div>
+        </div>
+
+        {clienteTipo === "mayorista" && (
+          <div className="grid md:grid-cols-2 gap-3 border-t border-brand-100 pt-3">
+            <div>
+              <label className="label">Nombre de la empresa</label>
+              <input className="input" value={clienteEmpresa} onChange={(e) => setClienteEmpresa(e.target.value)} placeholder="Ej. Distribuidora Cococo" />
+            </div>
+            <div>
+              <label className="label">Nombre del responsable</label>
+              <input className="input" value={clienteResponsable} onChange={(e) => setClienteResponsable(e.target.value)} placeholder="Ej. Patricia García" />
+            </div>
+            <div>
+              <label className="label">Número del responsable</label>
+              <input className="input" value={clienteTelefonoResponsable} onChange={(e) => setClienteTelefonoResponsable(e.target.value)} placeholder="Ej. 555 987 6543" />
+            </div>
+            <div>
+              <label className="label">Correo del responsable</label>
+              <input className="input" type="email" value={clienteCorreoResponsable} onChange={(e) => setClienteCorreoResponsable(e.target.value)} placeholder="correo@empresa.com" />
+            </div>
+            <div>
+              <label className="label">De dónde es</label>
+              <input className="input" value={clienteLugarOrigen} onChange={(e) => setClienteLugarOrigen(e.target.value)} placeholder="Ej. Guadalajara, Jalisco" />
+            </div>
+            <div>
+              <label className="label">Cuánto compra</label>
+              <input className="input" value={clienteVolumenCompra} onChange={(e) => setClienteVolumenCompra(e.target.value)} placeholder="Ej. Compra semanal / mensual / grande" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">Productos de interés</label>
+              <input className="input" value={clienteProductosInteres} onChange={(e) => setClienteProductosInteres(e.target.value)} placeholder="Opcional: productos o categorías de interés" />
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid md:grid-cols-3 gap-3">
         <div>

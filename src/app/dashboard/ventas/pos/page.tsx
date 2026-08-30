@@ -48,6 +48,7 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
     return { ok: false, message: validacionCliente.message || "La información del cliente es inválida." };
   }
 
+  const clienteValido = validacionCliente.cliente;
   const db = supabaseAdmin();
   const ventaGrupoId = randomUUID();
   const productoIds = Array.from(new Set(items.map((it) => it.producto_id)));
@@ -72,17 +73,17 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
   }
 
   const clientePayload = {
-    nombre: validacionCliente.cliente.nombre,
-    apellido: validacionCliente.cliente.apellido,
-    telefono: validacionCliente.cliente.telefono,
-    tipo_cliente: validacionCliente.cliente.es_mayorista ? "mayorista" : "ocasional",
-    nombre_empresa: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.nombre_empresa : null,
-    nombre_responsable: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.nombre_responsable : null,
-    telefono_responsable: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.telefono_responsable || null : null,
-    correo_responsable: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.correo_responsable || null : null,
-    lugar_origen: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.lugar_origen : null,
-    volumen_compra: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.volumen_compra : null,
-    productos_interes: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.productos_interes || null : null,
+    nombre: clienteValido.nombre,
+    apellido: clienteValido.apellido,
+    telefono: clienteValido.telefono,
+    tipo_cliente: clienteValido.es_mayorista ? "mayorista" : "ocasional",
+    nombre_empresa: clienteValido.es_mayorista ? clienteValido.nombre_empresa : null,
+    nombre_responsable: clienteValido.es_mayorista ? clienteValido.nombre_responsable : null,
+    telefono_responsable: clienteValido.es_mayorista ? clienteValido.telefono_responsable || null : null,
+    correo_responsable: clienteValido.es_mayorista ? clienteValido.correo_responsable || null : null,
+    lugar_origen: clienteValido.es_mayorista ? clienteValido.lugar_origen : null,
+    volumen_compra: clienteValido.es_mayorista ? clienteValido.volumen_compra : null,
+    productos_interes: clienteValido.es_mayorista ? clienteValido.productos_interes || null : null,
   };
 
   const { data: clienteGuardado, error: errCliente } = await db
@@ -136,17 +137,17 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
     registrada_por: user.id,
     venta_grupo_id: ventaGrupoId,
     cliente_id: clienteGuardado.id,
-    cliente_tipo: validacionCliente.cliente.es_mayorista ? "mayorista" : "ocasional",
-    cliente_nombre: validacionCliente.cliente.nombre,
-    cliente_apellido: validacionCliente.cliente.apellido,
-    cliente_telefono: validacionCliente.cliente.telefono,
-    cliente_empresa: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.nombre_empresa : null,
-    cliente_responsable: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.nombre_responsable : null,
-    cliente_telefono_responsable: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.telefono_responsable || null : null,
-    cliente_correo_responsable: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.correo_responsable || null : null,
-    cliente_lugar_origen: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.lugar_origen : null,
-    cliente_volumen_compra: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.volumen_compra : null,
-    cliente_productos_interes: validacionCliente.cliente.es_mayorista ? validacionCliente.cliente.productos_interes || null : null,
+    cliente_tipo: clienteValido.es_mayorista ? "mayorista" : "ocasional",
+    cliente_nombre: clienteValido.nombre,
+    cliente_apellido: clienteValido.apellido,
+    cliente_telefono: clienteValido.telefono,
+    cliente_empresa: clienteValido.es_mayorista ? clienteValido.nombre_empresa : null,
+    cliente_responsable: clienteValido.es_mayorista ? clienteValido.nombre_responsable : null,
+    cliente_telefono_responsable: clienteValido.es_mayorista ? clienteValido.telefono_responsable || null : null,
+    cliente_correo_responsable: clienteValido.es_mayorista ? clienteValido.correo_responsable || null : null,
+    cliente_lugar_origen: clienteValido.es_mayorista ? clienteValido.lugar_origen : null,
+    cliente_volumen_compra: clienteValido.es_mayorista ? clienteValido.volumen_compra : null,
+    cliente_productos_interes: clienteValido.es_mayorista ? clienteValido.productos_interes || null : null,
   }));
 
   const movimientos = items.map((it) => ({
@@ -181,7 +182,7 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
     entidad: "ventas_pos",
     entidadId: ventaGrupoId,
     sucursalId,
-    detalle: { productos: items.length, total: totalVenta, medio_pago: medioPago, folio_pos: folioPos, cliente: validacionCliente.cliente },
+    detalle: { productos: items.length, total: totalVenta, medio_pago: medioPago, folio_pos: folioPos, cliente: clienteValido },
   });
 
   revalidatePath("/dashboard/ventas/pos");

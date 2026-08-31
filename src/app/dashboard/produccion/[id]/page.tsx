@@ -170,11 +170,13 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
     .select("*, lotes(folio_lote)")
     .eq("orden_produccion_id", params.id)
     .order("created_at", { ascending: false });
-  const { data: receta } = await db
-    .from("bom")
-    .select("cantidad_por_unidad, unidad, insumos(nombre, codigo_interno, tipo), insumo_producto:insumo_producto_id(nombre, sku, tipo_producto)")
-    .eq("producto_id", params.id)
-    .order("id");
+  const { data: receta } = orden?.producto_id
+    ? await db
+        .from("bom")
+        .select("cantidad_por_unidad, unidad, insumos(nombre, codigo_interno, tipo), insumo_producto:insumo_producto_id(nombre, sku, tipo_producto)")
+        .eq("producto_id", orden.producto_id)
+        .order("id")
+    : { data: [] };
   const { data: lotes } = await db
     .from("lotes")
     .select("*, piezas(count)")

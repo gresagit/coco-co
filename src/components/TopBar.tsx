@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { dispararBurbujas } from "@/lib/burbujas";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -30,28 +30,35 @@ export default function TopBar({
   const [cambiando, setCambiando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [confirmarDestino, setConfirmarDestino] = useState<{ label: string; path: string } | null>(null);
   const [resultadosBusqueda, setResultadosBusqueda] = useState<Array<{ label: string; type: string; path: string; metadata?: string }>>([]);
   const sucursalDetailsRef = useRef<HTMLDetailsElement>(null);
   const perfilDetailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
     const pregunta = busqueda.trim();
-    if (!pregunta) {
+    if (pregunta.length < 2) {
       setResultadosBusqueda([]);
+      setIsSearching(false);
       return;
     }
 
     let activo = true;
     const timeout = window.setTimeout(async () => {
       try {
-        const res = await fetch(`/api/busqueda-global?q=${encodeURIComponent(pregunta)}`);
+        setIsSearching(true);
+        const controller = new AbortController();
+        const res = await fetch(`/api/busqueda-global?q=${encodeURIComponent(pregunta)}`, { signal: controller.signal });
         if (!res.ok) return;
         const data = await res.json();
         if (activo) setResultadosBusqueda(data.results || []);
       } catch {
         if (activo) setResultadosBusqueda([]);
+      } finally {
+        if (activo) setIsSearching(false);
       }
-    }, 200);
+    }, 250);
 
     return () => {
       activo = false;
@@ -94,10 +101,17 @@ export default function TopBar({
     router.push("/dashboard");
   }
 
-  function abrirResultado(ruta: string) {
+  function abrirResultado(ruta: string, label?: string) {
+    setConfirmarDestino(label ? { label, path: ruta } : null);
+  }
+
+  function confirmarNavegacion() {
+    if (!confirmarDestino) return;
+    const { path } = confirmarDestino;
     setBusqueda("");
     setMostrarResultados(false);
-    router.push(ruta);
+    setConfirmarDestino(null);
+    router.push(path);
   }
 
   // Cada click sobre un botón/enlace/selector de la barra de herramientas
@@ -187,13 +201,19 @@ export default function TopBar({
           onKeyDown={(event) => {
             if (event.key === "Enter" && resultadosBusqueda[0]) {
               event.preventDefault();
-              abrirResultado(resultadosBusqueda[0].path);
+              abrirResultado(resultadosBusqueda[0].path, resultadosBusqueda[0].label);
             }
           }}
           placeholder="Buscar productos, insumos, clientes, reportes..."
           aria-label="Buscar cualquier dato o sección del sistema"
           className="w-full rounded-lg border border-brand-200 bg-surface py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-brand-400 focus:border-brand-400 focus:outline-none"
         />
+
+        {isSearching && busqueda.trim().length >= 2 && (
+          <div className="absolute left-0 right-0 top-full mt-2 rounded-lg border border-brand-150 bg-surface px-3 py-2 text-xs text-brand-500 shadow-soft z-30">
+            Buscando resultados...
+          </div>
+        )}
 
         {mostrarResultados && busqueda.trim() && resultadosBusqueda.length > 0 && (
           <div className="absolute left-0 right-0 top-full mt-2 rounded-lg border border-brand-150 bg-surface shadow-soft z-30 overflow-hidden">
@@ -202,7 +222,7 @@ export default function TopBar({
                 key={`${opcion.path}-${opcion.label}-${opcion.type}`}
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => abrirResultado(opcion.path)}
+                onClick={() => abrirResultado(opcion.path, opcion.label)}
                 className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-brand-600 hover:bg-brand-50 transition-colors"
               >
                 <span className="min-w-0">
@@ -215,6 +235,19 @@ export default function TopBar({
           </div>
         )}
       </div>
+
+      {confirmarDestino && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/35 p-4">
+          <div className="w-full max-w-sm rounded-xl border border-brand-150 bg-surface p-4 shadow-soft">
+            <p className="text-sm text-brand-500">¿Quieres abrir esta sección?</p>
+            <p className="mt-2 text-lg font-semibold text-ink">{confirmarDestino.label}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setConfirmarDestino(null)} className="btn-secondary">Cancelar</button>
+              <button type="button" onClick={confirmarNavegacion} className="btn-primary">Ir</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modo claro / oscuro */}
       <ThemeToggle />

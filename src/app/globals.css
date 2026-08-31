@@ -93,6 +93,20 @@
     animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  @keyframes spin-green {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .loader-green {
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    border: 2px solid rgba(22, 163, 74, 0.2);
+    border-top-color: rgb(22 163 74);
+    display: inline-block;
+    animation: spin-green 0.8s linear infinite;
+  }
+
   /* Burbujitas de jabón que salen al hacer click en la barra de herramientas */
   @keyframes burbuja-subir {
     0% {

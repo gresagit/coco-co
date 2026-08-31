@@ -1,10 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { dispararBurbujas } from "@/lib/burbujas";
 import ThemeToggle from "@/components/ThemeToggle";
 import type { Permisos } from "@/lib/roles";
+
+const opcionesBusqueda = [
+  { label: "Dashboard", path: "/dashboard", keywords: ["inicio", "home", "panel", "principal"] },
+  { label: "Productos", path: "/dashboard/productos", keywords: ["producto", "productos", "catalogo", "inventario", "stock"] },
+  { label: "Insumos", path: "/dashboard/insumos", keywords: ["insumo", "insumos", "materiales", "materia prima"] },
+  { label: "Clientes", path: "/dashboard/ventas/pos", keywords: ["cliente", "clientes", "ventas", "pos", "comercial"] },
+  { label: "Proveedores", path: "/dashboard/proveedores", keywords: ["proveedor", "proveedores", "suministros"] },
+  { label: "Sucursales", path: "/dashboard/sucursales", keywords: ["sucursal", "sucursales", "tiendas", "locales"] },
+  { label: "Órdenes de compra", path: "/dashboard/ordenes-compra", keywords: ["ordenes", "orden de compra", "compras", "pedidos"] },
+  { label: "Producción", path: "/dashboard/produccion", keywords: ["produccion", "fabricacion", "lotes", "etiquetas"] },
+  { label: "Reportes", path: "/dashboard/reportes", keywords: ["reportes", "reporte", "estadisticas", "graficas"] },
+  { label: "Auditoría", path: "/dashboard/auditoria", keywords: ["auditoria", "logs", "acciones", "historial"] },
+  { label: "Usuarios", path: "/dashboard/usuarios", keywords: ["usuarios", "usuario", "equipo", "roles", "personal"] },
+];
 
 type Sucursal = { id: string; nombre: string };
 
@@ -28,8 +42,20 @@ export default function TopBar({
   const router = useRouter();
   const pathname = usePathname();
   const [cambiando, setCambiando] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [mostrarResultados, setMostrarResultados] = useState(false);
   const sucursalDetailsRef = useRef<HTMLDetailsElement>(null);
   const perfilDetailsRef = useRef<HTMLDetailsElement>(null);
+
+  const resultadosBusqueda = useMemo(() => {
+    const pregunta = busqueda.trim().toLowerCase();
+    if (!pregunta) return [];
+
+    return opcionesBusqueda.filter((opcion) => {
+      const texto = `${opcion.label} ${opcion.keywords.join(" ")}`.toLowerCase();
+      return texto.includes(pregunta);
+    }).slice(0, 6);
+  }, [busqueda]);
 
   const sucursalActual = sucursales.find((s) => s.id === sucursalActualId) || sucursales[0];
   const iniciales = nombre
@@ -64,6 +90,12 @@ export default function TopBar({
       return;
     }
     router.push("/dashboard");
+  }
+
+  function abrirResultado(ruta: string) {
+    setBusqueda("");
+    setMostrarResultados(false);
+    router.push(ruta);
   }
 
   // Cada click sobre un botón/enlace/selector de la barra de herramientas
@@ -132,26 +164,52 @@ export default function TopBar({
         </details>
       )}
 
-      <button
-        type="button"
-        aria-label="Buscar productos"
-        title="Buscar productos"
-        onClick={() => {
-          const searchInput = document.getElementById("productos-search") as HTMLInputElement | null;
-          if (searchInput) {
-            searchInput.focus();
-            searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-          }
-          router.push("/dashboard/productos");
-        }}
-        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-brand-200 bg-surface text-brand-500 hover:border-brand-400 hover:text-ink transition-colors"
-      >
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
-          <circle cx="11" cy="11" r="5.5" strokeLinecap="round" />
-          <path d="m16 16 4 4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+      <div className="relative hidden md:block w-full max-w-xs">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-brand-400">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+            <circle cx="11" cy="11" r="5.5" strokeLinecap="round" />
+            <path d="m16 16 4 4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(event) => {
+            setBusqueda(event.target.value);
+            setMostrarResultados(true);
+          }}
+          onFocus={() => setMostrarResultados(true)}
+          onBlur={() => {
+            window.setTimeout(() => setMostrarResultados(false), 120);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && resultadosBusqueda[0]) {
+              event.preventDefault();
+              abrirResultado(resultadosBusqueda[0].path);
+            }
+          }}
+          placeholder="Buscar secciones..."
+          aria-label="Buscar secciones o información"
+          className="w-full rounded-lg border border-brand-200 bg-surface py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-brand-400 focus:border-brand-400 focus:outline-none"
+        />
+
+        {mostrarResultados && busqueda.trim() && resultadosBusqueda.length > 0 && (
+          <div className="absolute left-0 right-0 top-full mt-2 rounded-lg border border-brand-150 bg-surface shadow-soft z-30 overflow-hidden">
+            {resultadosBusqueda.map((opcion) => (
+              <button
+                key={opcion.path}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => abrirResultado(opcion.path)}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-brand-600 hover:bg-brand-50 transition-colors"
+              >
+                <span>{opcion.label}</span>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-brand-400">Ir</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Modo claro / oscuro */}
       <ThemeToggle />

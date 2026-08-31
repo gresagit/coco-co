@@ -132,6 +132,27 @@ export default function TopBar({
         </details>
       )}
 
+      <button
+        type="button"
+        aria-label="Buscar productos"
+        title="Buscar productos"
+        onClick={() => {
+          const searchInput = document.getElementById("productos-search") as HTMLInputElement | null;
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+          }
+          router.push("/dashboard/productos");
+        }}
+        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-brand-200 bg-surface text-brand-500 hover:border-brand-400 hover:text-ink transition-colors"
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+          <circle cx="11" cy="11" r="5.5" strokeLinecap="round" />
+          <path d="m16 16 4 4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
       {/* Modo claro / oscuro */}
       <ThemeToggle />
 

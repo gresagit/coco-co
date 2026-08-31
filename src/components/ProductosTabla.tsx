@@ -27,72 +27,108 @@ export default function ProductosTabla({
   editarProducto: (formData: FormData) => Promise<void>;
 }) {
   const [editando, setEditando] = useState<Producto | null>(null);
+  const [search, setSearch] = useState("");
+
+  const productosFiltrados = productos.filter((p) => {
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+
+    const categoria = p.categorias?.nombre?.toLowerCase() || "";
+    return (
+      p.nombre.toLowerCase().includes(query) ||
+      p.sku.toLowerCase().includes(query) ||
+      categoria.includes(query)
+    );
+  });
 
   return (
-    <div className="card overflow-x-auto">
-      <table className="table-base">
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Nombre</th>
-            <th>Categoría</th>
-            <th>Stock</th>
-            <th>Costo (auto)</th>
-            <th>Precio sugerido</th>
-            <th>Margen</th>
-            <th className="text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {productos.map((p) => (
-            <tr key={p.id}>
-              <td className="font-mono text-xs">{p.sku}</td>
-              <td className="font-medium">{p.nombre}</td>
-              <td>{p.categorias?.nombre || "—"}</td>
-              <td className="font-medium">{p.stock}</td>
-              <td>${p.costo.toFixed(2)}</td>
-              <td>
-                ${p.precio.toFixed(2)}
-                {p.precio_venta_override && <span className="text-xs text-brand-400 ml-1">(manual)</span>}
-              </td>
-              <td>{(Number(p.porcentaje_margen_deseado) * 100).toFixed(0)}%</td>
-              <td>
-                <div className="flex items-center justify-end gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setEditando(p)}
-                    title="Editar producto"
-                    className="w-8 h-8 rounded-lg border border-brand-200 text-brand-500 flex items-center justify-center hover:border-ink hover:text-ink hover:bg-brand-50 transition-colors"
-                  >
-                    <IconEdit className="w-4 h-4" />
-                  </button>
-                  <Link
-                    href={`/dashboard/productos/${p.id}`}
-                    title="Detalle y stock por sucursal"
-                    className="w-8 h-8 rounded-lg border border-brand-200 text-brand-500 flex items-center justify-center hover:border-ink hover:text-ink hover:bg-brand-50 transition-colors"
-                  >
-                    <IconBox className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href={`/dashboard/bom?producto=${p.id}`}
-                    title="Editar fórmula (BOM)"
-                    className="w-8 h-8 rounded-lg border border-brand-200 text-brand-500 flex items-center justify-center hover:border-ink hover:text-ink hover:bg-brand-50 transition-colors"
-                  >
-                    <IconBeaker className="w-4 h-4" />
-                  </Link>
-                </div>
-              </td>
-            </tr>
-          ))}
-          {productos.length === 0 && (
+    <div className="card overflow-hidden">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 className="font-semibold text-ink">Productos</h2>
+          <p className="text-xs text-brand-400">{productosFiltrados.length} resultados</p>
+        </div>
+        <label className="relative block w-full max-w-sm">
+          <span className="sr-only">Buscar productos</span>
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-brand-400">
+            <IconSearch className="w-4 h-4" />
+          </span>
+          <input
+            id="productos-search"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre, SKU o categoría"
+            className="input pl-9"
+          />
+        </label>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="table-base">
+          <thead>
             <tr>
-              <td colSpan={8} className="text-center text-brand-400 py-6">
-                Todavía no hay productos.
-              </td>
+              <th>SKU</th>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Stock</th>
+              <th>Costo (auto)</th>
+              <th>Precio sugerido</th>
+              <th>Margen</th>
+              <th className="text-right">Acciones</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {productosFiltrados.map((p) => (
+              <tr key={p.id}>
+                <td className="font-mono text-xs">{p.sku}</td>
+                <td className="font-medium">{p.nombre}</td>
+                <td>{p.categorias?.nombre || "—"}</td>
+                <td className="font-medium">{p.stock}</td>
+                <td>${p.costo.toFixed(2)}</td>
+                <td>
+                  ${p.precio.toFixed(2)}
+                  {p.precio_venta_override && <span className="text-xs text-brand-400 ml-1">(manual)</span>}
+                </td>
+                <td>{(Number(p.porcentaje_margen_deseado) * 100).toFixed(0)}%</td>
+                <td>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setEditando(p)}
+                      title="Editar producto"
+                      className="w-8 h-8 rounded-lg border border-brand-200 text-brand-500 flex items-center justify-center hover:border-ink hover:text-ink hover:bg-brand-50 transition-colors"
+                    >
+                      <IconEdit className="w-4 h-4" />
+                    </button>
+                    <Link
+                      href={`/dashboard/productos/${p.id}`}
+                      title="Detalle y stock por sucursal"
+                      className="w-8 h-8 rounded-lg border border-brand-200 text-brand-500 flex items-center justify-center hover:border-ink hover:text-ink hover:bg-brand-50 transition-colors"
+                    >
+                      <IconBox className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href={`/dashboard/bom?producto=${p.id}`}
+                      title="Editar fórmula (BOM)"
+                      className="w-8 h-8 rounded-lg border border-brand-200 text-brand-500 flex items-center justify-center hover:border-ink hover:text-ink hover:bg-brand-50 transition-colors"
+                    >
+                      <IconBeaker className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {productosFiltrados.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center text-brand-400 py-6">
+                  No se encontraron productos con ese término.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {editando && (
         <ModalEditarProducto
@@ -252,6 +288,15 @@ function IconBeaker(props: SVGProps<SVGSVGElement>) {
       <path d="M9 3h6" strokeLinecap="round" />
       <path d="M10 3v6.5L4.8 18a1.6 1.6 0 0 0 1.4 2.4h11.6a1.6 1.6 0 0 0 1.4-2.4L14 9.5V3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M7.5 15h9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconSearch(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
+      <circle cx="11" cy="11" r="5.5" strokeLinecap="round" />
+      <path d="m16 16 4 4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

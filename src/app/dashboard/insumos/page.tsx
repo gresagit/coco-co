@@ -89,6 +89,48 @@ async function crearInsumo(formData: FormData) {
   revalidatePath("/dashboard/insumos");
 }
 
+async function eliminarInsumo(insumoId: string) {
+  "use server";
+  const db = supabaseAdmin();
+  const { error } = await db.from("insumos").delete().eq("id", insumoId);
+
+  if (error) {
+    throw new Error("No se pudo eliminar el insumo. Verifica que no tenga relaciones activas.");
+  }
+
+  await registrarAuditoria({
+    accion: "eliminar_insumo",
+    entidad: "insumos",
+    entidadId: insumoId,
+  });
+
+  revalidatePath("/dashboard/insumos");
+}
+
+async function eliminarInsumosMasivos(formData: FormData) {
+  "use server";
+  const ids = formData.getAll("insumo_ids").map(String).filter(Boolean);
+  if (!ids.length) return;
+
+  const db = supabaseAdmin();
+  const { error } = await db.from("insumos").delete().in("id", ids);
+  if (error) {
+    throw new Error("No se pudo eliminar la selección de insumos.");
+  }
+
+  await Promise.all(
+    ids.map((id) =>
+      registrarAuditoria({
+        accion: "eliminar_insumo",
+        entidad: "insumos",
+        entidadId: id,
+      })
+    )
+  );
+
+  revalidatePath("/dashboard/insumos");
+}
+
 export default async function InsumosPage() {
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
@@ -168,9 +210,20 @@ export default async function InsumosPage() {
       </div>
 
       <div className="card overflow-x-auto">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h2 className="font-semibold">Listado de insumos</h2>
+          <form action={eliminarInsumosMasivos} className="flex items-center">
+            <button type="submit" className="btn-secondary !border-red-200 !text-red-600 text-xs">
+              Eliminar seleccionados
+            </button>
+          </form>
+        </div>
         <table className="table-base">
           <thead>
             <tr>
+              <th className="w-10">
+                <input type="checkbox" aria-label="Seleccionar todos" className="checkbox" />
+              </th>
               <th>Código</th>
               <th>Nombre</th>
               <th>Marca</th>
@@ -184,6 +237,9 @@ export default async function InsumosPage() {
           <tbody>
             {(insumos || []).map((i: any) => (
               <tr key={i.id}>
+                <td>
+                  <input type="checkbox" name="insumo_ids" value={i.id} className="checkbox" />
+                </td>
                 <td className="font-mono text-xs">{i.codigo_interno}</td>
                 <td className="font-medium">{i.nombre}</td>
                 <td className="text-brand-500">{i.marca || "—"}</td>
@@ -197,6 +253,12 @@ export default async function InsumosPage() {
                   <Link href={`/dashboard/insumos/${i.id}/stock`} className="text-brand-600 text-xs underline">
                     Ver / editar
                   </Link>
+                  <span className="text-brand-200 mx-1.5">·</span>
+                  <form action={eliminarInsumo.bind(null, i.id)} className="inline-block">
+                    <button type="submit" className="text-red-600 text-xs underline">
+                      Eliminar
+                    </button>
+                  </form>
                   <span className="text-brand-200 mx-1.5">·</span>
                   <a
                     href={`/api/insumos/${i.id}/barcode/pdf`}

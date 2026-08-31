@@ -1,6 +1,41 @@
+import { randomBytes } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export type ModoGeneracion = "sin_lote" | "lote_existente" | "lote_nuevo";
+export type TipoFolio = "secuencial" | "universal";
+
+export function validarConteoCodigosSolicitados(solicitados: number, generados: number) {
+  const diferencia = generados - solicitados;
+
+  if (diferencia === 0) {
+    return { ok: true, estado: "correcto", diferencia: 0, mensaje: `Conteo correcto: ${generados} de ${solicitados}.` };
+  }
+
+  if (diferencia > 0) {
+    return {
+      ok: false,
+      estado: "sobra",
+      diferencia,
+      mensaje: `Se generaron ${generados} etiquetas y se solicitaron ${solicitados}. Sobraron ${diferencia}.`,
+    };
+  }
+
+  return {
+    ok: false,
+    estado: "falta",
+    diferencia,
+    mensaje: `Se generaron ${generados} etiquetas y se solicitaron ${solicitados}. Faltan ${Math.abs(diferencia)}.`,
+  };
+}
+
+function generarFolioUniversal(sku?: string) {
+  const prefijo = (sku || "PROD")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(0, 8)
+    .toUpperCase() || "PROD";
+  const token = randomBytes(3).toString("hex").slice(0, 6).toUpperCase();
+  return `${prefijo}-${token}`;
+}
 
 // Genera N folios de pieza (código de barras) para un producto, sin
 // necesidad de una orden de producción cerrada. Soporta tres modos:
@@ -19,6 +54,7 @@ export async function generarTandaCodigosBarra(params: {
   generadoPor?: string;
   metaId?: string;
   pedidoId?: string;
+  tipoFolio?: TipoFolio;
   // "Disponible" = ya está producido (se debe indicar a propósito).
   // "Pendiente" (default) = código impreso, aún no confirmado — lo confirma el escaneo.
   estadoInicial?: "Disponible" | "Pendiente";
@@ -52,6 +88,8 @@ export async function generarTandaCodigosBarra(params: {
   }
   // modo "sin_lote": loteId queda null
 
+  const tipoFolio = params.tipoFolio || "secuencial";
+
   const { data: generacion, error: errGen } = await db
     .from("generaciones_codigo_barra")
     .insert({
@@ -59,6 +97,7 @@ export async function generarTandaCodigosBarra(params: {
       sucursal_id: params.sucursalId,
       lote_id: loteId,
       cantidad: params.cantidad,
+      tipo_folio: tipoFolio,
       generado_por: params.generadoPor || null,
       meta_id: params.metaId || null,
       pedido_id: params.pedidoId || null,
@@ -108,17 +147,35 @@ export async function generarTandaCodigosBarra(params: {
   }
 
   const piezas = [];
+  const { data: producto } = await db.from("productos").select("sku").eq("id", params.productoId).single();
+
   for (let i = 0; i < params.cantidad; i++) {
-    const { data: folioData, error: errFolio } = await db.rpc("siguiente_folio_producto", {
-      p_producto_id: params.productoId,
-    });
-    if (errFolio) {
-      throw new Error(
-        `No se pudo generar el folio ${i + 1} de ${params.cantidad}: ${errFolio.message}`
-      );
+    let folioGenerado: string;
+
+    if (tipoFolio === "universal") {
+      let candidato = generarFolioUniversal(producto?.sku);
+      let intento = 0;
+      while (intento < 20) {
+        const { data: existente } = await db.from("piezas").select("id").eq("folio_pieza", candidato).maybeSingle();
+        if (!existente) break;
+        candidato = generarFolioUniversal(producto?.sku);
+        intento += 1;
+      }
+      folioGenerado = candidato;
+    } else {
+      const { data: folioData, error: errFolio } = await db.rpc("siguiente_folio_producto", {
+        p_producto_id: params.productoId,
+      });
+      if (errFolio) {
+        throw new Error(
+          `No se pudo generar el folio ${i + 1} de ${params.cantidad}: ${errFolio.message}`
+        );
+      }
+      folioGenerado = folioData as string;
     }
+
     piezas.push({
-      folio_pieza: folioData as string,
+      folio_pieza: folioGenerado,
       lote_id: loteId,
       producto_id: params.productoId,
       sucursal_id: params.sucursalId,
@@ -131,6 +188,12 @@ export async function generarTandaCodigosBarra(params: {
   if (piezas.length) {
     const { error: errPiezas } = await db.from("piezas").insert(piezas);
     if (errPiezas) throw errPiezas;
+  }
+
+  const conteoGenerado = await db.from("piezas").select("id", { count: "exact", head: true }).eq("generacion_id", generacion.id);
+  const resultadoConteo = validarConteoCodigosSolicitados(params.cantidad, Number(conteoGenerado.count || 0));
+  if (!resultadoConteo.ok) {
+    throw new Error(resultadoConteo.mensaje);
   }
 
   return generacion.id as string;
@@ -158,6 +221,7 @@ export async function generarPedidoMultiProducto(params: {
   sucursalId: string;
   items: { productoId: string; cantidad: number }[];
   generadoPor?: string;
+  tipoFolio?: TipoFolio;
 }) {
   const itemsValidos = params.items.filter((i) => i.productoId && i.cantidad > 0);
   if (!itemsValidos.length) throw new Error("Agrega al menos un producto con cantidad mayor a 0");
@@ -173,6 +237,7 @@ export async function generarPedidoMultiProducto(params: {
       modo: "sin_lote",
       generadoPor: params.generadoPor,
       pedidoId,
+      tipoFolio: params.tipoFolio || "secuencial",
     });
     generacionIds.push(generacionId);
   }

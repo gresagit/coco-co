@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
-import { generarPedidoMultiProducto } from "@/lib/codigos-barra";
+import { generarPedidoMultiProducto, type TipoFolio } from "@/lib/codigos-barra";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { registrarAuditoria } from "@/lib/auditoria";
@@ -9,6 +9,8 @@ async function generar(formData: FormData) {
   "use server";
   const user = await getSessionUser();
   const sucursalId = formData.get("sucursal_id") as string;
+
+  const tipoFolio = (formData.get("tipo_folio") as TipoFolio) || "secuencial";
 
   const items: { productoId: string; cantidad: number }[] = [];
   for (const [key, value] of formData.entries()) {
@@ -25,7 +27,7 @@ async function generar(formData: FormData) {
 
   let pedidoId: string;
   try {
-    const resultado = await generarPedidoMultiProducto({ sucursalId, items, generadoPor: user?.id });
+    const resultado = await generarPedidoMultiProducto({ sucursalId, items, generadoPor: user?.id, tipoFolio });
     pedidoId = resultado.pedidoId;
   } catch (err: any) {
     const mensaje = encodeURIComponent(err?.message || "No se pudo generar los códigos.");
@@ -83,15 +85,24 @@ export default async function NuevaGeneracionPage({
       )}
 
       <form action={generar} className="space-y-4">
-        <div className="card !py-4 max-w-xs">
-          <label className="label">Sucursal</label>
-          <select name="sucursal_id" className="input" required>
-            {(sucursales || []).map((s: any) => (
-              <option key={s.id} value={s.id}>
-                {s.nombre}
-              </option>
-            ))}
-          </select>
+        <div className="card !py-4 max-w-md grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="label">Sucursal</label>
+            <select name="sucursal_id" className="input" required>
+              {(sucursales || []).map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Tipo de folio</label>
+            <select name="tipo_folio" className="input" defaultValue="secuencial">
+              <option value="secuencial">Secuencial por producto</option>
+              <option value="universal">Universal no secuencial</option>
+            </select>
+          </div>
         </div>
 
         <div className="card overflow-x-auto">

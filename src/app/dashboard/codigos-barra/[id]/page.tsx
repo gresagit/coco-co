@@ -18,6 +18,14 @@ export default async function DetalleGeneracionPage({ params }: { params: { id: 
     .eq("generacion_id", params.id)
     .order("folio_pieza");
 
+  const conteoGenerado = piezas?.length ?? 0;
+  const conteoSolicitado = Number(generacion.cantidad || 0);
+  const resultadoConteo = conteoGenerado === conteoSolicitado
+    ? { ok: true, estado: "correcto", mensaje: `Conteo correcto: ${conteoGenerado} de ${conteoSolicitado}.` }
+    : conteoGenerado > conteoSolicitado
+      ? { ok: false, estado: "sobra", mensaje: `Sobraron ${conteoGenerado - conteoSolicitado} etiquetas.` }
+      : { ok: false, estado: "falta", mensaje: `Faltan ${conteoSolicitado - conteoGenerado} etiquetas.` };
+
   const piezaIds = (piezas || []).map((p: any) => p.id);
   const { data: reimpresiones } = piezaIds.length
     ? await db
@@ -47,6 +55,20 @@ export default async function DetalleGeneracionPage({ params }: { params: { id: 
           <a href={`/api/codigos-barra/${generacion.id}/termica`} target="_blank" className="btn-secondary">
             Descargar para térmica
           </a>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="font-semibold mb-1">Control de conteo</h2>
+            <p className="text-sm text-brand-500">
+              Tipo: <b>{generacion.tipo_folio === "universal" ? "Universal no secuencial" : "Secuencial por producto"}</b>
+            </p>
+          </div>
+          <span className={resultadoConteo.ok ? "badge-verde" : resultadoConteo.estado === "sobra" ? "badge-amarillo" : "badge-rojo"}>
+            {resultadoConteo.mensaje}
+          </span>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
-import { generarTandaCodigosBarra, ModoGeneracion } from "@/lib/codigos-barra";
+import { generarTandaCodigosBarra, type ModoGeneracion, type TipoFolio } from "@/lib/codigos-barra";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { registrarAuditoria } from "@/lib/auditoria";
@@ -20,6 +20,7 @@ async function generar(formData: FormData) {
       loteId: (formData.get("lote_id") as string) || undefined,
       folioLoteNuevo: (formData.get("folio_lote_nuevo") as string) || undefined,
       generadoPor: user?.id,
+      tipoFolio: (formData.get("tipo_folio") as TipoFolio) || "secuencial",
     });
   } catch (err: any) {
     const mensaje = encodeURIComponent(err?.message || "No se pudo generar los códigos.");
@@ -131,9 +132,18 @@ export default async function NuevaGeneracionPage({
           </div>
         </div>
 
-        <div>
-          <label className="label">Cantidad de códigos a imprimir</label>
-          <input name="cantidad" type="number" min="1" step="1" className="input" required />
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="label">Tipo de folio</label>
+            <select name="tipo_folio" className="input" defaultValue="secuencial">
+              <option value="secuencial">Secuencial por producto</option>
+              <option value="universal">Universal no secuencial</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Cantidad de códigos a imprimir</label>
+            <input name="cantidad" type="number" min="1" step="1" className="input" required />
+          </div>
         </div>
 
         <button className="btn-primary">Generar y ver PDF</button>

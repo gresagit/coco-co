@@ -1,24 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { dispararBurbujas } from "@/lib/burbujas";
 import ThemeToggle from "@/components/ThemeToggle";
 import type { Permisos } from "@/lib/roles";
-
-const opcionesBusqueda = [
-  { label: "Dashboard", path: "/dashboard", keywords: ["inicio", "home", "panel", "principal"] },
-  { label: "Productos", path: "/dashboard/productos", keywords: ["producto", "productos", "catalogo", "inventario", "stock"] },
-  { label: "Insumos", path: "/dashboard/insumos", keywords: ["insumo", "insumos", "materiales", "materia prima"] },
-  { label: "Clientes", path: "/dashboard/ventas/pos", keywords: ["cliente", "clientes", "ventas", "pos", "comercial"] },
-  { label: "Proveedores", path: "/dashboard/proveedores", keywords: ["proveedor", "proveedores", "suministros"] },
-  { label: "Sucursales", path: "/dashboard/sucursales", keywords: ["sucursal", "sucursales", "tiendas", "locales"] },
-  { label: "Órdenes de compra", path: "/dashboard/ordenes-compra", keywords: ["ordenes", "orden de compra", "compras", "pedidos"] },
-  { label: "Producción", path: "/dashboard/produccion", keywords: ["produccion", "fabricacion", "lotes", "etiquetas"] },
-  { label: "Reportes", path: "/dashboard/reportes", keywords: ["reportes", "reporte", "estadisticas", "graficas"] },
-  { label: "Auditoría", path: "/dashboard/auditoria", keywords: ["auditoria", "logs", "acciones", "historial"] },
-  { label: "Usuarios", path: "/dashboard/usuarios", keywords: ["usuarios", "usuario", "equipo", "roles", "personal"] },
-];
 
 type Sucursal = { id: string; nombre: string };
 
@@ -44,17 +30,33 @@ export default function TopBar({
   const [cambiando, setCambiando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [resultadosBusqueda, setResultadosBusqueda] = useState<Array<{ label: string; type: string; path: string; metadata?: string }>>([]);
   const sucursalDetailsRef = useRef<HTMLDetailsElement>(null);
   const perfilDetailsRef = useRef<HTMLDetailsElement>(null);
 
-  const resultadosBusqueda = useMemo(() => {
-    const pregunta = busqueda.trim().toLowerCase();
-    if (!pregunta) return [];
+  useEffect(() => {
+    const pregunta = busqueda.trim();
+    if (!pregunta) {
+      setResultadosBusqueda([]);
+      return;
+    }
 
-    return opcionesBusqueda.filter((opcion) => {
-      const texto = `${opcion.label} ${opcion.keywords.join(" ")}`.toLowerCase();
-      return texto.includes(pregunta);
-    }).slice(0, 6);
+    let activo = true;
+    const timeout = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/busqueda-global?q=${encodeURIComponent(pregunta)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (activo) setResultadosBusqueda(data.results || []);
+      } catch {
+        if (activo) setResultadosBusqueda([]);
+      }
+    }, 200);
+
+    return () => {
+      activo = false;
+      window.clearTimeout(timeout);
+    };
   }, [busqueda]);
 
   const sucursalActual = sucursales.find((s) => s.id === sucursalActualId) || sucursales[0];
@@ -188,8 +190,8 @@ export default function TopBar({
               abrirResultado(resultadosBusqueda[0].path);
             }
           }}
-          placeholder="Buscar secciones..."
-          aria-label="Buscar secciones o información"
+          placeholder="Buscar productos, insumos, clientes, reportes..."
+          aria-label="Buscar cualquier dato o sección del sistema"
           className="w-full rounded-lg border border-brand-200 bg-surface py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-brand-400 focus:border-brand-400 focus:outline-none"
         />
 
@@ -197,14 +199,17 @@ export default function TopBar({
           <div className="absolute left-0 right-0 top-full mt-2 rounded-lg border border-brand-150 bg-surface shadow-soft z-30 overflow-hidden">
             {resultadosBusqueda.map((opcion) => (
               <button
-                key={opcion.path}
+                key={`${opcion.path}-${opcion.label}-${opcion.type}`}
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => abrirResultado(opcion.path)}
                 className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-brand-600 hover:bg-brand-50 transition-colors"
               >
-                <span>{opcion.label}</span>
-                <span className="text-[10px] uppercase tracking-[0.12em] text-brand-400">Ir</span>
+                <span className="min-w-0">
+                  <span className="block truncate">{opcion.label}</span>
+                  {opcion.metadata && <span className="block text-[10px] text-brand-400 uppercase tracking-[0.08em]">{opcion.metadata}</span>}
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-brand-400">{opcion.type}</span>
               </button>
             ))}
           </div>

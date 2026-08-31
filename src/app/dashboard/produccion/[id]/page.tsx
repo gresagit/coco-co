@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { procesarReporteAvance } from "@/lib/produccion";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { esAdministrador } from "@/lib/roles";
@@ -87,15 +88,83 @@ async function cerrarOrden(ordenId: string) {
   revalidatePath(`/dashboard/produccion/${ordenId}`);
 }
 
+async function editarOrden(ordenId: string, formData: FormData) {
+  "use server";
+  const db = supabaseAdmin();
+  const { data: ordenActual } = await db.from("ordenes_produccion").select("estado").eq("id", ordenId).single();
+
+  if (ordenActual?.estado === "Cerrada") {
+    throw new Error("No se puede editar una orden cerrada.");
+  }
+
+  const productoId = (formData.get("producto_id") as string) || null;
+  const sucursalId = (formData.get("sucursal_id") as string) || null;
+  const cantidadPlaneada = Number(formData.get("cantidad_planeada") || 0);
+  const fechaEstimada = (formData.get("fecha_estimada") as string) || null;
+  const frecuenciaReporte = (formData.get("frecuencia_reporte") as string) || "semanal";
+
+  if (!productoId || !sucursalId || !cantidadPlaneada || cantidadPlaneada <= 0) {
+    throw new Error("Faltan datos obligatorios para editar la orden de producción.");
+  }
+
+  const { error } = await db
+    .from("ordenes_produccion")
+    .update({
+      producto_id: productoId,
+      sucursal_id: sucursalId,
+      cantidad_planeada: cantidadPlaneada,
+      fecha_estimada: fechaEstimada,
+      frecuencia_reporte: frecuenciaReporte,
+    })
+    .eq("id", ordenId);
+
+  if (error) {
+    throw new Error("No se pudo actualizar la orden de producción.");
+  }
+
+  await registrarAuditoria({
+    accion: "editar_orden_produccion",
+    entidad: "ordenes_produccion",
+    entidadId: ordenId,
+    detalle: { producto_id: productoId, sucursal_id: sucursalId, cantidad_planeada: cantidadPlaneada },
+  });
+
+  revalidatePath(`/dashboard/produccion/${ordenId}`);
+  revalidatePath("/dashboard/produccion");
+}
+
+async function eliminarOrden(ordenId: string) {
+  "use server";
+  const db = supabaseAdmin();
+  const { error } = await db.from("ordenes_produccion").delete().eq("id", ordenId);
+
+  if (error) {
+    throw new Error("No se pudo eliminar la orden de producción.");
+  }
+
+  await registrarAuditoria({
+    accion: "eliminar_orden_produccion",
+    entidad: "ordenes_produccion",
+    entidadId: ordenId,
+  });
+
+  revalidatePath("/dashboard/produccion");
+  redirect("/dashboard/produccion");
+}
+
 export default async function DetalleProduccionPage({ params }: { params: { id: string } }) {
   const db = supabaseAdmin();
   const user = await getSessionUser();
   const esAdmin = esAdministrador(user?.roles);
-  const { data: orden } = await db
-    .from("ordenes_produccion")
-    .select("*, productos(nombre, sku, tipo_producto), sucursales(nombre), aprobador:aprobado_por(nombre_completo)")
-    .eq("id", params.id)
-    .single();
+  const [{ data: orden }, { data: productos }, { data: sucursales }] = await Promise.all([
+    db
+      .from("ordenes_produccion")
+      .select("*, productos(nombre, sku, tipo_producto), sucursales(nombre), aprobador:aprobado_por(nombre_completo)")
+      .eq("id", params.id)
+      .single(),
+    db.from("productos").select("id, sku, nombre, tipo_producto").eq("activo", true).order("nombre"),
+    db.from("sucursales").select("*").eq("activa", true).order("nombre"),
+  ]);
   const { data: reportes } = await db
     .from("reportes_avance")
     .select("*, lotes(folio_lote)")
@@ -182,6 +251,54 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
             </div>
           </form>
         )}
+      </div>
+
+      <div className="card">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h2 className="font-semibold">Editar orden de producción</h2>
+          <form action={eliminarOrden.bind(null, orden.id)}>
+            <button type="submit" className="btn-secondary !border-red-200 !text-red-600">
+              Eliminar orden
+            </button>
+          </form>
+        </div>
+        <form action={editarOrden.bind(null, orden.id)} className="grid md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="label">Producto</label>
+            <select name="producto_id" className="input" defaultValue={orden.producto_id} required>
+              {(productos || []).map((p: any) => (
+                <option key={p.id} value={p.id}>{p.sku} — {p.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Sucursal</label>
+            <select name="sucursal_id" className="input" defaultValue={orden.sucursal_id} required>
+              {(sucursales || []).map((s: any) => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Cantidad planeada</label>
+            <input name="cantidad_planeada" type="number" step="0.01" className="input" defaultValue={orden.cantidad_planeada} required />
+          </div>
+          <div>
+            <label className="label">Frecuencia de reporte</label>
+            <select name="frecuencia_reporte" className="input" defaultValue={orden.frecuencia_reporte || "semanal"}>
+              <option value="diario">Diario</option>
+              <option value="semanal">Semanal</option>
+              <option value="mensual">Mensual</option>
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="label">Fecha estimada</label>
+            <input name="fecha_estimada" type="date" className="input" defaultValue={orden.fecha_estimada || ""} />
+          </div>
+          <div className="md:col-span-2">
+            <button className="btn-primary">Guardar cambios</button>
+          </div>
+        </form>
       </div>
 
       {orden.estado !== "Cerrada" && orden.aprobacion_estado === "Aprobada" && (

@@ -45,6 +45,7 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
       items: [
         { href: "/dashboard/produccion", label: "Producción", icon: IconFactory },
         { href: "/dashboard/movimientos", label: "Movimientos", icon: IconSwap },
+        { href: "/dashboard/gastos", label: "Gastos empresa", icon: IconWallet },
         { href: "/dashboard/alertas", label: "Alertas", icon: IconBell },
       ],
     },
@@ -239,6 +240,16 @@ function IconBell(props: SVGProps<SVGSVGElement>) {
     <svg {...base(props)}>
       <path d="M6 10a6 6 0 0 1 12 0v4l1.5 3h-15L6 14v-4Z" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M10 20a2 2 0 0 0 4 0" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconWallet(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h11A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 12h5v4h-5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 9.5h16" strokeLinecap="round" />
     </svg>
   );
 }

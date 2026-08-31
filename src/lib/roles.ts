@@ -9,6 +9,7 @@ export const APARTADOS_SISTEMA = [
   { clave: "ventas_pos", etiqueta: "Ventas punto de venta", grupo: "Ventas", ruta: "/dashboard/ventas/pos" },
   { clave: "produccion", etiqueta: "Producción", grupo: "Operación", ruta: "/dashboard/produccion" },
   { clave: "movimientos", etiqueta: "Movimientos", grupo: "Operación", ruta: "/dashboard/movimientos" },
+  { clave: "gastos", etiqueta: "Gastos empresa", grupo: "Operación", ruta: "/dashboard/gastos" },
   { clave: "alertas", etiqueta: "Alertas", grupo: "Operación", ruta: "/dashboard/alertas" },
   { clave: "proveedores", etiqueta: "Proveedores", grupo: "Compras", ruta: "/dashboard/proveedores" },
   { clave: "ordenes_compra", etiqueta: "Órdenes de compra", grupo: "Compras", ruta: "/dashboard/ordenes-compra" },

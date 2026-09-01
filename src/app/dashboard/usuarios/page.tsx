@@ -71,6 +71,23 @@ async function toggleActivo(usuarioId: string, activo: boolean) {
   revalidatePath("/dashboard/usuarios");
 }
 
+async function eliminarUsuario(usuarioId: string) {
+  "use server";
+  const db = supabaseAdmin();
+
+  await db.from("usuario_roles").delete().eq("usuario_id", usuarioId);
+  await db.from("usuario_sucursales").delete().eq("usuario_id", usuarioId);
+  await db.from("usuarios").delete().eq("id", usuarioId);
+
+  await registrarAuditoria({
+    accion: "eliminar_usuario",
+    entidad: "usuarios",
+    entidadId: usuarioId,
+  });
+
+  revalidatePath("/dashboard/usuarios");
+}
+
 async function crearRolPersonalizado(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
@@ -188,9 +205,22 @@ export default async function UsuariosPage() {
                   </form>
                 </td>
                 <td>
-                  <form action={toggleActivo.bind(null, u.id, u.activo)}>
-                    <button className="btn-secondary text-xs">{u.activo ? "Desactivar" : "Activar"}</button>
-                  </form>
+                  <div className="flex gap-2 items-center">
+                    <form action={toggleActivo.bind(null, u.id, u.activo)}>
+                      <button className="btn-secondary text-xs">{u.activo ? "Desactivar" : "Activar"}</button>
+                    </form>
+                    <form
+                      action={eliminarUsuario.bind(null, u.id)}
+                      onSubmit={(e) => {
+                        const ok = window.confirm(`¿Seguro que quieres eliminar al usuario ${u.usuario}?`);
+                        if (!ok) e.preventDefault();
+                      }}
+                    >
+                      <button type="submit" className="btn text-xs bg-red-600 text-white hover:bg-red-700">
+                        Eliminar
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             ))}

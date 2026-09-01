@@ -68,21 +68,23 @@ export default function BomAgregarInsumo({
         La unidad se toma automáticamente de cómo tienes registrado el insumo (normalmente kilos) — no necesitas
         escribirla.
       </p>
-      <form onSubmit={onSubmit} className="grid sm:grid-cols-[1.3fr_auto_auto] gap-3 items-end">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4 xl:flex-row xl:items-end">
         <input type="hidden" name="producto_id" value={productoId} />
-        <div className="relative min-w-0">
+
+        <div className="relative w-full min-w-0 xl:flex-[2.2]">
           <label className="label">Insumo</label>
           <input type="hidden" name="insumo_id" value={insumoId} />
           <input
             type="search"
-            className="input w-full pr-10"
+            className="input w-full"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Busca por nombre, clave o unidad..."
             aria-label="Buscar insumo por nombre, clave o unidad"
           />
+
           <div
-            className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-brand-150 bg-surface shadow-lg shadow-brand-100/50"
+            className="absolute left-0 right-0 top-full z-30 mt-2 max-h-44 overflow-y-auto rounded-xl border border-brand-150 bg-surface shadow-lg shadow-brand-100/60"
             role="listbox"
             aria-label="Resultados de insumos"
           >
@@ -109,11 +111,13 @@ export default function BomAgregarInsumo({
               ))
             )}
           </div>
+
           <p className="mt-2 text-xs text-brand-400">
             Seleccionado: <span className="text-ink">{insumoSeleccionado?.nombre || "ninguno"}</span>
           </p>
         </div>
-        <div>
+
+        <div className="w-full sm:w-auto xl:flex-[0.7]">
           <label className="label">Cantidad por unidad</label>
           <div className="flex items-center gap-2">
             <input
@@ -121,17 +125,20 @@ export default function BomAgregarInsumo({
               type="number"
               step="0.000001"
               min="0.000001"
-              className="input w-32"
+              className="input min-w-0 w-full sm:w-28"
               placeholder="0.000"
               value={cantidad}
               onChange={(e) => setCantidad(e.target.value)}
               required
             />
-            <span className="text-sm text-brand-500 w-8 shrink-0">{insumoSeleccionado?.unidad_medida || "kg"}</span>
+            <span className="text-sm text-brand-500 w-10 shrink-0 text-right">
+              {insumoSeleccionado?.unidad_medida || "kg"}
+            </span>
           </div>
         </div>
-        <div>
-          <button type="submit" className="btn-primary" disabled={pending}>
+
+        <div className="w-full sm:w-auto xl:flex-[0.3]">
+          <button type="submit" className="btn-primary w-full sm:w-auto" disabled={pending}>
             {pending ? "Agregando…" : "Agregar"}
           </button>
         </div>

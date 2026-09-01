@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { APARTADOS_SISTEMA } from "@/lib/roles";
+import { ConfirmDeleteUsuario } from "@/components/ConfirmDeleteUsuario";
 
 async function crearUsuario(formData: FormData) {
   "use server";
@@ -209,17 +210,10 @@ export default async function UsuariosPage() {
                     <form action={toggleActivo.bind(null, u.id, u.activo)}>
                       <button className="btn-secondary text-xs">{u.activo ? "Desactivar" : "Activar"}</button>
                     </form>
-                    <form
+                    <ConfirmDeleteUsuario
+                      usuario={u.usuario}
                       action={eliminarUsuario.bind(null, u.id)}
-                      onSubmit={(e) => {
-                        const ok = window.confirm(`¿Seguro que quieres eliminar al usuario ${u.usuario}?`);
-                        if (!ok) e.preventDefault();
-                      }}
-                    >
-                      <button type="submit" className="btn text-xs bg-red-600 text-white hover:bg-red-700">
-                        Eliminar
-                      </button>
-                    </form>
+                    />
                   </div>
                 </td>
               </tr>

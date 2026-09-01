@@ -68,20 +68,24 @@ export default function BomAgregarInsumo({
         La unidad se toma automáticamente de cómo tienes registrado el insumo (normalmente kilos) — no necesitas
         escribirla.
       </p>
-      <form onSubmit={onSubmit} className="grid sm:grid-cols-[1fr_auto_auto] gap-3 items-end">
+      <form onSubmit={onSubmit} className="grid sm:grid-cols-[1.3fr_auto_auto] gap-3 items-end">
         <input type="hidden" name="producto_id" value={productoId} />
-        <div>
+        <div className="relative min-w-0">
           <label className="label">Insumo</label>
           <input type="hidden" name="insumo_id" value={insumoId} />
           <input
             type="search"
-            className="input"
+            className="input w-full pr-10"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Busca por nombre, clave o unidad..."
             aria-label="Buscar insumo por nombre, clave o unidad"
           />
-          <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-brand-150 bg-surface" role="listbox" aria-label="Resultados de insumos">
+          <div
+            className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-brand-150 bg-surface shadow-lg shadow-brand-100/50"
+            role="listbox"
+            aria-label="Resultados de insumos"
+          >
             {insumosFiltrados.length === 0 ? (
               <p className="px-3 py-2 text-xs text-brand-400">No encontramos ese insumo.</p>
             ) : (
@@ -95,8 +99,8 @@ export default function BomAgregarInsumo({
                     setInsumoId(i.id);
                     setBusqueda(i.nombre);
                   }}
-                  className={`w-full text-left px-3 py-2 text-sm border-b border-brand-100 last:border-0 hover:bg-brand-50 transition-colors ${
-                    i.id === insumoId ? "bg-brand-50 text-ink font-medium" : "text-brand-600"
+                  className={`w-full text-left px-3 py-2.5 text-sm border-b border-brand-100 last:border-0 transition-colors ${
+                    i.id === insumoId ? "bg-brand-50 text-ink font-medium" : "text-brand-600 hover:bg-brand-50/70"
                   }`}
                 >
                   <span className="block">{i.nombre}</span>
@@ -105,7 +109,7 @@ export default function BomAgregarInsumo({
               ))
             )}
           </div>
-          <p className="mt-1 text-xs text-brand-400">
+          <p className="mt-2 text-xs text-brand-400">
             Seleccionado: <span className="text-ink">{insumoSeleccionado?.nombre || "ninguno"}</span>
           </p>
         </div>

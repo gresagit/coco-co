@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type Insumo = {
   id: string;
@@ -22,7 +22,9 @@ export default function BomAgregarInsumo({
   const [insumoId, setInsumoId] = useState(insumosDisponibles[0]?.id || "");
   const [busqueda, setBusqueda] = useState("");
   const [cantidad, setCantidad] = useState("");
+  const [listaAbierta, setListaAbierta] = useState(false);
   const [pending, startTransition] = useTransition();
+  const contenedorRef = useRef<HTMLDivElement>(null);
 
   const insumoSeleccionado = useMemo(
     () => insumosDisponibles.find((i) => i.id === insumoId),
@@ -35,6 +37,27 @@ export default function BomAgregarInsumo({
       `${i.nombre} ${i.codigo_interno} ${i.unidad_medida}`.toLowerCase().includes(texto)
     );
   }, [busqueda, insumosDisponibles]);
+
+  // Cierra la lista si se hace clic fuera del buscador, o con la tecla Escape.
+  // Sin esto, la lista se quedaba "flotando" abierta encima del resto del
+  // formulario y de la tabla, tapando contenido aunque el usuario ya hubiera
+  // terminado de buscar.
+  useEffect(() => {
+    function onClickFuera(e: MouseEvent) {
+      if (contenedorRef.current && !contenedorRef.current.contains(e.target as Node)) {
+        setListaAbierta(false);
+      }
+    }
+    function onEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setListaAbierta(false);
+    }
+    document.addEventListener("mousedown", onClickFuera);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", onClickFuera);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, []);
 
   if (insumosDisponibles.length === 0) {
     return (
@@ -71,46 +94,58 @@ export default function BomAgregarInsumo({
       <form onSubmit={onSubmit} className="flex flex-col gap-4 xl:flex-row xl:items-end">
         <input type="hidden" name="producto_id" value={productoId} />
 
-        <div className="relative w-full min-w-0 xl:flex-[2.2]">
+        <div ref={contenedorRef} className="relative w-full min-w-0 xl:flex-[2.2]">
           <label className="label">Insumo</label>
           <input type="hidden" name="insumo_id" value={insumoId} />
           <input
             type="search"
             className="input w-full"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setListaAbierta(true);
+            }}
+            onFocus={() => setListaAbierta(true)}
             placeholder="Busca por nombre, clave o unidad..."
             aria-label="Buscar insumo por nombre, clave o unidad"
+            aria-expanded={listaAbierta}
+            role="combobox"
+            aria-controls="bom-insumo-listbox"
+            autoComplete="off"
           />
 
-          <div
-            className="absolute left-0 right-0 top-full z-30 mt-2 max-h-44 overflow-y-auto rounded-xl border border-brand-150 bg-surface shadow-lg shadow-brand-100/60"
-            role="listbox"
-            aria-label="Resultados de insumos"
-          >
-            {insumosFiltrados.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-brand-400">No encontramos ese insumo.</p>
-            ) : (
-              insumosFiltrados.map((i) => (
-                <button
-                  key={i.id}
-                  type="button"
-                  role="option"
-                  aria-selected={i.id === insumoId}
-                  onClick={() => {
-                    setInsumoId(i.id);
-                    setBusqueda(i.nombre);
-                  }}
-                  className={`w-full text-left px-3 py-2.5 text-sm border-b border-brand-100 last:border-0 transition-colors ${
-                    i.id === insumoId ? "bg-brand-50 text-ink font-medium" : "text-brand-600 hover:bg-brand-50/70"
-                  }`}
-                >
-                  <span className="block">{i.nombre}</span>
-                  <span className="block text-xs text-brand-400">{i.codigo_interno} · {i.unidad_medida}</span>
-                </button>
-              ))
-            )}
-          </div>
+          {listaAbierta && (
+            <div
+              id="bom-insumo-listbox"
+              className="absolute left-0 right-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-xl border border-brand-150 bg-surface shadow-lg shadow-brand-100/60"
+              role="listbox"
+              aria-label="Resultados de insumos"
+            >
+              {insumosFiltrados.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-brand-400">No encontramos ese insumo.</p>
+              ) : (
+                insumosFiltrados.map((i) => (
+                  <button
+                    key={i.id}
+                    type="button"
+                    role="option"
+                    aria-selected={i.id === insumoId}
+                    onClick={() => {
+                      setInsumoId(i.id);
+                      setBusqueda(i.nombre);
+                      setListaAbierta(false);
+                    }}
+                    className={`w-full text-left px-3 py-2.5 text-sm border-b border-brand-100 last:border-0 transition-colors ${
+                      i.id === insumoId ? "bg-brand-50 text-ink font-medium" : "text-brand-600 hover:bg-brand-50/70"
+                    }`}
+                  >
+                    <span className="block">{i.nombre}</span>
+                    <span className="block text-xs text-brand-400">{i.codigo_interno} · {i.unidad_medida}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
 
           <p className="mt-2 text-xs text-brand-400">
             Seleccionado: <span className="text-ink">{insumoSeleccionado?.nombre || "ninguno"}</span>

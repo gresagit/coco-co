@@ -146,10 +146,10 @@ export default async function ProductosPage() {
     })
   );
 
-  const stockPorCategoria: Record<string, number> = {};
+  const productosPorCategoria: Record<string, number> = {};
   for (const p of conCosteo) {
     const nombre = p.categorias?.nombre || "Sin categoría";
-    stockPorCategoria[nombre] = (stockPorCategoria[nombre] || 0) + p.stock;
+    productosPorCategoria[nombre] = (productosPorCategoria[nombre] || 0) + 1;
   }
 
   return (
@@ -170,11 +170,11 @@ export default async function ProductosPage() {
         <EscanerInventario embedded />
       </CollapsePanel>
 
-      {sucursalId && Object.keys(stockPorCategoria).length > 0 && (
+      {sucursalId && Object.keys(productosPorCategoria).length > 0 && (
         <div className="banner">
-          <h2 className="font-semibold mb-3">Stock por categoría — esta sucursal</h2>
+          <h2 className="font-semibold mb-3">Productos por categoría — esta sucursal</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {Object.entries(stockPorCategoria).map(([nombre, cantidad]) => (
+            {Object.entries(productosPorCategoria).map(([nombre, cantidad]) => (
               <div key={nombre} className="rounded-lg border border-brand-150 bg-surface px-3 py-2.5 transition-transform hover:-translate-y-0.5">
                 <p className="text-xs text-brand-400 uppercase tracking-wide truncate">{nombre}</p>
                 <p className="font-serif text-2xl text-ink mt-0.5">{cantidad}</p>

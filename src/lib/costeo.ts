@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { convertirCantidad } from "@/lib/unidades";
 
 // Calcula el costo unitario de un producto sumando su BOM.
 // Soporta receta anidada: si un item del BOM es otro producto
@@ -13,14 +14,16 @@ export async function calcularCostoProducto(
   const db = supabaseAdmin();
   const { data: items } = await db
     .from("bom")
-    .select("cantidad_por_unidad, insumo_id, insumo_producto_id, insumos(costo_unitario_actual)")
+    .select("cantidad_por_unidad, unidad, insumo_id, insumo_producto_id, insumos(costo_unitario_actual, unidad_medida)")
     .eq("producto_id", productoId);
 
   let total = 0;
   for (const item of items || []) {
     if (item.insumo_id) {
       const costoInsumo = Number((item as any).insumos?.costo_unitario_actual || 0);
-      total += Number(item.cantidad_por_unidad) * costoInsumo;
+      const unidadBaseInsumo = (item as any).insumos?.unidad_medida || item.unidad;
+      const cantidadEnUnidadBase = convertirCantidad(Number(item.cantidad_por_unidad), item.unidad, unidadBaseInsumo);
+      total += cantidadEnUnidadBase * costoInsumo;
     } else if (item.insumo_producto_id) {
       const costoAnidado = await calcularCostoProducto(item.insumo_producto_id, visitados);
       total += Number(item.cantidad_por_unidad) * costoAnidado;

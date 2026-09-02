@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { descontarInsumo } from "@/lib/insumo-consumo";
+import { convertirCantidad } from "@/lib/unidades";
 
 export type ResultadoEscaneo =
   | { ok: true; folio: string; productoId: string; productoNombre: string; productoSku: string }
@@ -45,13 +46,21 @@ export async function confirmarPiezaPorFolio(
   }
 
   // 1. Descuento de insumos según BOM (x1 unidad de producto)
-  const { data: bomItems } = await db.from("bom").select("*").eq("producto_id", pieza.producto_id);
+  const { data: bomItems } = await db
+    .from("bom")
+    .select("*, insumos(unidad_medida)")
+    .eq("producto_id", pieza.producto_id);
   for (const item of bomItems || []) {
     const cantidadNecesaria = Number(item.cantidad_por_unidad);
     if (cantidadNecesaria <= 0) continue;
 
     if (item.insumo_id) {
-      await descontarInsumo(db, item.insumo_id, sucursalId, cantidadNecesaria, { piezaId: pieza.id });
+      // El stock del insumo se controla en su unidad base, pero la fórmula
+      // pudo capturarse en otra unidad de la misma familia (ej. gramos en
+      // vez de kilos) — se convierte antes de descontar.
+      const unidadBaseInsumo = (item as any).insumos?.unidad_medida || item.unidad;
+      const cantidadEnUnidadBase = convertirCantidad(cantidadNecesaria, item.unidad, unidadBaseInsumo);
+      await descontarInsumo(db, item.insumo_id, sucursalId, cantidadEnUnidadBase, { piezaId: pieza.id });
     } else if (item.insumo_producto_id) {
       const { data: stockRow } = await db
         .from("producto_stock")

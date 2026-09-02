@@ -10,6 +10,30 @@ type Insumo = {
   costo_unitario_actual: number;
 };
 
+// Etiquetas para cada unidad válida (mismo catálogo del check constraint de
+// `insumos.unidad_medida`, migración 021).
+const UNIDAD_LABELS: Record<string, string> = {
+  kg: "kg (kilos)",
+  g: "g (gramos)",
+  L: "L (litros)",
+  ml: "ml (mililitros)",
+  pz: "pz (piezas)",
+  m: "m (metros)",
+};
+
+// Solo se puede elegir otra unidad dentro de la misma familia que el insumo
+// (masa, volumen, pieza o longitud), porque el costo del insumo está
+// registrado por su unidad base y la conversión solo tiene sentido dentro de
+// la misma familia (ej. kg <-> g, L <-> ml).
+const FAMILIAS_UNIDAD: Record<string, string[]> = {
+  kg: ["kg", "g"],
+  g: ["kg", "g"],
+  L: ["L", "ml"],
+  ml: ["L", "ml"],
+  pz: ["pz"],
+  m: ["m"],
+};
+
 export default function BomAgregarInsumo({
   productoId,
   insumosDisponibles,
@@ -22,6 +46,7 @@ export default function BomAgregarInsumo({
   const [insumoId, setInsumoId] = useState(insumosDisponibles[0]?.id || "");
   const [busqueda, setBusqueda] = useState("");
   const [cantidad, setCantidad] = useState("");
+  const [unidad, setUnidad] = useState(insumosDisponibles[0]?.unidad_medida || "kg");
   const [listaAbierta, setListaAbierta] = useState(false);
   const [pending, startTransition] = useTransition();
   const contenedorRef = useRef<HTMLDivElement>(null);
@@ -42,6 +67,11 @@ export default function BomAgregarInsumo({
     () => insumosDisponibles.find((i) => i.id === insumoId),
     [insumoId, insumosDisponibles]
   );
+  const unidadesDisponibles = useMemo(
+    () => FAMILIAS_UNIDAD[insumoSeleccionado?.unidad_medida || "kg"] || ["kg"],
+    [insumoSeleccionado]
+  );
+
   const insumosFiltrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
     if (!texto) return insumosDisponibles;
@@ -79,8 +109,8 @@ export default function BomAgregarInsumo({
     <div className="card">
       <h2 className="font-semibold mb-1">Agregar insumo a la fórmula</h2>
       <p className="text-xs text-brand-500 mb-3">
-        La unidad se toma automáticamente de cómo tienes registrado el insumo (normalmente kilos) — no necesitas
-        escribirla.
+        La unidad se sugiere automáticamente según cómo tienes registrado el insumo, pero puedes cambiarla si en
+        esta fórmula la vas a usar en otra unidad.
       </p>
       <form onSubmit={onSubmit} className="flex flex-col gap-4 xl:flex-row xl:items-end">
         <input type="hidden" name="producto_id" value={productoId} />
@@ -124,6 +154,10 @@ export default function BomAgregarInsumo({
                       setInsumoId(i.id);
                       setBusqueda(i.nombre);
                       setListaAbierta(false);
+                      // Reinicia la unidad a la del insumo elegido, ya que las
+                      // opciones disponibles dependen de su familia (masa,
+                      // volumen, pieza o longitud).
+                      setUnidad(i.unidad_medida);
                     }}
                     className={`w-full text-left px-3 py-2.5 text-sm border-b border-brand-100 last:border-0 transition-colors ${
                       i.id === insumoId ? "bg-brand-50 text-ink font-medium" : "text-brand-600 hover:bg-brand-50/70"
@@ -144,22 +178,40 @@ export default function BomAgregarInsumo({
 
         <div className="w-full sm:w-auto xl:flex-[0.7]">
           <label className="label">Cantidad por unidad</label>
-          <div className="flex items-center gap-2">
-            <input
-              name="cantidad_por_unidad"
-              type="number"
-              step="0.000001"
-              min="0.000001"
-              className="input min-w-0 w-full sm:w-28"
-              placeholder="0.000"
-              value={cantidad}
-              onChange={(e) => setCantidad(e.target.value)}
-              required
-            />
-            <span className="text-sm text-brand-500 w-10 shrink-0 text-right">
-              {insumoSeleccionado?.unidad_medida || "kg"}
-            </span>
-          </div>
+          <input
+            name="cantidad_por_unidad"
+            type="number"
+            step="0.000001"
+            min="0.000001"
+            className="input min-w-0 w-full sm:w-28"
+            placeholder="0.000"
+            value={cantidad}
+            onChange={(e) => setCantidad(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="w-full sm:w-auto xl:flex-[0.5]">
+          <label className="label">Unidad de medida</label>
+          <select
+            name="unidad"
+            className="input"
+            value={unidad}
+            onChange={(e) => setUnidad(e.target.value)}
+            required
+          >
+            {unidadesDisponibles.map((u) => (
+              <option key={u} value={u}>
+                {UNIDAD_LABELS[u] || u}
+              </option>
+            ))}
+          </select>
+          {unidadesDisponibles.length > 1 && (
+            <p className="mt-1 text-xs text-brand-400">
+              El costo se registró en {insumoSeleccionado?.unidad_medida}; si usas otra unidad aquí, la cantidad se
+              convierte automáticamente al calcular el costo.
+            </p>
+          )}
         </div>
 
         <div className="w-full sm:w-auto xl:flex-[0.3]">

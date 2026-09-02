@@ -4,16 +4,21 @@ import { registrarAuditoria } from "@/lib/auditoria";
 import { calcularCostoProducto } from "@/lib/costeo";
 import BomAgregarInsumo from "@/components/BomAgregarInsumo";
 
-// Agrega un insumo del catálogo a la fórmula de un producto. La unidad NO se
-// pide en el formulario: se toma directo de `insumos.unidad_medida` (casi
-// siempre "kg"), así nunca hay inconsistencia entre lo que dice la fórmula y
-// cómo está registrado el insumo.
+// Unidades válidas para una línea de fórmula (mismo catálogo que el check
+// constraint de `insumos.unidad_medida`, migración 021).
+const UNIDADES_VALIDAS = ["kg", "g", "L", "ml", "pz", "m"];
+
+// Agrega un insumo del catálogo a la fórmula de un producto. La unidad se
+// sugiere en el formulario a partir de `insumos.unidad_medida`, pero el
+// usuario puede elegir otra (ej. usar gramos en la receta aunque el insumo
+// se compre y almacene en kilos).
 async function agregarInsumoBom(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
   const productoId = formData.get("producto_id") as string;
   const insumoId = formData.get("insumo_id") as string;
   const cantidad = Number(formData.get("cantidad_por_unidad"));
+  const unidadElegida = formData.get("unidad") as string;
 
   if (!productoId || !insumoId || !cantidad || cantidad <= 0) {
     revalidatePath("/dashboard/bom");
@@ -22,18 +27,20 @@ async function agregarInsumoBom(formData: FormData) {
 
   const { data: insumo } = await db.from("insumos").select("unidad_medida, nombre").eq("id", insumoId).single();
 
+  const unidad = UNIDADES_VALIDAS.includes(unidadElegida) ? unidadElegida : insumo?.unidad_medida || "kg";
+
   await db.from("bom").insert({
     producto_id: productoId,
     insumo_id: insumoId,
     cantidad_por_unidad: cantidad,
-    unidad: insumo?.unidad_medida || "kg",
+    unidad,
   });
 
   await registrarAuditoria({
     accion: "agregar_componente_bom",
     entidad: "bom",
     entidadId: productoId,
-    detalle: { tipo: "insumo", insumo_id: insumoId, insumo_nombre: insumo?.nombre, cantidad, unidad: insumo?.unidad_medida },
+    detalle: { tipo: "insumo", insumo_id: insumoId, insumo_nombre: insumo?.nombre, cantidad, unidad },
   });
 
   revalidatePath("/dashboard/bom");

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { generarTandaCodigosBarra } from "@/lib/codigos-barra";
+import { convertirCantidad } from "@/lib/unidades";
 
 /**
  * Panorama de decisión para Administración: por cada producto de una
@@ -103,7 +104,10 @@ export async function obtenerPanoramaProduccion(sucursalId: string): Promise<Pan
 
       const disponible = Number(insumoStock?.cantidad_disponible || 0);
       const stockMinimo = Number(insumoStock?.stock_minimo || 0);
-      const cantidadPorUnidad = Number(item.cantidad_por_unidad);
+      // El stock (`disponible`) está en la unidad base del insumo, pero la
+      // fórmula pudo capturarse en otra unidad de la misma familia (ej.
+      // gramos en vez de kilos) — se convierte antes de comparar.
+      const cantidadPorUnidad = convertirCantidad(Number(item.cantidad_por_unidad), item.unidad, insumo.unidad_medida);
       const unidadesFabricables = cantidadPorUnidad > 0 ? Math.floor(disponible / cantidadPorUnidad) : Infinity;
 
       insumos.push({

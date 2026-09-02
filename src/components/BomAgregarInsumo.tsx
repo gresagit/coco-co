@@ -206,12 +206,6 @@ export default function BomAgregarInsumo({
               </option>
             ))}
           </select>
-          {unidadesDisponibles.length > 1 && (
-            <p className="mt-1 text-xs text-brand-400">
-              El costo se registró en {insumoSeleccionado?.unidad_medida}; si usas otra unidad aquí, la cantidad se
-              convierte automáticamente al calcular el costo.
-            </p>
-          )}
         </div>
 
         <div className="w-full sm:w-auto xl:flex-[0.3]">
@@ -220,6 +214,14 @@ export default function BomAgregarInsumo({
           </button>
         </div>
       </form>
+
+      {unidadesDisponibles.length > 1 && (
+        <p className="mt-3 text-xs text-brand-400">
+          El costo de <span className="text-ink">{insumoSeleccionado?.nombre}</span> se registró en{" "}
+          <span className="text-ink">{insumoSeleccionado?.unidad_medida}</span>; si aquí usas {UNIDAD_LABELS[unidad] || unidad},
+          la cantidad se convierte automáticamente al calcular el costo.
+        </p>
+      )}
     </div>
   );
 }

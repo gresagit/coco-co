@@ -84,7 +84,7 @@ create table insumos (
   nombre text not null,
   marca text, -- opcional: proveedor/fabricante del insumo
   tipo text not null check (tipo in ('Materia Prima','Empaque','Etiqueta','Producto Intermedio')),
-  unidad_medida text not null check (unidad_medida in ('kg','L','pz','m')),
+  unidad_medida text not null check (unidad_medida in ('kg','g','L','ml','pz','m')),
   controla_caducidad boolean not null default false, -- activa FEFO
   costo_unitario_actual numeric(12,4) not null default 0,
   activo boolean not null default true,

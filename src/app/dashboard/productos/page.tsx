@@ -121,6 +121,43 @@ async function editarProducto(formData: FormData) {
   revalidatePath(`/dashboard/productos/${productoId}`);
 }
 
+// Elimina un producto terminado. Si tiene historial (órdenes de producción,
+// ventas, movimientos, etc.) la base de datos rechaza el borrado por las
+// llaves foráneas, así que en ese caso lo marcamos como inactivo (se deja de
+// mostrar y de poder vender/producir) en lugar de perder el historial.
+async function eliminarProducto(productoId: string) {
+  "use server";
+  const db = supabaseAdmin();
+
+  const { error } = await db.from("productos").delete().eq("id", productoId);
+
+  if (error) {
+    const { error: errorDesactivar } = await db
+      .from("productos")
+      .update({ activo: false })
+      .eq("id", productoId);
+
+    if (errorDesactivar) {
+      throw new Error("No se pudo eliminar ni desactivar el producto.");
+    }
+
+    await registrarAuditoria({
+      accion: "desactivar_producto",
+      entidad: "productos",
+      entidadId: productoId,
+      detalle: { motivo: "Tiene historial relacionado (producción, ventas o movimientos); se desactivó en vez de borrarse." },
+    });
+  } else {
+    await registrarAuditoria({
+      accion: "eliminar_producto",
+      entidad: "productos",
+      entidadId: productoId,
+    });
+  }
+
+  revalidatePath("/dashboard/productos");
+}
+
 export default async function ProductosPage() {
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
@@ -238,7 +275,12 @@ export default async function ProductosPage() {
         </form>
       </div>
 
-      <ProductosTabla productos={conCosteo} categorias={categorias || []} editarProducto={editarProducto} />
+      <ProductosTabla
+        productos={conCosteo}
+        categorias={categorias || []}
+        editarProducto={editarProducto}
+        eliminarProducto={eliminarProducto}
+      />
     </div>
   );
 }

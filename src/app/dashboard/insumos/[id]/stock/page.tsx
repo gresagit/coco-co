@@ -238,7 +238,9 @@ export default async function InsumoStockPage({ params }: { params: { id: string
             <label className="label">Unidad de medida</label>
             <select name="unidad_medida" defaultValue={insumo?.unidad_medida} className="input" required>
               <option value="kg">kg</option>
+              <option value="g">g (gramos)</option>
               <option value="L">L</option>
+              <option value="ml">ml (mililitros)</option>
               <option value="pz">pz</option>
               <option value="m">m</option>
             </select>

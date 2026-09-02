@@ -49,14 +49,16 @@ export default function InsumoTipoUnidad() {
           required
         >
           <option value="kg">kg</option>
+          <option value="g">g (gramos)</option>
           <option value="L">L</option>
+          <option value="ml">ml (mililitros)</option>
           <option value="pz">pz</option>
           <option value="m">m</option>
         </select>
         <p className="text-xs text-brand-400 mt-1">
           {tipo === "Empaque" || tipo === "Etiqueta"
             ? "Sugerido \"pz\" porque este tipo casi siempre se cuenta por pieza."
-            : "Sugerido \"kg\" — cámbialo si este insumo se compra por litro, pieza o metro."}
+            : "Sugerido \"kg\" — cámbialo si este insumo se compra o se usa en receta por gramo, litro, mililitro, pieza o metro."}
         </p>
       </div>
     </>

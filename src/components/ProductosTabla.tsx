@@ -15,19 +15,44 @@ type Producto = {
   precio: number;
   precio_venta_override: number | null;
   porcentaje_margen_deseado: number;
+  activo?: boolean;
 };
 
 export default function ProductosTabla({
   productos,
   categorias,
   editarProducto,
+  eliminarProducto,
 }: {
   productos: Producto[];
   categorias: Categoria[];
   editarProducto: (formData: FormData) => Promise<void>;
+  eliminarProducto: (productoId: string) => Promise<void>;
 }) {
   const [editando, setEditando] = useState<Producto | null>(null);
   const [search, setSearch] = useState("");
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  function onEliminar(producto: Producto) {
+    const confirmado = window.confirm(
+      `¿Eliminar "${producto.nombre}"? Si ya tiene historial de producción o ventas, en vez de borrarse se marcará como inactivo.`
+    );
+    if (!confirmado) return;
+
+    setErrorEliminar(null);
+    setEliminandoId(producto.id);
+    startTransition(async () => {
+      try {
+        await eliminarProducto(producto.id);
+      } catch {
+        setErrorEliminar(`No se pudo eliminar "${producto.nombre}".`);
+      } finally {
+        setEliminandoId(null);
+      }
+    });
+  }
 
   const productosFiltrados = productos.filter((p) => {
     const query = search.trim().toLowerCase();
@@ -64,6 +89,12 @@ export default function ProductosTabla({
         </label>
       </div>
 
+      {errorEliminar && (
+        <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+          {errorEliminar}
+        </p>
+      )}
+
       <div className="overflow-x-auto">
         <table className="table-base">
           <thead>
@@ -80,9 +111,16 @@ export default function ProductosTabla({
           </thead>
           <tbody>
             {productosFiltrados.map((p) => (
-              <tr key={p.id}>
+              <tr key={p.id} className={p.activo === false ? "opacity-50" : ""}>
                 <td className="font-mono text-xs">{p.sku}</td>
-                <td className="font-medium">{p.nombre}</td>
+                <td className="font-medium">
+                  {p.nombre}
+                  {p.activo === false && (
+                    <span className="ml-2 inline-block rounded-full border border-brand-200 px-2 py-0.5 text-[10px] uppercase tracking-wide text-brand-400">
+                      Inactivo
+                    </span>
+                  )}
+                </td>
                 <td>{p.categorias?.nombre || "—"}</td>
                 <td className="font-medium">{p.stock}</td>
                 <td>${p.costo.toFixed(2)}</td>
@@ -115,6 +153,15 @@ export default function ProductosTabla({
                     >
                       <IconBeaker className="w-4 h-4" />
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => onEliminar(p)}
+                      disabled={eliminandoId === p.id}
+                      title="Eliminar producto"
+                      className="w-8 h-8 rounded-lg border border-brand-200 text-red-500 flex items-center justify-center hover:border-red-400 hover:bg-red-50 transition-colors disabled:opacity-50"
+                    >
+                      <IconTrash className="w-4 h-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -288,6 +335,17 @@ function IconBeaker(props: SVGProps<SVGSVGElement>) {
       <path d="M9 3h6" strokeLinecap="round" />
       <path d="M10 3v6.5L4.8 18a1.6 1.6 0 0 0 1.4 2.4h11.6a1.6 1.6 0 0 0 1.4-2.4L14 9.5V3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M7.5 15h9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTrash(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} {...props}>
+      <path d="M5 7h14" strokeLinecap="round" />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 7l1 12.5A1.5 1.5 0 0 0 9.5 21h5a1.5 1.5 0 0 0 1.5-1.5L17 7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 11v6M14 11v6" strokeLinecap="round" />
     </svg>
   );
 }

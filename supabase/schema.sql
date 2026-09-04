@@ -118,8 +118,13 @@ create table insumo_lotes (
   fecha_caducidad date,
   cantidad_inicial numeric(12,4) not null,
   cantidad_restante numeric(12,4) not null,
+  costo_subtotal numeric(14,2),
   costo_total numeric(14,2),      -- lo pagado en total por esta compra/lote (si aplica)
   costo_unitario numeric(12,4),   -- costo_total / cantidad_inicial, calculado (kg, L, pieza, etc.)
+  iva_porcentaje numeric(6,3) not null default 0,
+  iva_incluido boolean not null default false,
+  iva_total numeric(14,2) not null default 0,
+  envio_total numeric(14,2) not null default 0,
   created_at timestamptz not null default now()
 );
 create index idx_insumo_lotes_fefo on insumo_lotes (insumo_id, sucursal_id, fecha_caducidad asc);
@@ -268,8 +273,13 @@ create table movimientos (
   sucursal_origen_id uuid references sucursales(id),    -- para Transferencia
   sucursal_destino_id uuid references sucursales(id),   -- para Transferencia
   cantidad numeric(14,4) not null,
+  costo_subtotal numeric(14,2),
   costo_total numeric(14,2),      -- lo pagado en total por esta entrada (si aplica)
   costo_unitario numeric(12,4),   -- costo_total / cantidad, calculado (kg, L, pieza, etc.)
+  iva_porcentaje numeric(6,3) not null default 0,
+  iva_incluido boolean not null default false,
+  iva_total numeric(14,2) not null default 0,
+  envio_total numeric(14,2) not null default 0,
   estado text not null default 'Confirmado' check (estado in ('En tránsito','Recibida','Confirmado','Cancelada')),
   referencia text, -- folio de OC, orden de produccion, venta, etc.
   usuario_id uuid references usuarios(id),
@@ -305,7 +315,12 @@ create table orden_compra_items (
   orden_compra_id uuid not null references ordenes_compra(id) on delete cascade,
   insumo_id uuid not null references insumos(id),
   cantidad numeric(14,4) not null,
+  costo_subtotal numeric(14,2),
   costo_unitario numeric(12,4) not null,
+  iva_porcentaje numeric(6,3) not null default 0,
+  iva_incluido boolean not null default false,
+  iva_total numeric(14,2) not null default 0,
+  envio_total numeric(14,2) not null default 0,
   subtotal numeric(14,2) generated always as (cantidad * costo_unitario) stored,
   cantidad_recibida numeric(14,4) not null default 0
 );

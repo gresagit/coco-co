@@ -9,6 +9,7 @@ import EscanerInsumos from "@/components/EscanerInsumos";
 import InsumoTipoUnidad from "@/components/InsumoTipoUnidad";
 import CostoInicialInsumo from "@/components/CostoInicialInsumo";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { calcularCostoCompra } from "@/lib/costo-compra";
 
 async function crearInsumo(formData: FormData) {
   "use server";
@@ -18,7 +19,13 @@ async function crearInsumo(formData: FormData) {
   const codigoInterno = await siguienteCodigoInsumo(tipo);
   const controlaCaducidad = formData.get("controla_caducidad") === "on";
   const cantidadInicial = Number(formData.get("cantidad_inicial") || 0);
-  const costoTotalInicial = Number(formData.get("costo_total_inicial") || 0);
+  const costoCompra = calcularCostoCompra(
+    Number(formData.get("costo_subtotal_inicial") || 0),
+    Number(formData.get("iva_porcentaje_inicial") || 0),
+    formData.get("iva_incluido_inicial") === "on",
+    Number(formData.get("envio_inicial") || 0)
+  );
+  const costoTotalInicial = costoCompra.total;
   const costoUnitario = cantidadInicial > 0 && costoTotalInicial > 0 ? costoTotalInicial / cantidadInicial : null;
   const fechaCaducidad = (formData.get("fecha_caducidad") as string) || null;
 
@@ -57,8 +64,13 @@ async function crearInsumo(formData: FormData) {
           fecha_caducidad: fechaCaducidad,
           cantidad_inicial: cantidadInicial,
           cantidad_restante: cantidadInicial,
+          costo_subtotal: costoCompra.subtotal || null,
           costo_total: costoTotalInicial || null,
           costo_unitario: costoUnitario,
+          iva_porcentaje: costoCompra.ivaPorcentaje,
+          iva_incluido: costoCompra.ivaIncluido,
+          iva_total: costoCompra.ivaTotal,
+          envio_total: costoCompra.envioTotal,
         });
       }
       await db
@@ -72,8 +84,13 @@ async function crearInsumo(formData: FormData) {
         insumo_id: insumo.id,
         sucursal_id: sucursalActualId,
         cantidad: cantidadInicial,
+        costo_subtotal: costoCompra.subtotal || null,
         costo_total: costoTotalInicial || null,
         costo_unitario: costoUnitario,
+        iva_porcentaje: costoCompra.ivaPorcentaje,
+        iva_incluido: costoCompra.ivaIncluido,
+        iva_total: costoCompra.ivaTotal,
+        envio_total: costoCompra.envioTotal,
         referencia: "Alta inicial",
         notas: "Cantidad inicial capturada al crear el insumo",
       });

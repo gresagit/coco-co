@@ -102,8 +102,13 @@ async function recibirMercancia(id: string, formData: FormData) {
         insumo_id: item.insumo_id,
         sucursal_id: orden.sucursal_id,
         cantidad: cantidadRecibidaAhora,
+        costo_subtotal: Number(item.costo_subtotal) > 0 ? Number(item.costo_subtotal) * (cantidadRecibidaAhora / Number(item.cantidad)) : null,
         costo_total: Number(item.costo_unitario) * cantidadRecibidaAhora || null,
         costo_unitario: Number(item.costo_unitario) || null,
+        iva_porcentaje: Number(item.iva_porcentaje) || 0,
+        iva_incluido: !!item.iva_incluido,
+        iva_total: Number(item.iva_total) || 0,
+        envio_total: Number(item.envio_total) || 0,
         referencia: orden.folio,
         notas: "Recepción de orden de compra",
       });

@@ -3,13 +3,20 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { registrarAuditoria } from "@/lib/auditoria";
 import EntradaInsumoForm from "@/components/EntradaInsumoForm";
+import { calcularCostoCompra } from "@/lib/costo-compra";
 
 async function agregarEntrada(insumoId: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const cantidad = Number(formData.get("cantidad"));
-  const costoTotal = Number(formData.get("costo_total") || 0);
+  const costoCompra = calcularCostoCompra(
+    Number(formData.get("costo_subtotal") || 0),
+    Number(formData.get("iva_porcentaje") || 0),
+    formData.get("iva_incluido") === "on",
+    Number(formData.get("envio_total") || 0)
+  );
+  const costoTotal = costoCompra.total;
   const fechaCaducidad = (formData.get("fecha_caducidad") as string) || null;
   const folioLote = (formData.get("folio_lote") as string)?.trim();
 
@@ -30,8 +37,13 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
       fecha_caducidad: fechaCaducidad,
       cantidad_inicial: cantidad,
       cantidad_restante: cantidad,
+      costo_subtotal: costoCompra.subtotal || null,
       costo_total: costoTotal || null,
       costo_unitario: costoUnitario,
+      iva_porcentaje: costoCompra.ivaPorcentaje,
+      iva_incluido: costoCompra.ivaIncluido,
+      iva_total: costoCompra.ivaTotal,
+      envio_total: costoCompra.envioTotal,
     });
   }
 
@@ -54,8 +66,13 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
     insumo_id: insumoId,
     sucursal_id: sucursalId,
     cantidad,
+    costo_subtotal: costoCompra.subtotal || null,
     costo_total: costoTotal || null,
     costo_unitario: costoUnitario,
+    iva_porcentaje: costoCompra.ivaPorcentaje,
+    iva_incluido: costoCompra.ivaIncluido,
+    iva_total: costoCompra.ivaTotal,
+    envio_total: costoCompra.envioTotal,
     referencia: insumo.controla_caducidad ? "Entrada con lote" : "Entrada",
     notas: "Registrada desde ficha de insumo",
   });
@@ -279,7 +296,7 @@ export default async function InsumoStockPage({ params }: { params: { id: string
                 <form action={actualizarStockMinimo.bind(null, params.id)} className="flex items-end gap-2">
                   <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
                   <div>
-                    <label className="label">Stock mínimo</label>
+                    <label className="label">Stock mínimo ({insumo?.unidad_medida})</label>
                     <input name="stock_minimo" type="number" step="0.01" defaultValue={s.stock_minimo} className="input !w-28 !py-1.5" />
                   </div>
                   <button className="btn-secondary text-xs">Guardar</button>

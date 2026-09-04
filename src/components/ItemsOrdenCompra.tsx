@@ -4,16 +4,16 @@ import { useState } from "react";
 
 type Insumo = { id: string; codigo_interno: string; nombre: string; unidad_medida: string };
 
-type Fila = { insumo_id: string; cantidad: string; costo_total: string };
+type Fila = { insumo_id: string; cantidad: string; costo_subtotal: string; iva_porcentaje: string; iva_incluido: boolean; envio_total: string };
 
 export default function ItemsOrdenCompra({ insumos }: { insumos: Insumo[] }) {
-  const [filas, setFilas] = useState<Fila[]>([{ insumo_id: "", cantidad: "", costo_total: "" }]);
+  const [filas, setFilas] = useState<Fila[]>([{ insumo_id: "", cantidad: "", costo_subtotal: "", iva_porcentaje: "", iva_incluido: false, envio_total: "" }]);
 
   function actualizar(i: number, campo: keyof Fila, valor: string) {
     setFilas((prev) => prev.map((f, idx) => (idx === i ? { ...f, [campo]: valor } : f)));
   }
   function agregarFila() {
-    setFilas((prev) => [...prev, { insumo_id: "", cantidad: "", costo_total: "" }]);
+    setFilas((prev) => [...prev, { insumo_id: "", cantidad: "", costo_subtotal: "", iva_porcentaje: "", iva_incluido: false, envio_total: "" }]);
   }
   function quitarFila(i: number) {
     setFilas((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
@@ -32,12 +32,14 @@ export default function ItemsOrdenCompra({ insumos }: { insumos: Insumo[] }) {
         {filas.map((fila, i) => {
           const insumo = insumosPorId.get(fila.insumo_id);
           const cantidad = Number(fila.cantidad);
-          const costoTotal = Number(fila.costo_total);
-          const costoUnitario = cantidad > 0 && costoTotal > 0 ? costoTotal / cantidad : null;
+          const subtotal = Number(fila.costo_subtotal);
+          const ivaTotal = fila.iva_incluido ? 0 : subtotal * (Number(fila.iva_porcentaje) / 100);
+          const total = subtotal + ivaTotal + Number(fila.envio_total || 0);
+          const costoUnitario = cantidad > 0 && total > 0 ? total / cantidad : null;
           return (
             <div
               key={i}
-              className="grid grid-cols-1 sm:grid-cols-[1.5fr_auto_auto_auto_auto] gap-2 pb-3 sm:pb-0 border-b sm:border-b-0 border-brand-100 items-end"
+              className="grid grid-cols-1 sm:grid-cols-[1.5fr_auto_auto_auto_auto_auto_auto] gap-2 pb-3 sm:pb-0 border-b sm:border-b-0 border-brand-100 items-end"
             >
               <div>
                 <label className="label !mb-1 sm:hidden">Insumo</label>
@@ -68,15 +70,27 @@ export default function ItemsOrdenCompra({ insumos }: { insumos: Insumo[] }) {
                 />
               </div>
               <div>
-                <label className="label !mb-1 sm:hidden">Costo total de la partida</label>
+                <label className="label !mb-1 sm:hidden">Subtotal de la partida</label>
                 <input
                   type="number"
                   step="0.01"
                   className="input sm:!w-32"
                   placeholder="Ej. 200"
-                  value={fila.costo_total}
-                  onChange={(e) => actualizar(i, "costo_total", e.target.value)}
+                  value={fila.costo_subtotal}
+                  onChange={(e) => actualizar(i, "costo_subtotal", e.target.value)}
                 />
+              </div>
+              <div>
+                <label className="label !mb-1 sm:hidden">IVA (%)</label>
+                <input name="iva_porcentaje" type="number" step="0.01" min={0} className="input sm:!w-20" placeholder="16" value={fila.iva_porcentaje} onChange={(e) => actualizar(i, "iva_porcentaje", e.target.value)} />
+                <select name="iva_incluido" className="input !py-1 text-[11px]" value={fila.iva_incluido ? "on" : "off"} onChange={(e) => setFilas((prev) => prev.map((f, idx) => idx === i ? { ...f, iva_incluido: e.target.value === "on" } : f))}>
+                  <option value="off">IVA aparte</option>
+                  <option value="on">IVA incluido</option>
+                </select>
+              </div>
+              <div>
+                <label className="label !mb-1 sm:hidden">Envío</label>
+                <input name="envio_total" type="number" step="0.01" min={0} className="input sm:!w-24" placeholder="0" value={fila.envio_total} onChange={(e) => actualizar(i, "envio_total", e.target.value)} />
               </div>
               {/* El costo unitario real que se guarda es calculado, no se captura a mano */}
               <input type="hidden" name="costo_unitario" value={costoUnitario ?? ""} />

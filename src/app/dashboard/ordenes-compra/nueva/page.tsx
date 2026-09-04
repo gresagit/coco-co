@@ -3,6 +3,7 @@ import { siguienteFolioOC } from "@/lib/folios";
 import { redirect } from "next/navigation";
 import { registrarAuditoria } from "@/lib/auditoria";
 import ItemsOrdenCompra from "@/components/ItemsOrdenCompra";
+import { calcularCostoCompra } from "@/lib/costo-compra";
 
 async function crearOrden(formData: FormData) {
   "use server";
@@ -16,6 +17,10 @@ async function crearOrden(formData: FormData) {
   const insumoIds = formData.getAll("insumo_id") as string[];
   const cantidades = formData.getAll("cantidad") as string[];
   const costos = formData.getAll("costo_unitario") as string[];
+  const subtotales = formData.getAll("costo_subtotal") as string[];
+  const ivas = formData.getAll("iva_porcentaje") as string[];
+  const ivaIncluidos = formData.getAll("iva_incluido") as string[];
+  const envios = formData.getAll("envio_total") as string[];
 
   const folio = await siguienteFolioOC();
 
@@ -40,9 +45,10 @@ async function crearOrden(formData: FormData) {
     if (!insumoIds[i]) continue;
     const cantidad = Number(cantidades[i] || 0);
     const costo = Number(costos[i] || 0);
+    const desglose = calcularCostoCompra(Number(subtotales[i] || 0), Number(ivas[i] || 0), ivaIncluidos[i] === "on", Number(envios[i] || 0));
     if (cantidad <= 0) continue;
     total += cantidad * costo;
-    items.push({ orden_compra_id: orden.id, insumo_id: insumoIds[i], cantidad, costo_unitario: costo });
+    items.push({ orden_compra_id: orden.id, insumo_id: insumoIds[i], cantidad, costo_unitario: costo, costo_subtotal: desglose.subtotal, iva_porcentaje: desglose.ivaPorcentaje, iva_incluido: desglose.ivaIncluido, iva_total: desglose.ivaTotal, envio_total: desglose.envioTotal });
   }
 
   if (items.length) {

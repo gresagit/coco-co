@@ -6,8 +6,7 @@ import { getSucursalActualId } from "@/lib/auth";
 import type { SVGProps } from "react";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInsumos from "@/components/EscanerInsumos";
-import InsumoTipoUnidad from "@/components/InsumoTipoUnidad";
-import CostoInicialInsumo from "@/components/CostoInicialInsumo";
+import NuevoInsumoCampos from "@/components/NuevoInsumoCampos";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { calcularCostoCompra } from "@/lib/costo-compra";
 
@@ -210,8 +209,7 @@ export default async function InsumosPage() {
             <label className="label">Marca (opcional)</label>
             <input name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
           </div>
-          <InsumoTipoUnidad />
-          <CostoInicialInsumo sucursalNombre={sucursalNombre} />
+          <NuevoInsumoCampos sucursalNombre={sucursalNombre} />
           <div>
             <label className="label">Fecha de caducidad (si aplica)</label>
             <input name="fecha_caducidad" type="date" className="input" />

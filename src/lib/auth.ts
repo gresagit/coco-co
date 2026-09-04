@@ -129,15 +129,16 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   if (!user || !user.activo) return null;
 
-  const { data: roleRows } = await db
-    .from("usuario_roles")
-    .select("roles(nombre, permisos)")
-    .eq("usuario_id", user.id);
-
-  const { data: sucRows } = await db
-    .from("usuario_sucursales")
-    .select("sucursal_id")
-    .eq("usuario_id", user.id);
+  const [{ data: roleRows }, { data: sucRows }] = await Promise.all([
+    db
+      .from("usuario_roles")
+      .select("roles(nombre, permisos)")
+      .eq("usuario_id", user.id),
+    db
+      .from("usuario_sucursales")
+      .select("sucursal_id")
+      .eq("usuario_id", user.id),
+  ]);
 
   const permisos: Permisos = {};
   for (const row of roleRows || []) {

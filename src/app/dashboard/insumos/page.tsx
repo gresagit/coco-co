@@ -105,17 +105,17 @@ async function crearInsumo(formData: FormData) {
   revalidatePath("/dashboard/insumos");
 }
 
-async function eliminarInsumo(insumoId: string) {
+async function desactivarInsumo(insumoId: string) {
   "use server";
   const db = supabaseAdmin();
-  const { error } = await db.from("insumos").delete().eq("id", insumoId);
+  const { error } = await db.from("insumos").update({ activo: false }).eq("id", insumoId);
 
   if (error) {
-    throw new Error("No se pudo eliminar el insumo. Verifica que no tenga relaciones activas.");
+    throw new Error("No se pudo desactivar el insumo.");
   }
 
   await registrarAuditoria({
-    accion: "eliminar_insumo",
+    accion: "desactivar_insumo",
     entidad: "insumos",
     entidadId: insumoId,
   });
@@ -123,21 +123,21 @@ async function eliminarInsumo(insumoId: string) {
   revalidatePath("/dashboard/insumos");
 }
 
-async function eliminarInsumosMasivos(formData: FormData) {
+async function desactivarInsumosMasivos(formData: FormData) {
   "use server";
   const ids = formData.getAll("insumo_ids").map(String).filter(Boolean);
   if (!ids.length) return;
 
   const db = supabaseAdmin();
-  const { error } = await db.from("insumos").delete().in("id", ids);
+  const { error } = await db.from("insumos").update({ activo: false }).in("id", ids);
   if (error) {
-    throw new Error("No se pudo eliminar la selección de insumos.");
+    throw new Error("No se pudo desactivar la selección de insumos.");
   }
 
   await Promise.all(
     ids.map((id) =>
       registrarAuditoria({
-        accion: "eliminar_insumo",
+        accion: "desactivar_insumo",
         entidad: "insumos",
         entidadId: id,
       })
@@ -152,7 +152,7 @@ export default async function InsumosPage() {
   const sucursalId = getSucursalActualId();
 
   const [{ data: insumos }, { data: sucursal }, { data: stockRows }] = await Promise.all([
-    db.from("insumos").select("*").order("nombre"),
+    db.from("insumos").select("*").eq("activo", true).order("nombre"),
     sucursalId ? db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle() : Promise.resolve({ data: null as any }),
     sucursalId
       ? db.from("insumo_stock").select("insumo_id, cantidad_disponible").eq("sucursal_id", sucursalId)
@@ -227,9 +227,9 @@ export default async function InsumosPage() {
       <div className="card overflow-x-auto">
         <div className="flex items-center justify-between gap-3 mb-3">
           <h2 className="font-semibold">Listado de insumos</h2>
-          <form action={eliminarInsumosMasivos} className="flex items-center">
+          <form action={desactivarInsumosMasivos} className="flex items-center">
             <button type="submit" className="btn-secondary !border-red-200 !text-red-600 text-xs">
-              Eliminar seleccionados
+              Desactivar seleccionados
             </button>
           </form>
         </div>
@@ -269,9 +269,9 @@ export default async function InsumosPage() {
                     Ver / editar
                   </Link>
                   <span className="text-brand-200 mx-1.5">·</span>
-                  <form action={eliminarInsumo.bind(null, i.id)} className="inline-block">
+                    <form action={desactivarInsumo.bind(null, i.id)} className="inline-block">
                     <button type="submit" className="text-red-600 text-xs underline">
-                      Eliminar
+                      Desactivar
                     </button>
                   </form>
                   <span className="text-brand-200 mx-1.5">·</span>

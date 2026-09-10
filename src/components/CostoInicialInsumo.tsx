@@ -47,7 +47,14 @@ export default function CostoInicialInsumo({ sucursalNombre }: { sucursalNombre?
       </div>
       <div>
         <label className="label">IVA (%)</label>
-        <input name="iva_porcentaje_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 16" value={ivaPorcentaje} onChange={(event) => setIvaPorcentaje(event.target.value)} />
+        <select name="iva_porcentaje_inicial" className="input" value={ivaPorcentaje} onChange={(event) => setIvaPorcentaje(event.target.value)}>
+          <option value="">0%</option>
+          <option value="0">0%</option>
+          <option value="8">8%</option>
+          <option value="16">16%</option>
+          <option value="18">18%</option>
+          <option value="20">20%</option>
+        </select>
         <label className="mt-1 flex items-center gap-2 text-xs text-brand-500">
           <input name="iva_incluido_inicial" type="checkbox" checked={ivaIncluido} onChange={(event) => setIvaIncluido(event.target.checked)} />
           IVA ya incluido en el subtotal

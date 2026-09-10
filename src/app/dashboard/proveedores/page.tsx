@@ -40,6 +40,56 @@ async function asociarInsumo(formData: FormData) {
   revalidatePath("/dashboard/proveedores");
 }
 
+async function actualizarProveedor(formData: FormData) {
+  "use server";
+  const db = supabaseAdmin();
+  const proveedorId = formData.get("proveedor_id") as string;
+  const payload = {
+    nombre: (formData.get("nombre") as string)?.trim() || null,
+    contacto: (formData.get("contacto") as string)?.trim() || null,
+    telefono: (formData.get("telefono") as string)?.trim() || null,
+    email: (formData.get("email") as string)?.trim() || null,
+    tiempo_entrega_dias: Number(formData.get("tiempo_entrega_dias") || 0) || null,
+    condiciones_pago: (formData.get("condiciones_pago") as string)?.trim() || null,
+    pedido_minimo: Number(formData.get("pedido_minimo") || 0) || null,
+  };
+
+  const { error } = await db.from("proveedores").update(payload).eq("id", proveedorId);
+  if (error) {
+    throw new Error("No se pudo actualizar el proveedor.");
+  }
+
+  await registrarAuditoria({
+    accion: "editar_proveedor",
+    entidad: "proveedores",
+    entidadId: proveedorId,
+    detalle: payload,
+  });
+
+  revalidatePath("/dashboard/proveedores");
+}
+
+async function eliminarProveedor(formData: FormData) {
+  "use server";
+  const db = supabaseAdmin();
+  const proveedorId = formData.get("proveedor_id") as string;
+  if (!proveedorId) return;
+
+  await db.from("insumo_proveedores").delete().eq("proveedor_id", proveedorId);
+  const { error } = await db.from("proveedores").delete().eq("id", proveedorId);
+  if (error) {
+    throw new Error("No se pudo eliminar el proveedor.");
+  }
+
+  await registrarAuditoria({
+    accion: "eliminar_proveedor",
+    entidad: "proveedores",
+    entidadId: proveedorId,
+  });
+
+  revalidatePath("/dashboard/proveedores");
+}
+
 export default async function ProveedoresPage() {
   const db = supabaseAdmin();
   const [{ data: proveedores }, { data: insumos }, { data: relaciones }] = await Promise.all([
@@ -95,6 +145,61 @@ export default async function ProveedoresPage() {
           </div>
           <div className="md:col-span-4"><button className="btn-primary">Asociar</button></div>
         </form>
+      </div>
+
+      <div className="card">
+        <h2 className="font-semibold mb-3">Editar o eliminar proveedor</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <form action={actualizarProveedor} className="grid md:grid-cols-2 gap-3 items-end">
+            <div className="md:col-span-2">
+              <label className="label">Proveedor</label>
+              <select name="proveedor_id" className="input" required>
+                {(proveedores || []).map((p: any) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Nombre</label>
+              <input name="nombre" className="input" placeholder="Nombre del proveedor" required />
+            </div>
+            <div>
+              <label className="label">Contacto</label>
+              <input name="contacto" className="input" placeholder="Contacto" />
+            </div>
+            <div>
+              <label className="label">Teléfono</label>
+              <input name="telefono" className="input" placeholder="Teléfono" />
+            </div>
+            <div>
+              <label className="label">Email</label>
+              <input name="email" type="email" className="input" placeholder="Email" />
+            </div>
+            <div>
+              <label className="label">Tiempo entrega (días)</label>
+              <input name="tiempo_entrega_dias" type="number" className="input" placeholder="Ej. 7" />
+            </div>
+            <div>
+              <label className="label">Pedido mínimo ($)</label>
+              <input name="pedido_minimo" type="number" step="0.01" className="input" placeholder="Ej. 1000" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">Condiciones de pago</label>
+              <input name="condiciones_pago" className="input" placeholder="Ej. 30 días" />
+            </div>
+            <div className="md:col-span-2">
+              <button className="btn-primary">Guardar cambios</button>
+            </div>
+          </form>
+
+          <form action={eliminarProveedor} className="flex flex-col justify-start gap-3">
+            <div>
+              <label className="label">Proveedor a eliminar</label>
+              <select name="proveedor_id" className="input" required>
+                {(proveedores || []).map((p: any) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </div>
+            <button className="btn-secondary !border-red-200 !text-red-600">Eliminar proveedor</button>
+          </form>
+        </div>
       </div>
 
       <div className="card overflow-x-auto">

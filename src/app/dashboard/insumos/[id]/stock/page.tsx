@@ -138,6 +138,50 @@ async function actualizarStockMinimo(insumoId: string, formData: FormData) {
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
 }
 
+async function actualizarCantidadDisponible(insumoId: string, formData: FormData) {
+  "use server";
+  const db = supabaseAdmin();
+  const sucursalId = formData.get("sucursal_id") as string;
+  const nuevaCantidad = Number(formData.get("cantidad_disponible") || 0);
+
+  const { data: row } = await db
+    .from("insumo_stock")
+    .select("cantidad_disponible")
+    .eq("insumo_id", insumoId)
+    .eq("sucursal_id", sucursalId)
+    .maybeSingle();
+
+  const actual = Number(row?.cantidad_disponible || 0);
+  const diferencia = Math.abs(nuevaCantidad - actual);
+
+  await db
+    .from("insumo_stock")
+    .update({ cantidad_disponible: nuevaCantidad })
+    .eq("insumo_id", insumoId)
+    .eq("sucursal_id", sucursalId);
+
+  await db.from("movimientos").insert({
+    tipo: "Ajuste",
+    origen_tipo: "Insumo",
+    insumo_id: insumoId,
+    sucursal_id: sucursalId,
+    cantidad: diferencia,
+    referencia: "Corrección manual",
+    notas: `Disponible corregido desde ficha de insumo: ${actual} → ${nuevaCantidad}`,
+  });
+
+  await registrarAuditoria({
+    accion: "corregir_disponible_insumo",
+    entidad: "insumos",
+    entidadId: insumoId,
+    sucursalId,
+    detalle: { cantidad_anterior: actual, cantidad_disponible: nuevaCantidad },
+  });
+
+  revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
+  revalidatePath("/dashboard/insumos");
+}
+
 async function ajusteManual(insumoId: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
@@ -293,14 +337,24 @@ export default async function InsumoStockPage({ params }: { params: { id: string
                     · mínimo {s.stock_minimo} {insumo?.unidad_medida} · <span className={`badge-${nivel}`}>{nivel}</span>
                   </p>
                 </div>
-                <form action={actualizarStockMinimo.bind(null, params.id)} className="flex items-end gap-2">
-                  <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
-                  <div>
-                    <label className="label">Stock mínimo ({insumo?.unidad_medida})</label>
-                    <input name="stock_minimo" type="number" step="0.01" defaultValue={s.stock_minimo} className="input !w-28 !py-1.5" />
-                  </div>
-                  <button className="btn-secondary text-xs">Guardar</button>
-                </form>
+                <div className="flex flex-wrap items-end gap-2">
+                  <form action={actualizarStockMinimo.bind(null, params.id)} className="flex items-end gap-2">
+                    <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
+                    <div>
+                      <label className="label">Stock mínimo ({insumo?.unidad_medida})</label>
+                      <input name="stock_minimo" type="number" step="0.01" defaultValue={s.stock_minimo} className="input !w-28 !py-1.5" />
+                    </div>
+                    <button className="btn-secondary text-xs">Guardar</button>
+                  </form>
+                  <form action={actualizarCantidadDisponible.bind(null, params.id)} className="flex items-end gap-2">
+                    <input type="hidden" name="sucursal_id" value={s.sucursal_id} />
+                    <div>
+                      <label className="label">Disponible ({insumo?.unidad_medida})</label>
+                      <input name="cantidad_disponible" type="number" step="0.01" defaultValue={s.cantidad_disponible} className="input !w-28 !py-1.5" />
+                    </div>
+                    <button className="btn-secondary text-xs">Guardar</button>
+                  </form>
+                </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-brand-100">

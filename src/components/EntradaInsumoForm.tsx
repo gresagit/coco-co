@@ -61,7 +61,14 @@ export default function EntradaInsumoForm({
         </div>
         <div>
           <label className="label !mb-1">IVA (%)</label>
-          <input name="iva_porcentaje" type="number" step="0.01" min={0} placeholder="16" className="input !w-24" value={ivaPorcentaje} onChange={(e) => setIvaPorcentaje(e.target.value)} />
+          <select name="iva_porcentaje" className="input !w-28" value={ivaPorcentaje} onChange={(e) => setIvaPorcentaje(e.target.value)}>
+            <option value="">0%</option>
+            <option value="0">0%</option>
+            <option value="8">8%</option>
+            <option value="16">16%</option>
+            <option value="18">18%</option>
+            <option value="20">20%</option>
+          </select>
           <label className="mt-1 flex items-center gap-1 text-[11px] text-brand-500">
             <input name="iva_incluido" type="checkbox" checked={ivaIncluido} onChange={(e) => setIvaIncluido(e.target.checked)} /> incluido
           </label>

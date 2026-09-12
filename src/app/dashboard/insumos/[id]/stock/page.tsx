@@ -99,6 +99,8 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
 async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
+  const costoUnitarioActual = Number(formData.get("costo_unitario_actual") || 0);
+
   await db
     .from("insumos")
     .update({
@@ -106,14 +108,21 @@ async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
       marca: (formData.get("marca") as string)?.trim() || null,
       tipo: formData.get("tipo"),
       unidad_medida: formData.get("unidad_medida"),
+      costo_unitario_actual: costoUnitarioActual,
     })
     .eq("id", insumoId);
+
   await registrarAuditoria({
     accion: "editar_insumo",
     entidad: "insumos",
     entidadId: insumoId,
-    detalle: { nombre: formData.get("nombre"), tipo: formData.get("tipo") },
+    detalle: {
+      nombre: formData.get("nombre"),
+      tipo: formData.get("tipo"),
+      costo_unitario_actual: costoUnitarioActual,
+    },
   });
+
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
   revalidatePath("/dashboard/insumos");
 }
@@ -307,11 +316,19 @@ export default async function InsumoStockPage({ params }: { params: { id: string
             </select>
           </div>
           <div>
-            <label className="label">Costo unitario actual</label>
-            <output className="input block bg-brand-50" aria-label="Costo unitario actual">
-              ${Number(insumo?.costo_unitario_actual || 0).toFixed(4)} / {insumo?.unidad_medida}
-            </output>
-            <p className="text-xs text-brand-400 mt-1">Se calcula con el costo total pagado dividido entre la cantidad recibida.</p>
+            <label className="label">Costo unitario actual ({insumo?.unidad_medida})</label>
+            <input
+              name="costo_unitario_actual"
+              type="number"
+              step="0.0001"
+              min={0}
+              defaultValue={Number(insumo?.costo_unitario_actual || 0).toFixed(4)}
+              className="input"
+              aria-label="Costo unitario actual"
+            />
+            <p className="text-xs text-brand-400 mt-1">
+              Puedes ajustar el costo base para reflejar el precio vigente del insumo.
+            </p>
           </div>
           <div className="flex items-end">
             <button className="btn-primary w-full sm:w-auto">Guardar cambios</button>

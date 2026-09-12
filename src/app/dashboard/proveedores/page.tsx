@@ -5,13 +5,16 @@ import { registrarAuditoria } from "@/lib/auditoria";
 async function crearProveedor(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
+  const condicionesPago = String(formData.get("condiciones_pago") || "");
   const { data: proveedor } = await db.from("proveedores").insert({
     nombre: formData.get("nombre"),
     contacto: formData.get("contacto"),
     telefono: formData.get("telefono"),
     email: formData.get("email"),
     tiempo_entrega_dias: Number(formData.get("tiempo_entrega_dias") || 0) || null,
-    condiciones_pago: formData.get("condiciones_pago"),
+    condiciones_pago: ["Transferencia bancaria", "Deposito", "Efectivo"].includes(condicionesPago)
+      ? condicionesPago
+      : "Transferencia bancaria",
     pedido_minimo: Number(formData.get("pedido_minimo") || 0) || null,
   }).select().single();
   await registrarAuditoria({
@@ -44,13 +47,16 @@ async function actualizarProveedor(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
   const proveedorId = formData.get("proveedor_id") as string;
+  const condicionesPago = String(formData.get("condiciones_pago") || "");
   const payload = {
     nombre: (formData.get("nombre") as string)?.trim() || null,
     contacto: (formData.get("contacto") as string)?.trim() || null,
     telefono: (formData.get("telefono") as string)?.trim() || null,
     email: (formData.get("email") as string)?.trim() || null,
     tiempo_entrega_dias: Number(formData.get("tiempo_entrega_dias") || 0) || null,
-    condiciones_pago: (formData.get("condiciones_pago") as string)?.trim() || null,
+    condiciones_pago: ["Transferencia bancaria", "Deposito", "Efectivo"].includes(condicionesPago)
+      ? condicionesPago
+      : null,
     pedido_minimo: Number(formData.get("pedido_minimo") || 0) || null,
   };
 
@@ -90,13 +96,22 @@ async function eliminarProveedor(formData: FormData) {
   revalidatePath("/dashboard/proveedores");
 }
 
-export default async function ProveedoresPage() {
+export default async function ProveedoresPage({ searchParams }: { searchParams?: { categoria?: string; editar?: string } }) {
   const db = supabaseAdmin();
+  const categoriaSeleccionada = String(searchParams?.categoria || "");
+  const editarId = String(searchParams?.editar || "");
+
   const [{ data: proveedores }, { data: insumos }, { data: relaciones }] = await Promise.all([
     db.from("proveedores").select("*").order("nombre"),
-    db.from("insumos").select("id, codigo_interno, nombre").order("nombre"),
+    db.from("insumos").select("id, codigo_interno, nombre, tipo").eq("activo", true).order("nombre"),
     db.from("insumo_proveedores").select("*, insumos(nombre), proveedores(nombre)"),
   ]);
+
+  const categoriasInsumos = Array.from(new Set((insumos || []).map((i: any) => i.tipo).filter(Boolean))).sort();
+  const insumosFiltrados = (insumos || []).filter((i: any) => !categoriaSeleccionada || i.tipo === categoriaSeleccionada);
+  const proveedorEnEdicion = editarId
+    ? (proveedores || []).find((p: any) => p.id === editarId)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -109,30 +124,50 @@ export default async function ProveedoresPage() {
       <div className="card">
         <h2 className="font-semibold mb-3">Nuevo proveedor</h2>
         <form action={crearProveedor} className="grid md:grid-cols-3 gap-3">
-          <div><label className="label">Nombre</label><input name="nombre" className="input" required /></div>
-          <div><label className="label">Contacto</label><input name="contacto" className="input" /></div>
+          <div><label className="label">Nombre de Empresa</label><input name="nombre" className="input" required /></div>
+          <div><label className="label">Nombre del Encargado</label><input name="contacto" className="input" /></div>
           <div><label className="label">Teléfono</label><input name="telefono" className="input" /></div>
           <div><label className="label">Email</label><input name="email" type="email" className="input" /></div>
           <div><label className="label">Tiempo de entrega (días)</label><input name="tiempo_entrega_dias" type="number" className="input" /></div>
           <div><label className="label">Pedido mínimo ($)</label><input name="pedido_minimo" type="number" step="0.01" className="input" /></div>
-          <div className="md:col-span-3"><label className="label">Condiciones de pago</label><input name="condiciones_pago" className="input" placeholder="Ej. Contado, 30 días, etc." /></div>
+          <div className="md:col-span-3">
+            <label className="label">Condiciones de pago</label>
+            <select name="condiciones_pago" className="input" defaultValue="Transferencia bancaria" required>
+              <option value="Transferencia bancaria">Transferencia bancaria</option>
+              <option value="Deposito">Deposito</option>
+              <option value="Efectivo">Efectivo</option>
+            </select>
+          </div>
           <div className="md:col-span-3"><button className="btn-primary">Agregar proveedor</button></div>
         </form>
       </div>
 
       <div className="card">
+        <div className="flex flex-wrap items-end gap-3 mb-4">
+          <form method="get" action="/dashboard/proveedores" className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="label">Filtrar insumos por categoría</label>
+              <select name="categoria" className="input" defaultValue={categoriaSeleccionada}>
+                <option value="">Todas</option>
+                {(categoriasInsumos || []).map((cat: string) => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <button className="btn-secondary">Aplicar</button>
+            {(categoriaSeleccionada || "").length > 0 && <a href="/dashboard/proveedores" className="btn-secondary">Quitar filtro</a>}
+          </form>
+        </div>
         <h2 className="font-semibold mb-3">Asociar insumo a proveedor</h2>
-        <form action={asociarInsumo} className="grid md:grid-cols-4 gap-3 items-end">
+        <form action={asociarInsumo} className="grid md:grid-cols-5 gap-3 items-end">
           <div>
             <label className="label">Proveedor</label>
             <select name="proveedor_id" className="input" required>
               {(proveedores || []).map((p: any) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
-          <div>
+          <div className="md:col-span-2">
             <label className="label">Insumo</label>
             <select name="insumo_id" className="input" required>
-              {(insumos || []).map((i: any) => <option key={i.id} value={i.id}>{i.codigo_interno} — {i.nombre}</option>)}
+              {(insumosFiltrados || []).map((i: any) => <option key={i.id} value={i.id}>{i.codigo_interno} — {i.nombre} ({i.tipo})</option>)}
             </select>
           </div>
           <div>
@@ -143,76 +178,63 @@ export default async function ProveedoresPage() {
             <input type="checkbox" name="es_preferido" id="pref" />
             <label htmlFor="pref" className="text-sm">Preferido</label>
           </div>
-          <div className="md:col-span-4"><button className="btn-primary">Asociar</button></div>
+          <div className="md:col-span-5"><button className="btn-primary">Asociar</button></div>
         </form>
-      </div>
-
-      <div className="card">
-        <h2 className="font-semibold mb-3">Editar o eliminar proveedor</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <form action={actualizarProveedor} className="grid md:grid-cols-2 gap-3 items-end">
-            <div className="md:col-span-2">
-              <label className="label">Proveedor</label>
-              <select name="proveedor_id" className="input" required>
-                {(proveedores || []).map((p: any) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Nombre</label>
-              <input name="nombre" className="input" placeholder="Nombre del proveedor" required />
-            </div>
-            <div>
-              <label className="label">Contacto</label>
-              <input name="contacto" className="input" placeholder="Contacto" />
-            </div>
-            <div>
-              <label className="label">Teléfono</label>
-              <input name="telefono" className="input" placeholder="Teléfono" />
-            </div>
-            <div>
-              <label className="label">Email</label>
-              <input name="email" type="email" className="input" placeholder="Email" />
-            </div>
-            <div>
-              <label className="label">Tiempo entrega (días)</label>
-              <input name="tiempo_entrega_dias" type="number" className="input" placeholder="Ej. 7" />
-            </div>
-            <div>
-              <label className="label">Pedido mínimo ($)</label>
-              <input name="pedido_minimo" type="number" step="0.01" className="input" placeholder="Ej. 1000" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="label">Condiciones de pago</label>
-              <input name="condiciones_pago" className="input" placeholder="Ej. 30 días" />
-            </div>
-            <div className="md:col-span-2">
-              <button className="btn-primary">Guardar cambios</button>
-            </div>
-          </form>
-
-          <form action={eliminarProveedor} className="flex flex-col justify-start gap-3">
-            <div>
-              <label className="label">Proveedor a eliminar</label>
-              <select name="proveedor_id" className="input" required>
-                {(proveedores || []).map((p: any) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-            </div>
-            <button className="btn-secondary !border-red-200 !text-red-600">Eliminar proveedor</button>
-          </form>
-        </div>
       </div>
 
       <div className="card overflow-x-auto">
         <table className="table-base">
-          <thead><tr><th>Nombre</th><th>Contacto</th><th>Tiempo entrega</th><th>Pedido mínimo</th><th>Condiciones</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Nombre de Empresa</th>
+              <th>Nombre del Encargado</th>
+              <th>Teléfono</th>
+              <th>Email</th>
+              <th>Tiempo entrega</th>
+              <th>Pedido mínimo</th>
+              <th>Condiciones</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
           <tbody>
             {(proveedores || []).map((p: any) => (
               <tr key={p.id}>
                 <td className="font-medium">{p.nombre}</td>
-                <td>{p.contacto} {p.telefono && `· ${p.telefono}`}</td>
+                <td>{p.contacto || "—"}</td>
+                <td>{p.telefono || "—"}</td>
+                <td>{p.email || "—"}</td>
                 <td>{p.tiempo_entrega_dias ? `${p.tiempo_entrega_dias} días` : "—"}</td>
                 <td>{p.pedido_minimo ? `$${p.pedido_minimo}` : "—"}</td>
                 <td>{p.condiciones_pago || "—"}</td>
+                <td className="whitespace-nowrap">
+                  <div className="flex flex-wrap gap-2">
+                    <a href={`/dashboard/proveedores?editar=${p.id}`} className="btn-secondary text-xs">Editar</a>
+                    <form action={eliminarProveedor} className="inline">
+                      <input type="hidden" name="proveedor_id" value={p.id} />
+                      <button type="submit" className="btn-secondary !border-red-200 !text-red-600 text-xs">Eliminar</button>
+                    </form>
+                  </div>
+                  {proveedorEnEdicion?.id === p.id && (
+                    <form action={actualizarProveedor} className="mt-3 flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="proveedor_id" value={p.id} />
+                      <div><label className="label">Empresa</label><input name="nombre" className="input" defaultValue={p.nombre} required /></div>
+                      <div><label className="label">Encargado</label><input name="contacto" className="input" defaultValue={p.contacto || ""} /></div>
+                      <div><label className="label">Teléfono</label><input name="telefono" className="input" defaultValue={p.telefono || ""} /></div>
+                      <div><label className="label">Email</label><input name="email" type="email" className="input" defaultValue={p.email || ""} /></div>
+                      <div><label className="label">Entrega</label><input name="tiempo_entrega_dias" type="number" className="input" defaultValue={p.tiempo_entrega_dias || ""} /></div>
+                      <div><label className="label">Pedido mínimo</label><input name="pedido_minimo" type="number" step="0.01" className="input" defaultValue={p.pedido_minimo || ""} /></div>
+                      <div>
+                        <label className="label">Pago</label>
+                        <select name="condiciones_pago" className="input" defaultValue={p.condiciones_pago || "Transferencia bancaria"}>
+                          <option value="Transferencia bancaria">Transferencia bancaria</option>
+                          <option value="Deposito">Deposito</option>
+                          <option value="Efectivo">Efectivo</option>
+                        </select>
+                      </div>
+                      <div><button className="btn-primary">Guardar</button></div>
+                    </form>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

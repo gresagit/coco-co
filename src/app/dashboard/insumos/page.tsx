@@ -147,12 +147,19 @@ async function desactivarInsumosMasivos(formData: FormData) {
   revalidatePath("/dashboard/insumos");
 }
 
-export default async function InsumosPage() {
+export default async function InsumosPage({ searchParams }: { searchParams?: { categoria?: string } }) {
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
+  const categoriaSeleccionada = String(searchParams?.categoria || "");
+
+  const baseQuery = db
+    .from("insumos")
+    .select("*")
+    .eq("activo", true)
+    .order("nombre");
 
   const [{ data: insumos }, { data: sucursal }, { data: stockRows }] = await Promise.all([
-    db.from("insumos").select("*").eq("activo", true).order("nombre"),
+    categoriaSeleccionada ? baseQuery.eq("tipo", categoriaSeleccionada) : baseQuery,
     sucursalId ? db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle() : Promise.resolve({ data: null as any }),
     sucursalId
       ? db.from("insumo_stock").select("insumo_id, cantidad_disponible").eq("sucursal_id", sucursalId)
@@ -164,6 +171,8 @@ export default async function InsumosPage() {
   for (const row of stockRows || []) {
     stockPorInsumo[row.insumo_id] = Number(row.cantidad_disponible);
   }
+
+  const categoriasInsumos = ["Materia Prima", "Empaque", "Etiqueta", "Producto Intermedio"];
 
   return (
     <div className="space-y-6">
@@ -229,6 +238,26 @@ export default async function InsumosPage() {
             </form>
           </div>
         </details>
+      </div>
+
+      <div className="card">
+        <div className="flex flex-wrap items-end gap-3">
+          <form method="get" action="/dashboard/insumos" className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="label">Filtrar por categoría</label>
+              <select name="categoria" className="input" defaultValue={categoriaSeleccionada}>
+                <option value="">Todas</option>
+                {(categoriasInsumos || []).map((categoria: string) => (
+                  <option key={categoria} value={categoria}>{categoria}</option>
+                ))}
+              </select>
+            </div>
+            <button className="btn-secondary">Aplicar filtro</button>
+          </form>
+          {(categoriaSeleccionada || '').length > 0 && (
+            <a href="/dashboard/insumos" className="btn-secondary">Quitar filtro</a>
+          )}
+        </div>
       </div>
 
       <div className="card overflow-x-auto">

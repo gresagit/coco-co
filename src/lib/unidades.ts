@@ -1,14 +1,11 @@
 // Utilidad compartida para convertir cantidades entre unidades de la misma
-// familia (masa o volumen). Se usa en cualquier lugar donde una línea de la
-// fórmula (BOM) pueda estar capturada en una unidad distinta a la unidad
-// base en la que se registra el costo y el stock del insumo
-// (`insumos.unidad_medida`), por ejemplo gramos en la receta cuando el
-// insumo se compra y almacena en kilos.
+// familia (masa o volumen) y usar la medida correcta cuando la receta se
+// captura en otra escala de la misma familia (ej. gramos en vez de kilos).
 const FACTORES_CONVERSION: Record<string, Record<string, number>> = {
-  kg: { kg: 1, g: 0.001 },
-  g: { g: 1, kg: 1000 },
-  L: { L: 1, ml: 0.001 },
-  ml: { ml: 1, L: 1000 },
+  kg: { g: 1000, kg: 1 },
+  g: { kg: 0.001, g: 1 },
+  L: { ml: 1000, L: 1 },
+  ml: { L: 0.001, ml: 1 },
   pz: { pz: 1 },
   m: { m: 1 },
 };
@@ -20,6 +17,6 @@ const FACTORES_CONVERSION: Record<string, Record<string, number>> = {
 // familia que el insumo.
 export function convertirCantidad(cantidad: number, deUnidad: string, aUnidad: string): number {
   if (!deUnidad || !aUnidad || deUnidad === aUnidad) return cantidad;
-  const factor = FACTORES_CONVERSION[aUnidad]?.[deUnidad];
+  const factor = FACTORES_CONVERSION[deUnidad]?.[aUnidad];
   return factor !== undefined ? cantidad * factor : cantidad;
 }

@@ -221,59 +221,64 @@ export default async function ProductosPage() {
         </div>
       )}
 
-      <div className="card">
-        <h2 className="font-semibold mb-3">Nuevo producto</h2>
-        <form action={crearProducto} className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="label">Nombre</label>
-            <input name="nombre" className="input" required />
-          </div>
-          <div>
-            <label className="label">Categoría existente</label>
-            <select name="categoria_id" className="input">
-              <option value="">— Ninguna —</option>
-              {(categorias || []).map((c: any) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">O nueva categoría</label>
-            <input name="categoria_nueva" className="input" placeholder="Ej. Jabones" />
-            <p className="text-xs text-brand-400 mt-1">La categoría define el prefijo del SKU (ej. Jabones → JAB-0001).</p>
-          </div>
-          <div>
-            <label className="label">Presentación / tamaño</label>
-            <input name="presentacion" className="input" required />
-          </div>
-          <div>
-            <label className="label">Unidad de venta</label>
-            <select name="unidad_venta" className="input" required>
-              <option value="pz">pz</option>
-              <option value="kg">kg</option>
-              <option value="L">L</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">% Margen deseado (ej. 0.30 = 30%)</label>
-            <input name="margen" type="number" step="0.01" min="0" max="0.99" defaultValue={0.3} className="input" />
-          </div>
-          <div className="flex items-center gap-2 pt-6">
-            <input type="checkbox" name="es_insumo_de_otro" id="anidado" />
-            <label htmlFor="anidado" className="text-sm">¿Es también insumo de otro producto?</label>
-          </div>
-          <div>
-            <label className="label">Tipo de producto</label>
-            <select name="tipo_producto" className="input" defaultValue="vendible">
-              <option value="vendible">Producto terminado listo para venta</option>
-              <option value="intermedio">Producto intermedio para otra receta</option>
-            </select>
-          </div>
-          <div className="md:col-span-3">
-            <button className="btn-primary">Agregar producto</button>
-          </div>
-        </form>
-      </div>
+      <CollapsePanel
+        title="Nuevo producto"
+        description="Crea el producto terminado y deja el catálogo ordenado."
+        icon={<IconPlus className="w-[18px] h-[18px]" />}
+      >
+        <div>
+          <form action={crearProducto} className="grid md:grid-cols-3 gap-3">
+            <div>
+              <label className="label">Nombre</label>
+              <input name="nombre" className="input" required />
+            </div>
+            <div>
+              <label className="label">Categoría existente</label>
+              <select name="categoria_id" className="input">
+                <option value="">— Ninguna —</option>
+                {(categorias || []).map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">O nueva categoría</label>
+              <input name="categoria_nueva" className="input" placeholder="Ej. Jabones" />
+              <p className="text-xs text-brand-400 mt-1">La categoría define el prefijo del SKU (ej. Jabones → JAB-0001).</p>
+            </div>
+            <div>
+              <label className="label">Presentación / tamaño</label>
+              <input name="presentacion" className="input" required />
+            </div>
+            <div>
+              <label className="label">Unidad de venta</label>
+              <select name="unidad_venta" className="input" required>
+                <option value="pz">pz</option>
+                <option value="kg">kg</option>
+                <option value="L">L</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">% Margen deseado (ej. 0.30 = 30%)</label>
+              <input name="margen" type="number" step="0.01" min="0" max="0.99" defaultValue={0.3} className="input" />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <input type="checkbox" name="es_insumo_de_otro" id="anidado" />
+              <label htmlFor="anidado" className="text-sm">¿Es también insumo de otro producto?</label>
+            </div>
+            <div>
+              <label className="label">Tipo de producto</label>
+              <select name="tipo_producto" className="input" defaultValue="vendible">
+                <option value="vendible">Producto terminado listo para venta</option>
+                <option value="intermedio">Producto intermedio para otra receta</option>
+              </select>
+            </div>
+            <div className="md:col-span-3">
+              <button className="btn-primary">Agregar producto</button>
+            </div>
+          </form>
+        </div>
+      </CollapsePanel>
 
       <ProductosTabla
         productos={conCosteo}
@@ -282,6 +287,14 @@ export default async function ProductosPage() {
         eliminarProducto={eliminarProducto}
       />
     </div>
+  );
+}
+
+function IconPlus(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

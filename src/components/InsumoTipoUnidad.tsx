@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { unidadesPermitidasPara } from "@/lib/unidades";
 
 const UNIDAD_SUGERIDA: Record<string, string> = {
   "Materia Prima": "kg",
@@ -13,14 +14,17 @@ export default function InsumoTipoUnidad() {
   const [tipo, setTipo] = useState("Materia Prima");
   const [unidad, setUnidad] = useState(UNIDAD_SUGERIDA["Materia Prima"]);
   const [unidadTocadaAMano, setUnidadTocadaAMano] = useState(false);
+  const unidadesDisponibles = unidadesPermitidasPara(tipo);
 
   function onTipoChange(nuevoTipo: string) {
     setTipo(nuevoTipo);
+    const disponiblesNuevoTipo = unidadesPermitidasPara(nuevoTipo);
     // Solo autocompleta la unidad si el usuario no la cambió manualmente antes
     // (para no pisarle una elección a propósito, ej. etiquetas que a veces se
-    // compran por rollo/metro).
-    if (!unidadTocadaAMano) {
-      setUnidad(UNIDAD_SUGERIDA[nuevoTipo] || "kg");
+    // compran por rollo/metro). Si la que traía ya no aplica al nuevo tipo
+    // (ej. Materia Prima ya no admite "L"), se corrige de todos modos.
+    if (!unidadTocadaAMano || !disponiblesNuevoTipo.includes(unidad)) {
+      setUnidad(UNIDAD_SUGERIDA[nuevoTipo] || disponiblesNuevoTipo[0]);
     }
   }
 
@@ -48,17 +52,16 @@ export default function InsumoTipoUnidad() {
           }}
           required
         >
-          <option value="kg">kg</option>
-          <option value="g">g (gramos)</option>
-          <option value="L">L</option>
-          <option value="ml">ml (mililitros)</option>
-          <option value="pz">pz</option>
-          <option value="m">m</option>
+          {unidadesDisponibles.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
         </select>
         <p className="text-xs text-brand-400 mt-1">
           {tipo === "Empaque" || tipo === "Etiqueta"
             ? "Sugerido \"pz\" porque este tipo casi siempre se cuenta por pieza."
-            : "Sugerido \"kg\" — cámbialo si este insumo se compra o se usa en receta por gramo, litro, mililitro, pieza o metro."}
+            : "Las fórmulas están en kilos: usa kg o g. Solo usa \"pz\" si este insumo se cuenta por pieza y no por peso."}
         </p>
       </div>
     </>

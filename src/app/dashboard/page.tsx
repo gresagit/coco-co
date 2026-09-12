@@ -38,7 +38,7 @@ export default async function DashboardHome() {
         <p className="page-subtitle">Resumen general del sistema de inventarios.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-fade">
         <StatCard label="Productos activos" value={productos ?? 0} />
         <StatCard label="Insumos activos" value={insumos ?? 0} />
         <StatCard label="Sucursales activas" value={sucursales ?? 0} />

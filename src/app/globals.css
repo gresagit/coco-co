@@ -148,6 +148,40 @@
   /* Línea que sube y baja sobre el video, como en los lectores de códigos de
      barra de las apps — así se ve claro que la cámara SÍ está buscando un
      código activamente, no solo mostrando el video. */
+  /* Entrada + brillo suave para los banners (bloques destacados). La entrada
+     los hace aparecer con vida en vez de "aparecer de golpe"; el brillo es
+     lentísimo (10s) para que se sienta vivo sin distraer de la lectura. */
+  @keyframes banner-entrada {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes banner-brillo {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Aparición escalonada para grids de tarjetas/banners (stats, categorías),
+     para que entren en cascada en vez de como un bloque plano de golpe. */
+  .stagger-fade > * {
+    opacity: 0;
+    animation: banner-entrada 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .stagger-fade > *:nth-child(1) { animation-delay: 0.02s; }
+  .stagger-fade > *:nth-child(2) { animation-delay: 0.08s; }
+  .stagger-fade > *:nth-child(3) { animation-delay: 0.14s; }
+  .stagger-fade > *:nth-child(4) { animation-delay: 0.2s; }
+  .stagger-fade > *:nth-child(5) { animation-delay: 0.26s; }
+  .stagger-fade > *:nth-child(6) { animation-delay: 0.32s; }
+  .stagger-fade > *:nth-child(7) { animation-delay: 0.38s; }
+  .stagger-fade > *:nth-child(8) { animation-delay: 0.44s; }
+  .stagger-fade > *:nth-child(n+9) { animation-delay: 0.5s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .banner, .banner-accent, .stagger-fade > * {
+      animation: none !important;
+    }
+  }
+
   @keyframes escaner-linea {
     0% {
       top: 6%;
@@ -239,11 +273,17 @@
     @apply text-xs font-medium text-brand-400;
   }
 
-  /* Banner — bloque destacado con acento suave, para avisos o resúmenes. */
+  /* Banner — bloque destacado con acento suave, para avisos o resúmenes.
+     Entra con un fade-up sutil y respira con un brillo de gradiente lentísimo
+     (10s) para que no se sienta un bloque estático más entre tanto card. */
   .banner {
-    @apply rounded-2xl border border-brand-150 bg-gradient-to-br from-surface to-brand-50 p-5 shadow-soft transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
+    @apply rounded-2xl border border-brand-150 bg-gradient-to-br from-surface to-brand-50 p-5 shadow-soft transition-all duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)] hover:-translate-y-0.5;
+    background-size: 160% 160%;
+    animation: banner-entrada 0.45s cubic-bezier(0.16, 1, 0.3, 1) both, banner-brillo 10s ease-in-out infinite;
   }
   .banner-accent {
-    @apply rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-surface p-5 shadow-soft;
+    @apply rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-surface p-5 shadow-soft transition-all duration-200 hover:-translate-y-0.5;
+    background-size: 160% 160%;
+    animation: banner-entrada 0.45s cubic-bezier(0.16, 1, 0.3, 1) both, banner-brillo 8s ease-in-out infinite;
   }
 }

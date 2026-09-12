@@ -1,12 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { unidadesPermitidasPara } from "@/lib/unidades";
 
 const UNIDAD_SUGERIDA: Record<string, string> = {
   "Materia Prima": "kg",
   Empaque: "pz",
   Etiqueta: "pz",
   "Producto Intermedio": "kg",
+};
+
+const UNIDAD_LABELS: Record<string, string> = {
+  kg: "kg (kilogramos)",
+  g: "g (gramos)",
+  L: "L (litros)",
+  ml: "ml (mililitros)",
+  pz: "pz (piezas)",
+  m: "m (metros)",
 };
 
 export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?: string }) {
@@ -25,9 +35,18 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
   const totalNumero = subtotalNumero + ivaNumero + Number(envio || 0);
   const costoUnitario = cantidadNumero > 0 && totalNumero > 0 ? totalNumero / cantidadNumero : null;
 
+  const unidadesDisponibles = unidadesPermitidasPara(tipo);
+
   function onTipoChange(nuevoTipo: string) {
     setTipo(nuevoTipo);
-    if (!unidadTocadaAMano) setUnidad(UNIDAD_SUGERIDA[nuevoTipo] || "kg");
+    const disponiblesNuevoTipo = unidadesPermitidasPara(nuevoTipo);
+    // Si el usuario no había tocado la unidad a mano, sigue autocompletando
+    // la sugerida. Si sí la había cambiado pero esa unidad ya no aplica para
+    // el nuevo tipo (ej. traía "L" y cambia a Materia Prima), hay que
+    // corregirla de todos modos para no dejar un valor inválido seleccionado.
+    if (!unidadTocadaAMano || !disponiblesNuevoTipo.includes(unidad)) {
+      setUnidad(UNIDAD_SUGERIDA[nuevoTipo] || disponiblesNuevoTipo[0]);
+    }
   }
 
   return (
@@ -54,14 +73,17 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
           }}
           required
         >
-          <option value="kg">kg (kilogramos)</option>
-          <option value="g">g (gramos)</option>
-          <option value="L">L (litros)</option>
-          <option value="ml">ml (mililitros)</option>
-          <option value="pz">pz (piezas)</option>
-          <option value="m">m (metros)</option>
+          {unidadesDisponibles.map((u) => (
+            <option key={u} value={u}>
+              {UNIDAD_LABELS[u] || u}
+            </option>
+          ))}
         </select>
-        <p className="text-xs text-brand-400 mt-1">Esta unidad se usará en stock, entradas y costo unitario.</p>
+        <p className="text-xs text-brand-400 mt-1">
+          {tipo === "Materia Prima" || tipo === "Producto Intermedio"
+            ? "Las fórmulas (BOM) están capturadas en kilos: usa kg o g. Elige \"pz\" solo si este insumo en realidad se cuenta por pieza y no por peso (ej. jabón pre-pastillado)."
+            : "Esta unidad se usará en stock, entradas y costo unitario."}
+        </p>
       </div>
       <div>
         <label className="label">

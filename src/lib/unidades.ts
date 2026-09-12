@@ -20,3 +20,21 @@ export function convertirCantidad(cantidad: number, deUnidad: string, aUnidad: s
   const factor = FACTORES_CONVERSION[deUnidad]?.[aUnidad];
   return factor !== undefined ? cantidad * factor : cantidad;
 }
+
+// Unidades permitidas al dar de alta un insumo, según su tipo. Las fórmulas
+// (BOM) están capturadas en kilos, así que Materia Prima y Producto
+// Intermedio solo pueden registrarse en kg o g — con la excepción de "pz"
+// para insumos que en realidad se cuentan por pieza y no por peso (ej.
+// pastillas de jabón pre-fabricadas). Empaque y Etiqueta no participan en el
+// cálculo de fórmula por peso, así que conservan el catálogo completo
+// (pz, L, ml, m, kg, g) para cubrir cualquier forma en que se compren.
+export const UNIDADES_PERMITIDAS_POR_TIPO: Record<string, string[]> = {
+  "Materia Prima": ["kg", "g", "pz"],
+  "Producto Intermedio": ["kg", "g", "pz"],
+  Empaque: ["kg", "g", "L", "ml", "pz", "m"],
+  Etiqueta: ["kg", "g", "L", "ml", "pz", "m"],
+};
+
+export function unidadesPermitidasPara(tipo: string): string[] {
+  return UNIDADES_PERMITIDAS_POR_TIPO[tipo] || ["kg", "g", "L", "ml", "pz", "m"];
+}

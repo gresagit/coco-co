@@ -9,11 +9,25 @@ import EscanerInsumos from "@/components/EscanerInsumos";
 import NuevoInsumoCampos from "@/components/NuevoInsumoCampos";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { calcularCostoCompra } from "@/lib/costo-compra";
+import { unidadesPermitidasPara } from "@/lib/unidades";
 
 async function crearInsumo(formData: FormData) {
   "use server";
   const db = supabaseAdmin();
   const tipo = formData.get("tipo") as string;
+
+  // Las fórmulas (BOM) están capturadas en kilos, así que un insumo de
+  // Materia Prima o Producto Intermedio solo puede darse de alta en kg, g o
+  // pz (para los que en realidad se cuentan por pieza). Se revalida aquí por
+  // si el formulario se manipula, ya que el <select> del cliente es solo la
+  // primera línea de defensa.
+  const unidadMedida = formData.get("unidad_medida") as string;
+  if (!unidadesPermitidasPara(tipo).includes(unidadMedida)) {
+    throw new Error(
+      `Unidad de medida "${unidadMedida}" no es válida para el tipo "${tipo}". Usa una de: ${unidadesPermitidasPara(tipo).join(", ")}.`
+    );
+  }
+
   // El código interno se genera automáticamente a partir del tipo de insumo.
   const codigoInterno = await siguienteCodigoInsumo(tipo);
   const controlaCaducidad = formData.get("controla_caducidad") === "on";
@@ -35,7 +49,7 @@ async function crearInsumo(formData: FormData) {
       nombre: formData.get("nombre"),
       marca: (formData.get("marca") as string)?.trim() || null,
       tipo,
-      unidad_medida: formData.get("unidad_medida"),
+      unidad_medida: unidadMedida,
       controla_caducidad: controlaCaducidad,
       costo_unitario_actual: costoUnitario || 0,
     })

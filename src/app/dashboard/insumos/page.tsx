@@ -193,35 +193,42 @@ export default async function InsumosPage() {
       </CollapsePanel>
 
       <div className="card">
-        <h2 className="font-semibold mb-3">Nuevo insumo</h2>
-        {!sucursalId && (
-          <p className="text-xs text-accent-600 mb-3">
-            No tienes una tienda elegida arriba a la derecha — puedes crear el insumo, pero la cantidad inicial no se
-            va a poder guardar hasta que elijas sucursal.
-          </p>
-        )}
-        <form action={crearInsumo} className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="label">Nombre</label>
-            <input name="nombre" className="input" required />
+        <details className="group">
+          <summary className="btn-secondary cursor-pointer list-none text-sm">
+            Agregar insumo
+          </summary>
+          <div className="mt-4 pt-4 border-t border-brand-150">
+            <h2 className="font-semibold mb-3">Nuevo insumo</h2>
+            {!sucursalId && (
+              <p className="text-xs text-accent-600 mb-3">
+                No tienes una tienda elegida arriba a la derecha — puedes crear el insumo, pero la cantidad inicial no se
+                va a poder guardar hasta que elijas sucursal.
+              </p>
+            )}
+            <form action={crearInsumo} className="grid md:grid-cols-3 gap-3">
+              <div>
+                <label className="label">Nombre</label>
+                <input name="nombre" className="input" required />
+              </div>
+              <div>
+                <label className="label">Marca (opcional)</label>
+                <input name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
+              </div>
+              <NuevoInsumoCampos sucursalNombre={sucursalNombre} />
+              <div>
+                <label className="label">Fecha de caducidad (si aplica)</label>
+                <input name="fecha_caducidad" type="date" className="input" />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input type="checkbox" name="controla_caducidad" id="cad" />
+                <label htmlFor="cad" className="text-sm">¿Controla caducidad? (activa FEFO)</label>
+              </div>
+              <div className="md:col-span-3">
+                <button className="btn-primary">Agregar insumo</button>
+              </div>
+            </form>
           </div>
-          <div>
-            <label className="label">Marca (opcional)</label>
-            <input name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
-          </div>
-          <NuevoInsumoCampos sucursalNombre={sucursalNombre} />
-          <div>
-            <label className="label">Fecha de caducidad (si aplica)</label>
-            <input name="fecha_caducidad" type="date" className="input" />
-          </div>
-          <div className="flex items-center gap-2 pt-6">
-            <input type="checkbox" name="controla_caducidad" id="cad" />
-            <label htmlFor="cad" className="text-sm">¿Controla caducidad? (activa FEFO)</label>
-          </div>
-          <div className="md:col-span-3">
-            <button className="btn-primary">Agregar insumo</button>
-          </div>
-        </form>
+        </details>
       </div>
 
       <div className="card overflow-x-auto">

@@ -170,19 +170,25 @@ export async function generarTandaCodigosBarra(params: {
   const piezas = [];
   const { data: producto } = await db.from("productos").select("sku").eq("id", params.productoId).single();
 
+  let folioUnicoPorProducto: string | null = null;
+
+  if (tipoFolio === "universal") {
+    let candidato = generarFolioUniversal(producto?.sku);
+    let intento = 0;
+    while (intento < 20) {
+      const { data: existente } = await db.from("piezas").select("id").eq("folio_pieza", candidato).maybeSingle();
+      if (!existente) break;
+      candidato = generarFolioUniversal(producto?.sku);
+      intento += 1;
+    }
+    folioUnicoPorProducto = candidato;
+  }
+
   for (let i = 0; i < params.cantidad; i++) {
     let folioGenerado: string;
 
     if (tipoFolio === "universal") {
-      let candidato = generarFolioUniversal(producto?.sku);
-      let intento = 0;
-      while (intento < 20) {
-        const { data: existente } = await db.from("piezas").select("id").eq("folio_pieza", candidato).maybeSingle();
-        if (!existente) break;
-        candidato = generarFolioUniversal(producto?.sku);
-        intento += 1;
-      }
-      folioGenerado = candidato;
+      folioGenerado = folioUnicoPorProducto!;
     } else {
       const { data: folioData, error: errFolio } = await db.rpc("siguiente_folio_producto", {
         p_producto_id: params.productoId,

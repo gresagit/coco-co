@@ -99,10 +99,18 @@ export default async function NuevaGeneracionPage({
           <div>
             <label className="label">Tipo de folio</label>
             <select name="tipo_folio" className="input" defaultValue="secuencial">
-              <option value="secuencial">Secuencial por producto</option>
-              <option value="universal">Universal no secuencial</option>
+              <option value="secuencial">Seriado por producto</option>
+              <option value="universal">Único por producto (no seriado)</option>
             </select>
           </div>
+        </div>
+
+        <div className="card !py-3 border border-brand-200 bg-brand-50/50">
+          <p className="text-xs text-brand-500">
+            Protocolo: si eliges <b>Único por producto (no seriado)</b>, el sistema reutiliza el mismo folio para cada
+            producto de la tanda y repite la misma etiqueta en todas las copias, para que puedas empacar 10 piezas de
+            un mismo producto con una sola referencia visible y comprobar que no falte ninguna.
+          </p>
         </div>
 
         <div className="card overflow-x-auto">

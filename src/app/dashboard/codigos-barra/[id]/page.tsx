@@ -63,7 +63,7 @@ export default async function DetalleGeneracionPage({ params }: { params: { id: 
           <div>
             <h2 className="font-semibold mb-1">Control de conteo</h2>
             <p className="text-sm text-brand-500">
-              Tipo: <b>{generacion.tipo_folio === "universal" ? "Universal no secuencial" : "Secuencial por producto"}</b>
+              Tipo: <b>{generacion.tipo_folio === "universal" ? "Único por producto (no seriado)" : "Seriado por producto"}</b>
             </p>
           </div>
           <span className={resultadoConteo.ok ? "badge-verde" : resultadoConteo.estado === "sobra" ? "badge-amarillo" : "badge-rojo"}>

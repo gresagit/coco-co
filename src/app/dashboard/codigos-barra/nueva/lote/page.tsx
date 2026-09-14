@@ -136,14 +136,22 @@ export default async function NuevaGeneracionPage({
           <div>
             <label className="label">Tipo de folio</label>
             <select name="tipo_folio" className="input" defaultValue="secuencial">
-              <option value="secuencial">Secuencial por producto</option>
-              <option value="universal">Universal no secuencial</option>
+              <option value="secuencial">Seriado por producto</option>
+              <option value="universal">Único por producto (no seriado)</option>
             </select>
           </div>
           <div>
             <label className="label">Cantidad de códigos a imprimir</label>
             <input name="cantidad" type="number" min="1" step="1" className="input" required />
           </div>
+        </div>
+
+        <div className="card !py-3 border border-brand-200 bg-brand-50/50">
+          <p className="text-xs text-brand-500">
+            Protocolo: en modo <b>Único por producto (no seriado)</b> la tanda usa un solo folio visible por cada
+            producto, repitiéndolo en las N copias que ordenes. Eso ayuda a empacar el lote y detectar cuáles copias
+            faltan con la misma referencia.
+          </p>
         </div>
 
         <button className="btn-primary">Generar y ver PDF</button>

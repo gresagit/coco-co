@@ -30,7 +30,6 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
         { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
         { href: "/dashboard/insumos", label: "Insumos", icon: IconLayers },
         { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
-        { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
       ],
     },
     {

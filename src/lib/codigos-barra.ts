@@ -90,20 +90,41 @@ export async function generarTandaCodigosBarra(params: {
 
   const tipoFolio = params.tipoFolio || "secuencial";
 
-  const { data: generacion, error: errGen } = await db
-    .from("generaciones_codigo_barra")
-    .insert({
-      producto_id: params.productoId,
-      sucursal_id: params.sucursalId,
-      lote_id: loteId,
-      cantidad: params.cantidad,
-      tipo_folio: tipoFolio,
-      generado_por: params.generadoPor || null,
-      meta_id: params.metaId || null,
-      pedido_id: params.pedidoId || null,
-    })
-    .select()
-    .single();
+  const basePayload = {
+    producto_id: params.productoId,
+    sucursal_id: params.sucursalId,
+    lote_id: loteId,
+    cantidad: params.cantidad,
+    generado_por: params.generadoPor || null,
+    meta_id: params.metaId || null,
+    pedido_id: params.pedidoId || null,
+  };
+
+  let generacion;
+  let errGen;
+
+  try {
+    ({ data: generacion, error: errGen } = await db
+      .from("generaciones_codigo_barra")
+      .insert({
+        ...basePayload,
+        tipo_folio: tipoFolio,
+      })
+      .select()
+      .single());
+  } catch (error: any) {
+    errGen = error;
+  }
+
+  const mensajeEsquema = `${errGen?.message ?? ""} ${errGen?.details ?? ""}`;
+  if (errGen && mensajeEsquema.includes("tipo_folio")) {
+    ({ data: generacion, error: errGen } = await db
+      .from("generaciones_codigo_barra")
+      .insert(basePayload)
+      .select()
+      .single());
+  }
+
   if (errGen || !generacion) throw errGen || new Error("No se pudo crear la generación");
 
   // Por default, un código recién generado NO está producido todavía — solo

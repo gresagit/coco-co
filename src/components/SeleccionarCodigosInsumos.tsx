@@ -20,6 +20,7 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [cantidadGlobal, setCantidadGlobal] = useState(CANTIDAD_DEFAULT);
+  const [tipoFolio, setTipoFolio] = useState<"secuencial" | "universal">("secuencial");
   const [generando, setGenerando] = useState(false);
   const [generandoId, setGenerandoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
     const res = await fetch("/api/insumos/barcodes/pdf", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items, tipo_folio: tipoFolio }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => null);
@@ -189,6 +190,13 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
         </div>
 
         <div className="flex flex-wrap items-end gap-3 bg-brand-50 rounded-lg p-3">
+          <div>
+            <label className="label">Tipo de folio</label>
+            <select value={tipoFolio} onChange={(e) => setTipoFolio(e.target.value as "secuencial" | "universal")} className="input">
+              <option value="secuencial">Seriado por producto</option>
+              <option value="universal">Único por producto (no seriado)</option>
+            </select>
+          </div>
           <div>
             <label className="label">Cantidad para todos los seleccionados</label>
             <input

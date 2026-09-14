@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Cuerpo inválido, se esperaba JSON." }, { status: 400 });
   }
 
+  const tipoFolio = body?.tipo_folio === "universal" ? "universal" : "secuencial";
   const seleccion: { id: string; copias: number }[] = Array.isArray(body?.items) ? body.items : [];
   if (seleccion.length === 0) {
     return NextResponse.json({ message: "Elige al menos un insumo para generar códigos." }, { status: 400 });
@@ -75,6 +76,15 @@ export async function POST(req: NextRequest) {
   for (const sel of seleccion) {
     const insumo = insumosPorId.get(sel.id);
     if (!insumo) continue;
+
+    if (tipoFolio === "universal") {
+      items.push({
+        folio: insumo.codigo_interno,
+        etiquetaSecundaria: insumo.marca ? `${insumo.nombre} · ${insumo.marca}` : insumo.nombre,
+      });
+      continue;
+    }
+
     const copias = Math.min(Math.max(Math.round(Number(sel.copias) || 0), 1), MAX_COPIAS_POR_INSUMO);
     for (let n = 0; n < copias; n++) {
       items.push({

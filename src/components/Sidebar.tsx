@@ -6,7 +6,12 @@ import type { SVGProps } from "react";
 import { dispararBurbujas } from "@/lib/burbujas";
 import { APARTADOS_SISTEMA, esAdministrador, tienePermiso, type Permisos } from "@/lib/roles";
 
-type NavItem = { href: string; label: string; icon: (props: SVGProps<SVGSVGElement>) => JSX.Element };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: (props: SVGProps<SVGSVGElement>) => JSX.Element;
+  children?: Array<{ href: string; label: string; icon?: (props: SVGProps<SVGSVGElement>) => JSX.Element }>;
+};
 type NavGroup = { label: string; items: NavItem[] };
 
 function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
@@ -28,9 +33,18 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
       label: "Catálogo",
       items: [
         { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
-        { href: "/dashboard/insumos", label: "Insumos", icon: IconLayers },
+        {
+          href: "/dashboard/insumos",
+          label: "Insumos",
+          icon: IconLayers,
+          children: [
+            { href: "/dashboard/insumos?categoria=Materia%20Prima", label: "Materia Prima" },
+            { href: "/dashboard/insumos?categoria=Empaque", label: "Empaque" },
+            { href: "/dashboard/insumos?categoria=Etiqueta", label: "Etiqueta" },
+            { href: "/dashboard/insumos?categoria=Producto%20Intermedio", label: "Producto Intermedio" },
+          ],
+        },
         { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
-        { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
       ],
     },
     {
@@ -135,8 +149,46 @@ export default function Sidebar({
               </p>
             )}
             {group.items.map((item) => {
-              const active = pathname === item.href;
+              const active = pathname === item.href || (item.children || []).some((child) => pathname === child.href);
               const Icon = item.icon;
+
+              if (item.children?.length) {
+                const expanded = pathname.startsWith(item.href) || (item.children || []).some((child) => pathname === child.href);
+                return (
+                  <details key={item.href} open={expanded} className="group">
+                    <summary
+                      className={`list-none flex items-center gap-3 px-6 py-2 text-sm border-l-2 cursor-pointer transition-colors ${
+                        active
+                          ? "border-ink text-ink font-medium bg-brand-50"
+                          : "border-transparent text-brand-500 hover:text-ink hover:bg-brand-50/60"
+                      }`}
+                    >
+                      <Icon className="w-[17px] h-[17px] shrink-0" />
+                      <span className="flex-1">{item.label}</span>
+                      <svg className="w-4 h-4 text-brand-400 group-open:rotate-90 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </summary>
+                    <div className="ml-8 border-l border-brand-150 pl-3">
+                      {(item.children || []).map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={onClose}
+                          className={`block px-4 py-2 text-xs transition-colors ${
+                            pathname === child.href
+                              ? "text-ink font-medium bg-brand-50"
+                              : "text-brand-500 hover:text-ink hover:bg-brand-50/60"
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                );
+              }
+
               return (
                 <Link
                   key={item.href}

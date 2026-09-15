@@ -79,10 +79,29 @@ async function editarProducto(formData: FormData) {
   const productoId = formData.get("producto_id") as string;
   if (!productoId) return;
 
+  const { data: productoActual, error: errorProducto } = await db
+    .from("productos")
+    .select("id, sku")
+    .eq("id", productoId)
+    .maybeSingle();
+
+  if (errorProducto || !productoActual) {
+    throw new Error("No se encontró el producto para editar.");
+  }
+
   const nombre = (formData.get("nombre") as string)?.trim();
   let categoriaId = formData.get("categoria_id") as string;
   const categoriaNueva = (formData.get("categoria_nueva") as string)?.trim();
   const margenRaw = formData.get("margen") as string;
+  const skuRaw = (formData.get("sku") as string)?.trim();
+  const sku = skuRaw ? skuRaw.toUpperCase() : "";
+
+  if (sku && sku !== productoActual.sku) {
+    const { data: skuExiste } = await db.from("productos").select("id").eq("sku", sku).maybeSingle();
+    if (skuExiste && skuExiste.id !== productoId) {
+      throw new Error(`El SKU "${sku}" ya existe en otro producto.`);
+    }
+  }
 
   if (categoriaNueva) {
     // Si ya existe una categoría con ese nombre (sin importar mayúsculas), la
@@ -113,9 +132,16 @@ async function editarProducto(formData: FormData) {
   if (nombre) cambios.nombre = nombre;
   if (categoriaId) cambios.categoria_id = categoriaId;
   if (margenRaw !== null && margenRaw !== "") cambios.porcentaje_margen_deseado = Number(margenRaw);
+  if (sku) cambios.sku = sku;
 
   if (Object.keys(cambios).length > 0) {
     await db.from("productos").update(cambios).eq("id", productoId);
+
+    if (sku && sku !== productoActual.sku) {
+      const prefijo = sku.split("-")[0].toUpperCase();
+      await db.from("folio_contadores").update({ prefijo }).eq("producto_id", productoId);
+    }
+
     await registrarAuditoria({
       accion: "editar_producto",
       entidad: "productos",

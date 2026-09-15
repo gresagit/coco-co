@@ -243,6 +243,12 @@ function ModalEditarProducto({
           <input type="hidden" name="producto_id" value={producto.id} />
 
           <div>
+            <label className="label">SKU</label>
+            <input name="sku" className="input font-mono" defaultValue={producto.sku} required />
+            <p className="text-xs text-brand-400 mt-1">Puedes escribir el SKU a tu gusto, siempre que sea único.</p>
+          </div>
+
+          <div>
             <label className="label">Nombre</label>
             <input name="nombre" className="input" defaultValue={producto.nombre} required />
           </div>

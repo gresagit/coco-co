@@ -9,13 +9,35 @@ function normalizarPrefijo(texto: string, largo = 3): string {
   return (limpio.slice(0, largo) || "GEN").padEnd(Math.min(largo, limpio.length || largo), "X");
 }
 
+// Nomenclatura fija de líneas de producto terminado (SKU). Antes el prefijo
+// se auto-derivaba de las primeras 3 letras del nombre de categoría, lo
+// cual generaba colisiones (ej. dos categorías que empiezan con "Jab...").
+// Ahora cada línea tiene un código fijo elegido a mano — ver migración 024.
+// Para agregar una línea nueva, solo agrega una entrada aquí.
+export const LINEAS_PRODUCTO: Array<{ prefijo: string; etiqueta: string }> = [
+  { prefijo: "ATB", etiqueta: "ATB — Atomizador Baños" },
+  { prefijo: "ATC", etiqueta: "ATC — Atomizador Cocina" },
+  { prefijo: "ATM", etiqueta: "ATM — Atomizador Multisuperficies" },
+  { prefijo: "LP", etiqueta: "LP — Limpiador de Pisos" },
+  { prefijo: "RLP", etiqueta: "RLP — Recarga Limpiador de Pisos" },
+  { prefijo: "RAT", etiqueta: "RAT — Recarga Atomizador" },
+  { prefijo: "PLM", etiqueta: "PLM — Pastilla Limpiadora Multiusos" },
+  { prefijo: "RM", etiqueta: "RM — Removedor de Manchas" },
+  { prefijo: "JRN", etiqueta: "JRN — Jabón Ropa Normal" },
+  { prefijo: "JPS", etiqueta: "JPS — Jabón Piel Sensible" },
+  { prefijo: "JTH", etiqueta: "JTH — Jabón Trastes Hojuela" },
+  { prefijo: "PM6", etiqueta: "PM6 — Pasta Limpiadora Multiacción" },
+];
+
 /**
- * Genera el siguiente SKU para un producto terminado de forma automática,
- * a partir del nombre de su categoría (o "PROD" si no tiene). Formato: PREFIJO-0001
+ * Genera el siguiente SKU para un producto terminado, a partir de un
+ * prefijo de línea fijo (ver LINEAS_PRODUCTO) elegido a mano al crear el
+ * producto — ya NO se deriva automáticamente del nombre de categoría.
+ * Formato: PREFIJO-0001
  */
-export async function siguienteSkuProducto(categoriaNombre?: string | null): Promise<string> {
+export async function siguienteSkuProducto(prefijoLinea: string): Promise<string> {
   const db = supabaseAdmin();
-  const prefijo = categoriaNombre ? normalizarPrefijo(categoriaNombre, 3) : "PROD";
+  const prefijo = normalizarPrefijo(prefijoLinea, prefijoLinea.length || 3);
 
   const { count } = await db
     .from("productos")

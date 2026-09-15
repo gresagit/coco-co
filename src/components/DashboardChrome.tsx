@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import type { Permisos } from "@/lib/roles";
@@ -32,7 +32,9 @@ export default function DashboardChrome({
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar nombre={nombre} roles={roles} permisos={permisos} open={menuAbierto} onClose={() => setMenuAbierto(false)} />
+      <Suspense fallback={null}>
+        <Sidebar nombre={nombre} roles={roles} permisos={permisos} open={menuAbierto} onClose={() => setMenuAbierto(false)} />
+      </Suspense>
 
       {/* Fondo oscuro detrás del menú cuando está abierto en móvil */}
       {menuAbierto && (

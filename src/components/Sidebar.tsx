@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { SVGProps } from "react";
 import { dispararBurbujas } from "@/lib/burbujas";
 import { APARTADOS_SISTEMA, esAdministrador, tienePermiso, type Permisos } from "@/lib/roles";
@@ -38,6 +38,7 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
           label: "Insumos",
           icon: IconLayers,
           children: [
+            { href: "/dashboard/insumos", label: "Todos" },
             { href: "/dashboard/insumos?categoria=Materia%20Prima", label: "Materia Prima" },
             { href: "/dashboard/insumos?categoria=Empaque", label: "Empaque" },
             { href: "/dashboard/insumos?categoria=Etiqueta", label: "Etiqueta" },
@@ -45,6 +46,7 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
           ],
         },
         { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
+        { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
       ],
     },
     {
@@ -105,7 +107,23 @@ export default function Sidebar({
   onClose?: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const GROUPS = construirGrupos(esAdministrador(roles), permisos);
+
+  // Compara un href de nav (puede traer ?query, ej. los filtros de
+  // categoría de Insumos) contra la ruta + parámetros actuales. usePathname()
+  // nunca incluye el query string, así que un simple `pathname === href`
+  // jamás detecta como activo un item con "?categoria=...".
+  function esActivo(href: string) {
+    const [rutaHref, queryHref] = href.split("?");
+    if (rutaHref !== pathname) return false;
+    if (!queryHref) return searchParams.toString() === "";
+    const paramsHref = new URLSearchParams(queryHref);
+    for (const [clave, valor] of paramsHref) {
+      if (searchParams.get(clave) !== valor) return false;
+    }
+    return true;
+  }
 
   // Mismo efecto de burbujitas de jabón que la barra superior, ahora al
   // hacer click en cualquier link/botón del menú lateral.
@@ -149,11 +167,11 @@ export default function Sidebar({
               </p>
             )}
             {group.items.map((item) => {
-              const active = pathname === item.href || (item.children || []).some((child) => pathname === child.href);
+              const active = pathname === item.href || (item.children || []).some((child) => esActivo(child.href));
               const Icon = item.icon;
 
               if (item.children?.length) {
-                const expanded = pathname.startsWith(item.href) || (item.children || []).some((child) => pathname === child.href);
+                const expanded = pathname.startsWith(item.href) || (item.children || []).some((child) => esActivo(child.href));
                 return (
                   <details key={item.href} open={expanded} className="group">
                     <summary
@@ -176,7 +194,7 @@ export default function Sidebar({
                           href={child.href}
                           onClick={onClose}
                           className={`block px-4 py-2 text-xs transition-colors ${
-                            pathname === child.href
+                            esActivo(child.href)
                               ? "text-ink font-medium bg-brand-50"
                               : "text-brand-500 hover:text-ink hover:bg-brand-50/60"
                           }`}

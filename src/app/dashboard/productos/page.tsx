@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
-import { siguienteSkuProducto } from "@/lib/sku";
+import { siguienteSkuProducto, LINEAS_PRODUCTO } from "@/lib/sku";
 import { getSucursalActualId } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/auditoria";
 import type { SVGProps } from "react";
@@ -24,8 +24,15 @@ async function crearProducto(formData: FormData) {
     categoriaNombre = cat?.nombre || null;
   }
 
-  // El SKU se genera automáticamente a partir de la categoría — el usuario no lo escribe.
-  const sku = await siguienteSkuProducto(categoriaNombre);
+  // El SKU ya NO se deriva de la categoría — se elige a mano la línea de
+  // producto (prefijo fijo) para evitar colisiones entre categorías con
+  // nombres parecidos. Se valida contra la lista fija por seguridad, por si
+  // el formulario se manipula.
+  const lineaSku = (formData.get("linea_sku") as string || "").toUpperCase();
+  if (!LINEAS_PRODUCTO.some((l) => l.prefijo === lineaSku)) {
+    throw new Error(`Línea de producto "${lineaSku}" no es válida. Elige una de la lista.`);
+  }
+  const sku = await siguienteSkuProducto(lineaSku);
 
   const { data: producto, error } = await db
     .from("productos")
@@ -233,6 +240,16 @@ export default async function ProductosPage() {
               <input name="nombre" className="input" required />
             </div>
             <div>
+              <label className="label">Línea de producto (SKU)</label>
+              <select name="linea_sku" className="input" required>
+                <option value="">— Elige una línea —</option>
+                {LINEAS_PRODUCTO.map((l) => (
+                  <option key={l.prefijo} value={l.prefijo}>{l.etiqueta}</option>
+                ))}
+              </select>
+              <p className="text-xs text-brand-400 mt-1">Define el prefijo del SKU (ej. JRN → JRN-0001). Independiente de la categoría.</p>
+            </div>
+            <div>
               <label className="label">Categoría existente</label>
               <select name="categoria_id" className="input">
                 <option value="">— Ninguna —</option>
@@ -244,7 +261,7 @@ export default async function ProductosPage() {
             <div>
               <label className="label">O nueva categoría</label>
               <input name="categoria_nueva" className="input" placeholder="Ej. Jabones" />
-              <p className="text-xs text-brand-400 mt-1">La categoría define el prefijo del SKU (ej. Jabones → JAB-0001).</p>
+              <p className="text-xs text-brand-400 mt-1">Solo agrupa/filtra el catálogo — ya no afecta el SKU.</p>
             </div>
             <div>
               <label className="label">Presentación / tamaño</label>

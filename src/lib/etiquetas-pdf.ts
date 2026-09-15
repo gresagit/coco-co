@@ -77,9 +77,13 @@ export async function construirPdfEtiquetas(
 
   // Espacio interno reservado para cada línea de texto (independiente del
   // tamaño de la imagen del código, así nunca se encima ni se deforma).
+  // altoEtiquetaSecundaria/altoFolio ya incluyen el alto del texto (ascenso +
+  // descenso aproximados a tamaño 8pt) MÁS un colchón (gapVertical) para que
+  // el código de barras nunca quede pegado o metido debajo de las letras.
   const padCelda = 6;
-  const altoEtiquetaSecundaria = 11;
-  const altoFolio = 12;
+  const gapVertical = 5; // separación mínima entre texto y código de barras
+  const altoEtiquetaSecundaria = 11 + gapVertical;
+  const altoFolio = 12 + gapVertical;
 
   function dibujarEncabezado(page: any) {
     if (!opciones.titulo) return;

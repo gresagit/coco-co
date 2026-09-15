@@ -46,7 +46,6 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
           ],
         },
         { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },
-        { href: "/dashboard/codigos-barra", label: "Códigos de barra", icon: IconBarcode },
       ],
     },
     {

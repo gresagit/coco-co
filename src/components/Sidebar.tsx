@@ -32,7 +32,16 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
     {
       label: "Catálogo",
       items: [
-        { href: "/dashboard/productos", label: "Producto terminado", icon: IconBottle },
+        {
+          href: "/dashboard/productos",
+          label: "Productos terminados",
+          icon: IconBottle,
+          children: [
+            { href: "/dashboard/productos", label: "Lista de productos" },
+            { href: "/dashboard/productos?seccion=escaner", label: "Escáner" },
+            { href: "/dashboard/codigos-barra/nueva", label: "Generar códigos de barras" },
+          ],
+        },
         {
           href: "/dashboard/insumos",
           label: "Insumos",
@@ -189,7 +198,7 @@ export default function Sidebar({
                     <div className="ml-8 border-l border-brand-150 pl-3">
                       {(item.children || []).map((child) => (
                         <Link
-                          key={child.href}
+                          key={`${child.href}-${child.label}`}
                           href={child.href}
                           onClick={onClose}
                           className={`block px-4 py-2 text-xs transition-colors ${

@@ -191,7 +191,11 @@ async function eliminarProducto(productoId: string) {
   revalidatePath("/dashboard/productos");
 }
 
-export default async function ProductosPage() {
+export default async function ProductosPage({
+  searchParams,
+}: {
+  searchParams: { seccion?: string };
+}) {
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
 
@@ -236,6 +240,7 @@ export default async function ProductosPage() {
         title="Escanear código de barras"
         description="Suma stock al instante con un lector Bluetooth o la cámara del teléfono."
         icon={<IconScan className="w-[18px] h-[18px]" />}
+        defaultOpen={searchParams.seccion === "escaner"}
       >
         <EscanerInventario embedded />
       </CollapsePanel>
@@ -323,12 +328,14 @@ export default async function ProductosPage() {
         </div>
       </CollapsePanel>
 
-      <ProductosTabla
-        productos={conCosteo}
-        categorias={categorias || []}
-        editarProducto={editarProducto}
-        eliminarProducto={eliminarProducto}
-      />
+      <div id="lista-productos">
+        <ProductosTabla
+          productos={conCosteo}
+          categorias={categorias || []}
+          editarProducto={editarProducto}
+          eliminarProducto={eliminarProducto}
+        />
+      </div>
     </div>
   );
 }

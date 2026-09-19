@@ -1,5 +1,14 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { eliminarGeneracionCodigoBarra } from "@/lib/codigos-barra";
 import Link from "next/link";
+import { ConfirmDeleteCodigoBarra } from "@/components/ConfirmDeleteCodigoBarra";
+
+async function eliminarGeneracion(generacionId: string) {
+  "use server";
+  await eliminarGeneracionCodigoBarra(generacionId);
+  revalidatePath("/dashboard/codigos-barra");
+}
 
 export default async function CodigosBarraPage() {
   const db = supabaseAdmin();
@@ -96,10 +105,15 @@ export default async function CodigosBarraPage() {
                 <td>{g.sucursales?.nombre}</td>
                 <td className="font-mono text-xs">{g.lotes?.folio_lote || <span className="text-brand-400">Sin lote</span>}</td>
                 <td>{g.cantidad}</td>
-                <td>
+                <td className="space-x-3 whitespace-nowrap">
                   <Link href={`/dashboard/codigos-barra/${g.id}`} className="text-brand-600 text-xs underline">
                     Ver / descargar
                   </Link>
+                  <ConfirmDeleteCodigoBarra
+                    label="Eliminar"
+                    descripcion={`${g.productos?.sku || "Tanda"} · ${g.cantidad} etiquetas`}
+                    action={eliminarGeneracion.bind(null, g.id)}
+                  />
                 </td>
               </tr>
             ))}

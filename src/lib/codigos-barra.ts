@@ -28,6 +28,49 @@ export function validarConteoCodigosSolicitados(solicitados: number, generados: 
   };
 }
 
+export function normalizarCantidadAjuste(actual: number, objetivo: number) {
+  const cantidadActual = Number(actual) || 0;
+  const cantidadObjetivo = Number(objetivo) || 0;
+
+  if (cantidadObjetivo <= 0) {
+    return {
+      accion: "eliminar",
+      diferencia: Math.max(cantidadActual, 0),
+      nuevaCantidad: 0,
+      cantidadActual,
+      cantidadObjetivo,
+    };
+  }
+
+  if (cantidadObjetivo < cantidadActual) {
+    return {
+      accion: "reducir",
+      diferencia: cantidadActual - cantidadObjetivo,
+      nuevaCantidad: cantidadObjetivo,
+      cantidadActual,
+      cantidadObjetivo,
+    };
+  }
+
+  if (cantidadObjetivo > cantidadActual) {
+    return {
+      accion: "agregar",
+      diferencia: cantidadObjetivo - cantidadActual,
+      nuevaCantidad: cantidadObjetivo,
+      cantidadActual,
+      cantidadObjetivo,
+    };
+  }
+
+  return {
+    accion: "sin_cambios",
+    diferencia: 0,
+    nuevaCantidad: cantidadObjetivo,
+    cantidadActual,
+    cantidadObjetivo,
+  };
+}
+
 function generarFolioUniversal(sku?: string) {
   const prefijo = (sku || "PROD")
     .replace(/[^A-Za-z0-9]/g, "")
@@ -292,4 +335,229 @@ export async function registrarReemplazos(params: {
 
   const { error } = await db.from("reimpresiones_etiqueta").insert(filas);
   if (error) throw error;
+}
+
+// Elimina una tanda de códigos de barra y todo su historial asociado, útil
+// cuando se imprimió una cantidad equivocada y hay que limpiar la tanda.
+export async function eliminarGeneracionCodigoBarra(generacionId: string) {
+  const db = supabaseAdmin();
+
+  const { data: generacion, error: errorGeneracion } = await db
+    .from("generaciones_codigo_barra")
+    .select("id, pedido_id")
+    .eq("id", generacionId)
+    .single();
+
+  if (errorGeneracion) throw errorGeneracion;
+  if (!generacion) return;
+
+  const { data: piezas } = await db
+    .from("piezas")
+    .select("id")
+    .eq("generacion_id", generacionId);
+
+  const piezaIds = (piezas || []).map((pieza) => pieza.id);
+
+  if (piezaIds.length) {
+    const { error: errorReimpresiones } = await db.from("reimpresiones_etiqueta").delete().in("pieza_id", piezaIds);
+    if (errorReimpresiones) throw errorReimpresiones;
+
+    const { error: errorPiezas } = await db.from("piezas").delete().in("id", piezaIds);
+    if (errorPiezas) throw errorPiezas;
+  }
+
+  const { error: errorDeleteGeneracion } = await db.from("generaciones_codigo_barra").delete().eq("id", generacionId);
+  if (errorDeleteGeneracion) throw errorDeleteGeneracion;
+
+  if (generacion.pedido_id) {
+    const { data: restantes } = await db
+      .from("generaciones_codigo_barra")
+      .select("id")
+      .eq("pedido_id", generacion.pedido_id)
+      .limit(1);
+
+    if (!restantes || restantes.length === 0) {
+      const { error: errorPedido } = await db.from("pedidos_impresion").delete().eq("id", generacion.pedido_id);
+      if (errorPedido) throw errorPedido;
+    }
+  }
+}
+
+export async function ajustarCantidadGeneracionCodigoBarra(generacionId: string, nuevaCantidad: number) {
+  const db = supabaseAdmin();
+  const cantidadObjetivo = Number(nuevaCantidad) || 0;
+
+  if (cantidadObjetivo < 0) {
+    throw new Error("La cantidad nueva no puede ser negativa.");
+  }
+
+  const { data: generacion, error: errorGeneracion } = await db
+    .from("generaciones_codigo_barra")
+    .select("id, cantidad, pedido_id, producto_id, sucursal_id, lote_id")
+    .eq("id", generacionId)
+    .single();
+
+  if (errorGeneracion || !generacion) {
+    throw errorGeneracion || new Error("No se encontró la tanda para ajustar.");
+  }
+
+  const { accion, diferencia } = normalizarCantidadAjuste(Number(generacion.cantidad || 0), cantidadObjetivo);
+
+  if (accion === "sin_cambios") {
+    return { generacionId, accion, diferencia, nuevaCantidad: cantidadObjetivo, mensaje: "No hubo cambios." };
+  }
+
+  if (accion === "eliminar") {
+    await eliminarGeneracionCodigoBarra(generacionId);
+    return {
+      generacionId,
+      accion: "eliminar",
+      diferencia,
+      nuevaCantidad: 0,
+      mensaje: `Se eliminó la tanda completa porque quedaba en 0 etiquetas.`,
+    };
+  }
+
+  if (accion === "reducir") {
+    const { data: piezas } = await db
+      .from("piezas")
+      .select("id")
+      .eq("generacion_id", generacionId)
+      .order("created_at", { ascending: false })
+      .limit(diferencia);
+
+    const piezaIds = (piezas || []).map((pieza) => pieza.id);
+
+    if (piezaIds.length) {
+      const { error: errorReimpresiones } = await db.from("reimpresiones_etiqueta").delete().in("pieza_id", piezaIds);
+      if (errorReimpresiones) throw errorReimpresiones;
+
+      const { error: errorPiezas } = await db.from("piezas").delete().in("id", piezaIds);
+      if (errorPiezas) throw errorPiezas;
+    }
+
+    const { error: errorCantidad } = await db
+      .from("generaciones_codigo_barra")
+      .update({ cantidad: cantidadObjetivo })
+      .eq("id", generacionId);
+
+    if (errorCantidad) throw errorCantidad;
+
+    return {
+      generacionId,
+      accion: "reducir",
+      diferencia,
+      nuevaCantidad: cantidadObjetivo,
+      mensaje: `Se redujo la tanda de ${Number(generacion.cantidad || 0)} a ${cantidadObjetivo}.`,
+    };
+  }
+
+  const { data: ultimaPieza } = await db
+    .from("piezas")
+    .select("folio_pieza")
+    .eq("generacion_id", generacionId)
+    .order("folio_pieza", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const ultimoNumero = ultimaPieza?.folio_pieza?.match(/(\d+)$/)?.[1] ? Number(ultimaPieza.folio_pieza.match(/(\d+)$/)?.[1]) : 0;
+
+  const piezas = [] as Array<{ folio_pieza: string; lote_id: string | null; producto_id: string; sucursal_id: string; estado: string; generacion_id: string; meta_id: string | null }>;
+  for (let i = 0; i < diferencia; i++) {
+    const siguienteFolio = await db.rpc("siguiente_folio_producto", { p_producto_id: generacion.producto_id });
+    const folioGenerado = String(siguienteFolio.data || `${ultimoNumero + i + 1}`);
+    piezas.push({
+      folio_pieza: folioGenerado,
+      lote_id: generacion.lote_id || null,
+      producto_id: generacion.producto_id,
+      sucursal_id: generacion.sucursal_id,
+      estado: "Pendiente",
+      generacion_id: generacionId,
+      meta_id: null,
+    });
+  }
+
+  if (piezas.length) {
+    const { error: errorPiezas } = await db.from("piezas").insert(piezas);
+    if (errorPiezas) throw errorPiezas;
+  }
+
+  const { error: errorCantidad } = await db
+    .from("generaciones_codigo_barra")
+    .update({ cantidad: cantidadObjetivo })
+    .eq("id", generacionId);
+
+  if (errorCantidad) throw errorCantidad;
+
+  return {
+    generacionId,
+    accion: "agregar",
+    diferencia,
+    nuevaCantidad: cantidadObjetivo,
+    mensaje: `Se agregaron ${diferencia} etiquetas más a la tanda.`,
+  };
+}
+
+export async function eliminarPiezasGeneracionPorCantidad(generacionId: string, cantidadAEliminar: number) {
+  const db = supabaseAdmin();
+  const cantidad = Number(cantidadAEliminar) || 0;
+
+  if (cantidad <= 0) {
+    throw new Error("Debes indicar al menos 1 etiqueta para eliminar.");
+  }
+
+  const { data: generacion, error: errorGeneracion } = await db
+    .from("generaciones_codigo_barra")
+    .select("id, cantidad")
+    .eq("id", generacionId)
+    .single();
+
+  if (errorGeneracion || !generacion) {
+    throw errorGeneracion || new Error("No se encontró la tanda para eliminar etiquetas.");
+  }
+
+  const totalActual = Number(generacion.cantidad || 0);
+  if (cantidad >= totalActual) {
+    await eliminarGeneracionCodigoBarra(generacionId);
+    return {
+      generacionId,
+      accion: "eliminar_tanda",
+      eliminadas: totalActual,
+      restante: 0,
+      mensaje: `Se eliminó toda la tanda (${totalActual} etiquetas).`,
+    };
+  }
+
+  const { data: piezas } = await db
+    .from("piezas")
+    .select("id")
+    .eq("generacion_id", generacionId)
+    .order("created_at", { ascending: false })
+    .limit(cantidad);
+
+  const piezaIds = (piezas || []).map((pieza) => pieza.id);
+
+  if (piezaIds.length) {
+    const { error: errorReimpresiones } = await db.from("reimpresiones_etiqueta").delete().in("pieza_id", piezaIds);
+    if (errorReimpresiones) throw errorReimpresiones;
+
+    const { error: errorPiezas } = await db.from("piezas").delete().in("id", piezaIds);
+    if (errorPiezas) throw errorPiezas;
+  }
+
+  const nuevaCantidad = totalActual - cantidad;
+  const { error: errorCantidad } = await db
+    .from("generaciones_codigo_barra")
+    .update({ cantidad: nuevaCantidad })
+    .eq("id", generacionId);
+
+  if (errorCantidad) throw errorCantidad;
+
+  return {
+    generacionId,
+    accion: "eliminar_parcial",
+    eliminadas: cantidad,
+    restante: nuevaCantidad,
+    mensaje: `Se eliminaron ${cantidad} etiquetas; quedan ${nuevaCantidad}.`,
+  };
 }

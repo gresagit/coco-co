@@ -74,23 +74,23 @@ export async function POST(req: NextRequest) {
   const insumosPorId = new Map(insumos.map((i: any) => [i.id, i]));
 
   const items: { folio: string; etiquetaSecundaria?: string }[] = [];
+  const generaciones: { insumoId: string; cantidad: number }[] = [];
   for (const sel of seleccion) {
     const insumo = insumosPorId.get(sel.id);
     if (!insumo) continue;
 
     const copias = Math.min(Math.max(Math.round(Number(sel.copias) || 0), 1), MAX_COPIAS_POR_INSUMO);
 
-    await registrarGeneracionInsumo({
-      insumoId: insumo.id,
-      cantidad: copias,
-      tipoFolio,
-    });
+    generaciones.push({ insumoId: insumo.id, cantidad: copias });
 
     if (tipoFolio === "universal") {
-      items.push({
-        folio: insumo.codigo_interno,
-        etiquetaSecundaria: insumo.marca ? `${insumo.nombre} · ${insumo.marca}` : insumo.nombre,
-      });
+      // El folio es el mismo, pero cada copia elegida debe aparecer en el PDF.
+      for (let n = 0; n < copias; n++) {
+        items.push({
+          folio: insumo.codigo_interno,
+          etiquetaSecundaria: insumo.marca ? `${insumo.nombre} · ${insumo.marca}` : insumo.nombre,
+        });
+      }
       continue;
     }
 
@@ -117,6 +117,14 @@ export async function POST(req: NextRequest) {
     tiposSeleccionados.length === 1 ? `Códigos de barra — ${tiposSeleccionados[0]}` : "Códigos de barra — Insumos";
 
   const bytes = await construirPdfEtiquetas(items, { titulo });
+
+  for (const generacion of generaciones) {
+    await registrarGeneracionInsumo({
+      insumoId: generacion.insumoId,
+      cantidad: generacion.cantidad,
+      tipoFolio,
+    });
+  }
 
   return new NextResponse(Buffer.from(bytes), {
     headers: {

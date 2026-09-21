@@ -40,6 +40,7 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
             { href: "/dashboard/productos", label: "Lista de productos" },
             { href: "/dashboard/productos?seccion=escaner", label: "Escáner" },
             { href: "/dashboard/codigos-barra/nueva", label: "Generar códigos de barras" },
+            { href: "/dashboard/codigos-barra", label: "Historial de códigos de barras" },
           ],
         },
         {
@@ -52,6 +53,7 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
             { href: "/dashboard/insumos?categoria=Empaque", label: "Empaque" },
             { href: "/dashboard/insumos?categoria=Etiqueta", label: "Etiqueta" },
             { href: "/dashboard/insumos?categoria=Producto%20Intermedio", label: "Producto Intermedio" },
+            { href: "/dashboard/insumos/codigos-barra", label: "Historial de códigos de barras" },
           ],
         },
         { href: "/dashboard/bom", label: "Fórmulas (BOM)", icon: IconBeaker },

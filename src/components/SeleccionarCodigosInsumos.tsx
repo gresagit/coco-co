@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Insumo = {
   id: string;
@@ -13,6 +14,7 @@ type Insumo = {
 const CANTIDAD_DEFAULT = 12;
 
 export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo[] }) {
+  const router = useRouter();
   const tipos = useMemo(() => Array.from(new Set(insumos.map((i) => i.tipo))).sort(), [insumos]);
 
   const [tiposActivos, setTiposActivos] = useState<Set<string>>(new Set(tipos));
@@ -102,6 +104,7 @@ export default function SeleccionarCodigosInsumos({ insumos }: { insumos: Insumo
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noreferrer");
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    router.refresh();
   }
 
   async function generarPdf() {

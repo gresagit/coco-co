@@ -4,6 +4,8 @@ import { generarPedidoMultiProducto, type TipoFolio } from "@/lib/codigos-barra"
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { revalidatePath } from "next/cache";
+import GenerarCodigosSubmit from "@/components/GenerarCodigosSubmit";
 
 async function generar(formData: FormData) {
   "use server";
@@ -42,7 +44,8 @@ async function generar(formData: FormData) {
     detalle: { items },
   });
 
-  redirect(`/dashboard/codigos-barra/pedidos/${pedidoId}`);
+  revalidatePath("/dashboard/codigos-barra");
+  redirect("/dashboard/codigos-barra");
 }
 
 export default async function NuevaGeneracionPage({
@@ -150,7 +153,7 @@ export default async function NuevaGeneracionPage({
           </table>
         </div>
 
-        <button className="btn-primary">Generar códigos</button>
+        <GenerarCodigosSubmit />
       </form>
 
       <p className="text-xs text-brand-500">

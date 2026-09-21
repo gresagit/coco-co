@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
 import { registrarGeneracionInsumo } from "@/lib/codigos-barra";
@@ -125,6 +126,7 @@ export async function POST(req: NextRequest) {
       tipoFolio,
     });
   }
+  revalidatePath("/dashboard/insumos/codigos-barra/historial");
 
   return new NextResponse(Buffer.from(bytes), {
     headers: {

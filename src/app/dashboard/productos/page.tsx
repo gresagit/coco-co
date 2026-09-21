@@ -53,6 +53,7 @@ async function crearProducto(formData: FormData) {
   if (!error && producto) {
     // Prefijo de folio: primeras 3 letras del SKU antes del primer guión, o el SKU completo
     const prefijo = sku.split("-")[0].toUpperCase();
+    // El contador representa el siguiente número disponible: el primer folio es PREFIJO-0000.
     await db.from("folio_contadores").insert({ producto_id: producto.id, prefijo, ultimo_numero: 0 });
 
     const { data: sucursales } = await db.from("sucursales").select("id").eq("activa", true);

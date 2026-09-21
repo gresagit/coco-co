@@ -367,14 +367,16 @@ create table auditoria (
 -- FUNCIONES / TRIGGERS DE APOYO
 -- ============================================================================
 
--- Genera el siguiente folio correlativo por producto (ej. JAB-0001)
+-- Genera el siguiente folio correlativo por producto (ej. JAB-0000)
 create or replace function siguiente_folio_producto(p_producto_id uuid)
 returns text as $$
 declare
   v_prefijo text;
   v_num integer;
 begin
-  select prefijo, ultimo_numero + 1 into v_prefijo, v_num
+  -- ultimo_numero representa el siguiente número disponible. Después de
+  -- devolverlo se incrementa para que un contador nuevo en 0 produzca 0000.
+  select prefijo, ultimo_numero into v_prefijo, v_num
   from folio_contadores where producto_id = p_producto_id
   for update;
 
@@ -382,7 +384,7 @@ begin
     raise exception 'No hay contador de folio configurado para este producto';
   end if;
 
-  update folio_contadores set ultimo_numero = v_num where producto_id = p_producto_id;
+  update folio_contadores set ultimo_numero = v_num + 1 where producto_id = p_producto_id;
   return v_prefijo || '-' || lpad(v_num::text, 4, '0');
 end;
 $$ language plpgsql;

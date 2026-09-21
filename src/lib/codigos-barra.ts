@@ -193,8 +193,8 @@ export async function generarTandaCodigosBarra(params: {
     const prefijo = (producto?.sku?.split("-")[0] || "PROD").toUpperCase();
 
     // Si el producto ya tenía piezas generadas antes (por ejemplo, migradas
-    // a mano) partimos del número más alto que ya esté en uso, para no
-    // repetir un folio existente.
+    // a mano) partimos del número siguiente al más alto que ya esté en uso,
+    // para no repetir un folio existente.
     const { data: ultimaPieza } = await db
       .from("piezas")
       .select("folio_pieza")
@@ -205,7 +205,7 @@ export async function generarTandaCodigosBarra(params: {
 
     let ultimoNumero = 0;
     const match = ultimaPieza?.folio_pieza?.match(/(\d+)$/);
-    if (match) ultimoNumero = parseInt(match[1], 10);
+    if (match) ultimoNumero = parseInt(match[1], 10) + 1;
 
     await db.from("folio_contadores").insert({ producto_id: params.productoId, prefijo, ultimo_numero: ultimoNumero });
   }

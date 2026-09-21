@@ -337,6 +337,28 @@ export async function registrarReemplazos(params: {
   if (error) throw error;
 }
 
+async function sincronizarContadorProducto(productoId: string) {
+  const db = supabaseAdmin();
+  const { data: piezas, error: errorPiezas } = await db
+    .from("piezas")
+    .select("folio_pieza")
+    .eq("producto_id", productoId);
+
+  if (errorPiezas) throw errorPiezas;
+
+  const mayorNumero = (piezas || []).reduce((mayor, pieza) => {
+    const numero = Number(pieza.folio_pieza.match(/(\d+)$/)?.[1]);
+    return Number.isFinite(numero) ? Math.max(mayor, numero) : mayor;
+  }, -1);
+
+  const { error: errorContador } = await db
+    .from("folio_contadores")
+    .update({ ultimo_numero: mayorNumero + 1 })
+    .eq("producto_id", productoId);
+
+  if (errorContador) throw errorContador;
+}
+
 // Elimina una tanda de códigos de barra y todo su historial asociado, útil
 // cuando se imprimió una cantidad equivocada y hay que limpiar la tanda.
 export async function eliminarGeneracionCodigoBarra(generacionId: string) {
@@ -344,7 +366,7 @@ export async function eliminarGeneracionCodigoBarra(generacionId: string) {
 
   const { data: generacion, error: errorGeneracion } = await db
     .from("generaciones_codigo_barra")
-    .select("id, pedido_id")
+    .select("id, pedido_id, producto_id")
     .eq("id", generacionId)
     .single();
 
@@ -381,6 +403,8 @@ export async function eliminarGeneracionCodigoBarra(generacionId: string) {
       if (errorPedido) throw errorPedido;
     }
   }
+
+  await sincronizarContadorProducto(generacion.producto_id);
 }
 
 export async function ajustarCantidadGeneracionCodigoBarra(generacionId: string, nuevaCantidad: number) {
@@ -443,6 +467,8 @@ export async function ajustarCantidadGeneracionCodigoBarra(generacionId: string,
 
     if (errorCantidad) throw errorCantidad;
 
+    await sincronizarContadorProducto(generacion.producto_id);
+
     return {
       generacionId,
       accion: "reducir",
@@ -489,6 +515,8 @@ export async function ajustarCantidadGeneracionCodigoBarra(generacionId: string,
 
   if (errorCantidad) throw errorCantidad;
 
+  await sincronizarContadorProducto(generacion.producto_id);
+
   return {
     generacionId,
     accion: "agregar",
@@ -508,7 +536,7 @@ export async function eliminarPiezasGeneracionPorCantidad(generacionId: string, 
 
   const { data: generacion, error: errorGeneracion } = await db
     .from("generaciones_codigo_barra")
-    .select("id, cantidad")
+    .select("id, cantidad, producto_id")
     .eq("id", generacionId)
     .single();
 
@@ -552,6 +580,8 @@ export async function eliminarPiezasGeneracionPorCantidad(generacionId: string, 
     .eq("id", generacionId);
 
   if (errorCantidad) throw errorCantidad;
+
+  await sincronizarContadorProducto(generacion.producto_id);
 
   return {
     generacionId,

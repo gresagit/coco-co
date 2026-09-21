@@ -236,6 +236,23 @@ export default async function ProductosPage({
         </p>
       </div>
 
+      <div className="card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-brand-400">Acceso rápido</p>
+            <h2 className="font-semibold text-ink">Códigos de barra de productos</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/codigos-barra/nueva" className="btn-primary text-xs">
+              Generar etiquetas
+            </Link>
+            <Link href="/dashboard/codigos-barra" className="btn-secondary text-xs">
+              Ver tandas
+            </Link>
+          </div>
+        </div>
+      </div>
+
       <CollapsePanel
         title="Escanear código de barras"
         description="Suma stock al instante con un lector Bluetooth o la cámara del teléfono."

@@ -200,10 +200,28 @@ export default async function InsumosPage({ searchParams }: { searchParams?: { c
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/dashboard/insumos/codigos-barra" className="btn-secondary text-sm">
+            <Link href="/dashboard/insumos/codigos-barra" className="btn-primary text-sm">
               Imprimir códigos de barra
             </Link>
+            <Link href="/dashboard/insumos" className="btn-secondary text-sm">
+              Ver catálogo
+            </Link>
           </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-lg border border-brand-150 bg-brand-50 px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-brand-400">Acceso rápido</p>
+            <p className="text-sm font-medium text-ink">Códigos de barra de insumos</p>
+          </div>
+          <Link href="/dashboard/insumos/codigos-barra" className="btn-secondary text-xs">
+            Generar PDF
+          </Link>
+          <Link href="/dashboard/insumos" className="text-brand-600 text-xs underline">
+            Ir al catálogo
+          </Link>
         </div>
       </div>
 
@@ -317,6 +335,10 @@ export default async function InsumosPage({ searchParams }: { searchParams?: { c
                 <td className="whitespace-nowrap">
                   <Link href={`/dashboard/insumos/${i.id}/stock`} className="text-brand-600 text-xs underline">
                     Ver / editar
+                  </Link>
+                  <span className="text-brand-200 mx-1.5">·</span>
+                  <Link href={`/dashboard/insumos/${i.id}/stock`} className="text-brand-600 text-xs underline">
+                    Historial
                   </Link>
                   <span className="text-brand-200 mx-1.5">·</span>
                     <form action={desactivarInsumo.bind(null, i.id)} className="inline-block">

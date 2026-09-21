@@ -5,6 +5,7 @@ import { siguienteSkuProducto, LINEAS_PRODUCTO } from "@/lib/sku";
 import { getSucursalActualId } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/auditoria";
 import type { SVGProps } from "react";
+import Link from "next/link";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInventario from "@/components/EscanerInventario";
 import ProductosTabla from "@/components/ProductosTabla";

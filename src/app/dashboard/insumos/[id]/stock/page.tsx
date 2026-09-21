@@ -1,7 +1,9 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { ajustarCantidadGeneracionInsumo, eliminarGeneracionInsumo } from "@/lib/codigos-barra";
 import EntradaInsumoForm from "@/components/EntradaInsumoForm";
 import { calcularCostoCompra } from "@/lib/costo-compra";
 
@@ -235,6 +237,35 @@ async function ajusteManual(insumoId: string, formData: FormData) {
   revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
 }
 
+async function ajustarGeneracionInsumo(formData: FormData) {
+  "use server";
+  const generacionId = String(formData.get("generacion_id") || "");
+  const insumoId = String(formData.get("insumo_id") || "");
+  const nuevaCantidad = Number(formData.get("nueva_cantidad") || 0);
+
+  if (!generacionId || !insumoId) {
+    redirect(`/dashboard/insumos/${insumoId || ""}`);
+  }
+
+  await ajustarCantidadGeneracionInsumo(generacionId, nuevaCantidad);
+  revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
+  redirect(`/dashboard/insumos/${insumoId}/stock`);
+}
+
+async function eliminarGeneracionInsumoAction(formData: FormData) {
+  "use server";
+  const generacionId = String(formData.get("generacion_id") || "");
+  const insumoId = String(formData.get("insumo_id") || "");
+
+  if (!generacionId || !insumoId) {
+    redirect(`/dashboard/insumos/${insumoId || ""}`);
+  }
+
+  await eliminarGeneracionInsumo(generacionId);
+  revalidatePath(`/dashboard/insumos/${insumoId}/stock`);
+  redirect(`/dashboard/insumos/${insumoId}/stock`);
+}
+
 export default async function InsumoStockPage({ params }: { params: { id: string } }) {
   const db = supabaseAdmin();
   const { data: insumo } = await db.from("insumos").select("*").eq("id", params.id).single();
@@ -243,6 +274,13 @@ export default async function InsumoStockPage({ params }: { params: { id: string
     .select("*, sucursales(nombre)")
     .eq("insumo_id", params.id)
     .order("sucursales(nombre)");
+
+  const { data: generaciones } = await db
+    .from("insumo_codigo_barra_generaciones")
+    .select("*")
+    .eq("insumo_id", params.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
 
   const lotesPorSucursal: Record<string, any[]> = {};
   if (insumo?.controla_caducidad) {
@@ -334,6 +372,60 @@ export default async function InsumoStockPage({ params }: { params: { id: string
             <button className="btn-primary w-full sm:w-auto">Guardar cambios</button>
           </div>
         </form>
+      </div>
+
+      <div className="card">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div>
+            <h2 className="font-semibold">Historial de códigos de barra</h2>
+            <p className="text-xs text-brand-400">Consulta y corrige las tandas ya impresas para este insumo.</p>
+          </div>
+        </div>
+
+        {(generaciones || []).length === 0 ? (
+          <p className="text-sm text-brand-400">Todavía no hay PDFs generados para este insumo.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table-base">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Cantidad</th>
+                  <th>Tipo</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(generaciones || []).map((g: any) => (
+                  <tr key={g.id}>
+                    <td className="text-xs">{new Date(g.created_at).toLocaleString("es-MX")}</td>
+                    <td>{g.cantidad}</td>
+                    <td>{g.tipo_folio === "universal" ? "Único por producto" : "Seriado"}</td>
+                    <td>
+                      <a href={`/api/insumos/generaciones/${g.id}/pdf`} target="_blank" rel="noreferrer" className="text-brand-600 text-xs underline">
+                        Ver PDF
+                      </a>
+                    </td>
+                    <td className="space-x-2 whitespace-nowrap">
+                      <form action={ajustarGeneracionInsumo} className="inline-flex items-center gap-2">
+                        <input type="hidden" name="insumo_id" value={params.id} />
+                        <input type="hidden" name="generacion_id" value={g.id} />
+                        <input type="number" name="nueva_cantidad" min="0" step="1" defaultValue={g.cantidad} className="input !w-20 !py-1" />
+                        <button type="submit" className="btn-secondary text-xs">Guardar</button>
+                      </form>
+                      <form action={eliminarGeneracionInsumoAction} className="inline-block">
+                        <input type="hidden" name="insumo_id" value={params.id} />
+                        <input type="hidden" name="generacion_id" value={g.id} />
+                        <button type="submit" className="text-red-600 text-xs underline">Eliminar</button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">

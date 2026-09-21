@@ -47,6 +47,12 @@ export default async function ProductoDetallePage({ params }: { params: { id: st
     .from("producto_stock")
     .select("*, sucursales(nombre)")
     .eq("producto_id", params.id);
+  const { data: generaciones } = await db
+    .from("generaciones_codigo_barra")
+    .select("id, cantidad, created_at")
+    .eq("producto_id", params.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
   const costo = await calcularCostoProducto(params.id);
   const sugerido = precioSugerido(costo, Number(producto?.porcentaje_margen_deseado || 0));
 
@@ -58,6 +64,43 @@ export default async function ProductoDetallePage({ params }: { params: { id: st
         </Link>
         <h1 className="text-2xl font-bold mt-2">{producto?.nombre}</h1>
         <p className="text-brand-500">SKU {producto?.sku}</p>
+      </div>
+
+      <div className="card">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div>
+            <h2 className="font-semibold">Historial de códigos de barra</h2>
+            <p className="text-xs text-brand-400">Abre cualquiera de las tandas generadas y ajusta el conteo si te sobró o faltó.</p>
+          </div>
+          <a href={`/dashboard/codigos-barra`} className="text-brand-600 text-xs underline">Ver todas las tandas</a>
+        </div>
+
+        {(generaciones || []).length === 0 ? (
+          <p className="text-sm text-brand-400">Todavía no se generaron códigos para este producto.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table-base">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Cantidad</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(generaciones || []).map((g: any) => (
+                  <tr key={g.id}>
+                    <td className="text-xs">{new Date(g.created_at).toLocaleString("es-MX")}</td>
+                    <td>{g.cantidad}</td>
+                    <td>
+                      <a href={`/dashboard/codigos-barra/${g.id}`} className="text-brand-600 text-xs underline">Ver / editar</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">

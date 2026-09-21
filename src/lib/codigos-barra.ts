@@ -561,3 +561,89 @@ export async function eliminarPiezasGeneracionPorCantidad(generacionId: string, 
     mensaje: `Se eliminaron ${cantidad} etiquetas; quedan ${nuevaCantidad}.`,
   };
 }
+
+export async function registrarGeneracionInsumo(params: {
+  insumoId: string;
+  cantidad: number;
+  tipoFolio?: "secuencial" | "universal";
+}) {
+  const db = supabaseAdmin();
+  const cantidadTotal = Math.max(0, Math.round(Number(params.cantidad) || 0));
+
+  if (!params.insumoId) {
+    throw new Error("Falta el insumo para registrar la generación.");
+  }
+
+  if (cantidadTotal <= 0) {
+    throw new Error("La cantidad de códigos para registrar debe ser mayor a 0.");
+  }
+
+  const { data, error } = await db
+    .from("insumo_codigo_barra_generaciones")
+    .insert({
+      insumo_id: params.insumoId,
+      cantidad: cantidadTotal,
+      tipo_folio: params.tipoFolio === "universal" ? "universal" : "secuencial",
+    })
+    .select()
+    .single();
+
+  if (error || !data) throw error || new Error("No se pudo guardar la generación de etiquetas del insumo.");
+  return data.id as string;
+}
+
+export async function ajustarCantidadGeneracionInsumo(generacionId: string, nuevaCantidad: number) {
+  const db = supabaseAdmin();
+  const cantidadObjetivo = Math.max(0, Math.round(Number(nuevaCantidad) || 0));
+
+  const { data: generacion, error: errorGeneracion } = await db
+    .from("insumo_codigo_barra_generaciones")
+    .select("id, cantidad")
+    .eq("id", generacionId)
+    .single();
+
+  if (errorGeneracion || !generacion) {
+    throw errorGeneracion || new Error("No se encontró la tanda de insumos para ajustar.");
+  }
+
+  const { accion, diferencia } = normalizarCantidadAjuste(Number(generacion.cantidad || 0), cantidadObjetivo);
+
+  if (accion === "sin_cambios") {
+    return { generacionId, accion, diferencia, nuevaCantidad: cantidadObjetivo, mensaje: "No hubo cambios." };
+  }
+
+  if (accion === "eliminar") {
+    await eliminarGeneracionInsumo(generacionId);
+    return {
+      generacionId,
+      accion: "eliminar",
+      diferencia,
+      nuevaCantidad: 0,
+      mensaje: "Se eliminó la tanda completa porque quedó en 0 etiquetas.",
+    };
+  }
+
+  const { error: errorCantidad } = await db
+    .from("insumo_codigo_barra_generaciones")
+    .update({ cantidad: cantidadObjetivo })
+    .eq("id", generacionId);
+
+  if (errorCantidad) throw errorCantidad;
+
+  return {
+    generacionId,
+    accion: accion === "reducir" ? "reducir" : "agregar",
+    diferencia,
+    nuevaCantidad: cantidadObjetivo,
+    mensaje:
+      accion === "reducir"
+        ? `Se redujo la tanda de ${Number(generacion.cantidad || 0)} a ${cantidadObjetivo}.`
+        : `Se agregaron ${diferencia} etiquetas más a la tanda.`,
+  };
+}
+
+export async function eliminarGeneracionInsumo(generacionId: string) {
+  const db = supabaseAdmin();
+  const { error } = await db.from("insumo_codigo_barra_generaciones").delete().eq("id", generacionId);
+  if (error) throw error;
+}

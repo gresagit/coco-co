@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
+import { registrarGeneracionInsumo } from "@/lib/codigos-barra";
 
 const MAX_ETIQUETAS = 600;
 const MAX_COPIAS_POR_INSUMO = 96;
@@ -77,6 +78,14 @@ export async function POST(req: NextRequest) {
     const insumo = insumosPorId.get(sel.id);
     if (!insumo) continue;
 
+    const copias = Math.min(Math.max(Math.round(Number(sel.copias) || 0), 1), MAX_COPIAS_POR_INSUMO);
+
+    await registrarGeneracionInsumo({
+      insumoId: insumo.id,
+      cantidad: copias,
+      tipoFolio,
+    });
+
     if (tipoFolio === "universal") {
       items.push({
         folio: insumo.codigo_interno,
@@ -85,7 +94,6 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const copias = Math.min(Math.max(Math.round(Number(sel.copias) || 0), 1), MAX_COPIAS_POR_INSUMO);
     for (let n = 0; n < copias; n++) {
       items.push({
         folio: insumo.codigo_interno,

@@ -126,7 +126,7 @@ export default function TopBar({
   return (
     <header
       onClickCapture={onClickToolbar}
-      className="h-16 border-b border-brand-150 bg-cream/95 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between gap-3 px-4 sm:px-6"
+      className="h-16 border-b border-brand-150 bg-cream/90 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between gap-3 px-4 sm:px-6"
     >
       {pathname !== "/dashboard" && (
         <button
@@ -206,7 +206,7 @@ export default function TopBar({
           }}
           placeholder="Buscar productos, insumos, clientes, reportes..."
           aria-label="Buscar cualquier dato o sección del sistema"
-          className="w-full rounded-lg border border-brand-200 bg-surface py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-brand-400 focus:border-brand-400 focus:outline-none"
+          className="w-full rounded-md border border-brand-200 bg-surface py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-brand-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/10"
         />
 
         {isSearching && busqueda.trim().length >= 2 && (
@@ -255,7 +255,7 @@ export default function TopBar({
       {/* Selector de perfil / usuario */}
       <details ref={perfilDetailsRef} className="relative">
         <summary className="list-none cursor-pointer select-none flex items-center gap-2 rounded-lg border border-brand-200 bg-surface pl-1.5 pr-2.5 sm:pr-3 py-1.5 hover:border-brand-400 transition-colors">
-          <span className="w-7 h-7 rounded-full bg-ink text-cream text-xs font-medium flex items-center justify-center">
+          <span className="w-7 h-7 rounded-full bg-brand-600 text-cream text-xs font-semibold flex items-center justify-center">
             {iniciales || "?"}
           </span>
           <span className="text-sm font-medium text-ink hidden sm:inline">{nombre}</span>

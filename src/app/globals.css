@@ -4,63 +4,57 @@
 
 @layer base {
   :root {
-    /* Modo claro — mismos valores que la paleta original. Formato "R G B"
-       (sin comas) para que funcione con la sintaxis rgb(var(--x) / <alpha-value>)
-       de Tailwind, incluyendo modificadores de opacidad como bg-ink/40. */
-    --color-cream: 241 239 234;
-    --color-ink: 23 21 15;
-    --color-surface: 255 255 255;
+     /* Paleta Coco & Co.: crema editorial, carbón, verde bosque y azul cielo.
+       Formato "R G B" para rgb(var(--x) / <alpha-value>) de Tailwind. */
+     --color-cream: 247 239 221;
+     --color-ink: 62 59 56;
+     --color-surface: 255 255 255;
 
-    --color-brand-50: 241 239 234;
-    --color-brand-100: 231 227 218;
-    --color-brand-150: 224 219 207;
-    --color-brand-200: 214 208 194;
-    --color-brand-300: 185 176 154;
-    --color-brand-400: 143 133 113;
-    --color-brand-500: 107 98 80;
-    --color-brand-600: 74 68 54;
-    --color-brand-700: 51 47 38;
-    --color-brand-800: 36 33 25;
-    --color-brand-900: 23 21 15;
+     --color-brand-50: 247 244 236;
+     --color-brand-100: 239 235 224;
+     --color-brand-150: 225 217 201;
+     --color-brand-200: 210 201 183;
+     --color-brand-300: 184 177 163;
+     --color-brand-400: 107 102 95;
+     --color-brand-500: 107 102 95;
+     --color-brand-600: 55 77 44;
+     --color-brand-700: 47 67 38;
+     --color-brand-800: 62 59 56;
+     --color-brand-900: 45 43 41;
 
-    --color-accent-50: 251 241 234;
-    --color-accent-100: 244 220 201;
-    --color-accent-200: 232 186 149;
-    --color-accent-300: 217 152 96;
-    --color-accent-400: 196 122 60;
-    --color-accent-500: 168 99 44;
-    --color-accent-600: 138 79 35;
-    --color-accent-700: 107 61 28;
+     --color-accent-50: 235 238 232;
+     --color-accent-100: 193 214 193;
+     --color-accent-200: 172 203 224;
+     --color-accent-300: 244 189 189;
+     --color-accent-400: 253 217 165;
+     --color-accent-500: 126 143 153;
+     --color-accent-600: 99 108 113;
+     --color-accent-700: 125 102 92;
   }
 
   .dark {
-    /* Modo oscuro — la escala brand/accent se invierte (50 pasa a ser el tono
-       más oscuro) para que bg-brand-50/border-brand-150/text-brand-400, etc.
-       en cualquier página se vean correctos automáticamente. */
-    --color-cream: 19 18 15;
-    --color-ink: 237 233 224;
-    --color-surface: 30 29 25;
-
-    --color-brand-50: 32 30 25;
-    --color-brand-100: 40 38 32;
-    --color-brand-150: 47 44 37;
-    --color-brand-200: 60 56 47;
-    --color-brand-300: 88 82 68;
-    --color-brand-400: 140 131 113;
-    --color-brand-500: 170 161 143;
-    --color-brand-600: 197 190 175;
-    --color-brand-700: 216 211 200;
-    --color-brand-800: 230 226 218;
-    --color-brand-900: 241 239 234;
-
-    --color-accent-50: 42 32 22;
-    --color-accent-100: 74 53 30;
-    --color-accent-200: 107 61 28;
-    --color-accent-300: 138 79 35;
-    --color-accent-400: 196 122 60;
-    --color-accent-500: 217 152 96;
-    --color-accent-600: 232 186 149;
-    --color-accent-700: 244 220 201;
+      --color-cream: 35 37 33;
+     --color-ink: 247 239 221;
+      --color-surface: 48 51 45;
+      --color-brand-50: 48 51 45;
+      --color-brand-100: 59 63 54;
+      --color-brand-150: 79 83 71;
+      --color-brand-200: 105 108 92;
+      --color-brand-300: 145 145 123;
+      --color-brand-400: 191 187 166;
+      --color-brand-500: 210 204 182;
+      --color-brand-600: 174 202 170;
+      --color-brand-700: 204 225 195;
+      --color-brand-800: 239 235 224;
+      --color-brand-900: 247 239 221;
+      --color-accent-50: 49 68 54;
+      --color-accent-100: 91 126 94;
+      --color-accent-200: 125 174 204;
+      --color-accent-300: 190 133 139;
+      --color-accent-400: 218 174 111;
+      --color-accent-500: 172 203 224;
+      --color-accent-600: 193 214 193;
+      --color-accent-700: 238 204 195;
   }
 
   html {
@@ -74,6 +68,75 @@
 @layer base {
   h1, h2, h3, .font-display {
     @apply font-serif;
+  }
+
+  body {
+    background-image: linear-gradient(135deg, rgb(var(--color-cream)) 0%, rgb(var(--color-brand-50)) 100%);
+  }
+
+  .brand-canvas {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .brand-canvas::before,
+  .brand-canvas::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 170px;
+    height: 92px;
+    border: 1px solid rgb(var(--color-accent-200) / 0.42);
+    border-radius: 100% 0 100% 0;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .brand-canvas::before {
+    top: 84px;
+    right: -72px;
+    transform: rotate(26deg);
+    box-shadow: -34px 38px 0 -1px rgb(var(--color-accent-300) / 0.24);
+  }
+
+  .brand-canvas::after {
+    bottom: 72px;
+    left: -112px;
+    transform: rotate(-28deg) scale(0.76);
+    border-color: rgb(var(--color-accent-100) / 0.65);
+  }
+
+  .brand-leaf {
+    position: absolute;
+    width: 112px;
+    height: 58px;
+    border: 1px solid rgb(var(--color-accent-200) / 0.48);
+    border-radius: 100% 0 100% 0;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .brand-leaf::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    top: 50%;
+    width: 82%;
+    height: 1px;
+    background: rgb(var(--color-accent-200) / 0.48);
+    transform: rotate(-25deg);
+    transform-origin: left center;
+  }
+
+  .brand-leaf--one { top: 18%; right: 4%; transform: rotate(22deg); }
+  .brand-leaf--two { top: 31%; right: -1%; transform: rotate(58deg) scale(0.7); border-color: rgb(var(--color-accent-300) / 0.5); }
+  .brand-leaf--three { bottom: 15%; left: 2%; transform: rotate(198deg) scale(0.82); border-color: rgb(var(--color-accent-100) / 0.64); }
+  .brand-leaf--four { bottom: 4%; left: 8%; transform: rotate(232deg) scale(0.56); border-color: rgb(var(--color-accent-400) / 0.52); }
+
+  ::selection {
+    background: rgb(var(--color-accent-100));
+    color: rgb(var(--color-ink));
   }
 }
 
@@ -217,7 +280,7 @@
   }
 
   .page-title {
-    @apply font-serif text-2xl md:text-[28px] leading-tight text-ink;
+    @apply font-serif text-2xl md:text-[30px] leading-tight text-ink;
   }
 
   .page-subtitle {
@@ -225,24 +288,24 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.98];
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 focus-visible:ring-offset-2;
   }
   .btn-primary {
-    @apply btn bg-ink text-cream hover:bg-brand-700 hover:shadow-soft;
+    @apply btn bg-brand-600 text-cream hover:bg-brand-700 hover:shadow-soft;
   }
   .btn-secondary {
-    @apply btn bg-transparent border border-brand-200 text-brand-600 hover:border-brand-400 hover:text-ink;
+    @apply btn bg-surface border border-brand-200 text-brand-600 hover:border-brand-600 hover:bg-brand-50 hover:text-ink;
   }
   .btn-accent {
-    @apply btn bg-accent-400 text-white hover:bg-accent-500 hover:shadow-soft;
+    @apply btn bg-accent-300 text-ink hover:bg-accent-400 hover:shadow-soft;
   }
 
   .card {
-    @apply bg-surface rounded-xl shadow-soft border border-brand-150 p-5 transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)];
+    @apply bg-surface rounded-lg shadow-soft border border-brand-150 p-5 transition-shadow duration-200 hover:shadow-[0_2px_4px_rgba(62,59,56,0.05),0_8px_24px_rgba(62,59,56,0.07)];
   }
 
   .input {
-    @apply w-full rounded-lg border border-brand-200 bg-surface px-3 py-2 text-sm text-ink placeholder:text-brand-300 focus:outline-none focus:ring-2 focus:ring-ink/10 focus:border-ink transition-colors;
+    @apply w-full rounded-md border border-brand-200 bg-surface px-3 py-2 text-sm text-ink placeholder:text-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-600/15 focus:border-brand-600 transition-colors;
   }
   .input[readonly] {
     @apply bg-brand-50 text-brand-500 cursor-not-allowed;
@@ -256,13 +319,13 @@
     @apply min-w-full text-sm text-left;
   }
   .table-base th {
-    @apply bg-transparent text-brand-400 font-medium text-xs uppercase tracking-wide px-3 py-2.5 border-b border-brand-200 text-left;
+    @apply bg-brand-50/60 text-brand-400 font-semibold text-xs uppercase tracking-wide px-3 py-2.5 border-b border-brand-200 text-left;
   }
   .table-base td {
     @apply px-3 py-2.5 border-b border-brand-100 text-ink;
   }
   .table-base tbody tr {
-    @apply hover:bg-brand-50/60 transition-colors;
+    @apply hover:bg-accent-50/70 transition-colors;
   }
 
   .badge-verde { @apply bg-transparent border border-green-700/30 dark:border-green-400/40 text-green-800 dark:text-green-400 px-2 py-0.5 rounded-full text-xs font-medium; }
@@ -277,10 +340,13 @@
      Entra con un fade-up sutil y respira con un brillo de gradiente lentísimo
      (10s) para que no se sienta un bloque estático más entre tanto card. */
   .banner {
-    @apply rounded-2xl border border-brand-150 bg-gradient-to-br from-surface to-brand-50 p-5 shadow-soft transition-all duration-200 hover:shadow-[0_2px_4px_rgba(23,21,15,0.05),0_8px_24px_rgba(23,21,15,0.06)] hover:-translate-y-0.5;
+    @apply rounded-2xl border border-brand-150 bg-gradient-to-br from-surface to-accent-50 p-5 shadow-soft transition-all duration-200 hover:shadow-[0_2px_4px_rgba(62,59,56,0.05),0_8px_24px_rgba(62,59,56,0.06)] hover:-translate-y-0.5;
     background-size: 160% 160%;
     animation: banner-entrada 0.45s cubic-bezier(0.16, 1, 0.3, 1) both, banner-brillo 10s ease-in-out infinite;
   }
+  .stagger-fade > .banner:nth-child(2) { background-image: linear-gradient(135deg, rgb(var(--color-surface)), rgb(var(--color-accent-200) / 0.28)); }
+  .stagger-fade > .banner:nth-child(3) { background-image: linear-gradient(135deg, rgb(var(--color-surface)), rgb(var(--color-accent-300) / 0.25)); }
+  .stagger-fade > .banner:nth-child(4) { background-image: linear-gradient(135deg, rgb(var(--color-surface)), rgb(var(--color-accent-400) / 0.3)); }
   .banner-accent {
     @apply rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-surface p-5 shadow-soft transition-all duration-200 hover:-translate-y-0.5;
     background-size: 160% 160%;

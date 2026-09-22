@@ -64,11 +64,6 @@ export default function LoginPage() {
           <button className="btn-primary w-full" disabled={loading}>
             {loading ? "Entrando..." : "Entrar"}
           </button>
-          <p className="text-xs text-brand-500 text-center pt-2">
-            Usuario por defecto: <b>Admin</b> / Contraseña: <b>cisco</b>
-            <br />
-            Cámbiala en cuanto entres, desde Usuarios y Roles.
-          </p>
         </form>
       </div>
     </div>

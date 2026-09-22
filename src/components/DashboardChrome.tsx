@@ -55,7 +55,13 @@ export default function DashboardChrome({
           onMenuClick={() => setMenuAbierto(true)}
           permisos={permisos}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0">{children}</main>
+        <main className="brand-canvas flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0">
+          <span className="brand-leaf brand-leaf--one" aria-hidden="true" />
+          <span className="brand-leaf brand-leaf--two" aria-hidden="true" />
+          <span className="brand-leaf brand-leaf--three" aria-hidden="true" />
+          <span className="brand-leaf brand-leaf--four" aria-hidden="true" />
+          {children}
+        </main>
       </div>
     </div>
   );

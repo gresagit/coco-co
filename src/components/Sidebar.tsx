@@ -152,10 +152,13 @@ export default function Sidebar({
         lg:static lg:translate-x-0
         ${open ? "translate-x-0 shadow-soft" : "-translate-x-full"}`}
     >
-      <div className="px-6 py-6 border-b border-brand-150 flex items-center justify-between">
-        <div>
-          <h1 className="font-serif text-lg text-ink leading-none">Coco & Co.</h1>
-          <p className="text-brand-400 text-xs mt-1.5 uppercase tracking-widest2">Inventarios</p>
+      <div className="px-6 py-6 border-b border-brand-150 flex items-center justify-between bg-brand-50/70">
+        <div className="flex items-center gap-3">
+          <LeafMark />
+          <div>
+          <h1 className="font-serif text-xl font-medium tracking-tight text-brand-600 leading-none">coco & co.</h1>
+          <p className="text-brand-400 text-[10px] mt-2 uppercase tracking-widest2">Cuidado natural · Inventarios</p>
+          </div>
         </div>
         {/* Botón para cerrar el menú en pantallas chicas (celular/tablet) */}
         <button
@@ -188,8 +191,8 @@ export default function Sidebar({
                     <summary
                       className={`list-none flex items-center gap-3 px-6 py-2 text-sm border-l-2 cursor-pointer transition-colors ${
                         active
-                          ? "border-ink text-ink font-medium bg-brand-50"
-                          : "border-transparent text-brand-500 hover:text-ink hover:bg-brand-50/60"
+                          ? "border-brand-600 text-brand-700 font-semibold bg-accent-50"
+                          : "border-transparent text-brand-500 hover:text-brand-700 hover:bg-brand-50/60"
                       }`}
                     >
                       <Icon className="w-[17px] h-[17px] shrink-0" />
@@ -206,8 +209,8 @@ export default function Sidebar({
                           onClick={onClose}
                           className={`block px-4 py-2 text-xs transition-colors ${
                             esActivo(child.href)
-                              ? "text-ink font-medium bg-brand-50"
-                              : "text-brand-500 hover:text-ink hover:bg-brand-50/60"
+                              ? "text-brand-700 font-semibold bg-accent-50"
+                              : "text-brand-500 hover:text-brand-700 hover:bg-brand-50/60"
                           }`}
                         >
                           {child.label}
@@ -225,8 +228,8 @@ export default function Sidebar({
                   onClick={onClose}
                   className={`flex items-center gap-3 px-6 py-2 text-sm border-l-2 transition-colors ${
                     active
-                      ? "border-ink text-ink font-medium bg-brand-50"
-                      : "border-transparent text-brand-500 hover:text-ink hover:bg-brand-50/60"
+                      ? "border-brand-600 text-brand-700 font-semibold bg-accent-50"
+                      : "border-transparent text-brand-500 hover:text-brand-700 hover:bg-brand-50/60"
                   }`}
                 >
                   <Icon className="w-[17px] h-[17px] shrink-0" />
@@ -237,11 +240,23 @@ export default function Sidebar({
           </div>
         ))}
       </nav>
-      <div className="px-6 py-4 border-t border-brand-150">
-        <p className="text-brand-300 text-xs">Sesión activa</p>
+      <div className="px-6 py-4 border-t border-brand-150 bg-brand-50/40">
+        <p className="text-brand-400 text-[10px] uppercase tracking-wide">Sesión activa</p>
         <p className="text-sm text-ink truncate">{nombre}</p>
       </div>
     </aside>
+  );
+}
+
+function LeafMark() {
+  return (
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-100/60 text-brand-600" aria-hidden="true">
+      <svg viewBox="0 0 40 40" className="h-8 w-8" fill="none">
+        <path d="M20 31c-1-9 2-17 12-22 1 10-3 18-12 22Z" fill="currentColor" opacity="0.92" />
+        <path d="M20 31C18 21 13 15 5 14c0 9 5 15 15 17Z" fill="currentColor" opacity="0.58" />
+        <path d="M20 31c0-8 3-15 11-21M20 31c-1-7-5-12-13-16" stroke="rgb(247 239 221)" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    </span>
   );
 }
 

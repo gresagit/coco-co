@@ -153,16 +153,26 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex-1 min-w-[240px]">
             <label className="label">Escanea o escribe el folio</label>
-            <input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={onKeyDown}
-              onBlur={() => !camaraActiva && setTimeout(() => inputRef.current?.focus(), 50)}
-              placeholder="Apunta el lector Bluetooth aquí y dispara, o escribe y da Enter"
-              className="input"
-              autoComplete="off"
-            />
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={onKeyDown}
+                onBlur={() => !camaraActiva && setTimeout(() => inputRef.current?.focus(), 50)}
+                placeholder="Apunta el lector Bluetooth aquí y dispara, o escribe y da Enter"
+                className="input min-w-0 flex-1"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={() => procesarFolio(inputValue)}
+                disabled={!inputValue.trim() || enviando}
+                className="btn-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Aceptar
+              </button>
+            </div>
           </div>
           <button type="button" onClick={toggleCamara} className={camaraActiva ? "btn-secondary" : "btn-primary"}>
             {camaraActiva ? "Apagar cámara" : "Usar cámara del teléfono"}

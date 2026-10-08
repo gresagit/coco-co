@@ -20,6 +20,7 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
   const router = useRouter();
   const [inputValue, setInputValue] = useState("");
   const [buscando, setBuscando] = useState(false);
+  const [modoEscaneo, setModoEscaneo] = useState<"lector" | "camara">("lector");
   const [mensajeError, setMensajeError] = useState<string | null>(null);
   const [encontrado, setEncontrado] = useState<InsumoEncontrado | null>(null);
   const [stock, setStock] = useState<Stock>(null);
@@ -89,7 +90,7 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
     } finally {
       setBuscando(false);
       setInputValue("");
-      inputRef.current?.focus();
+      if (modoEscaneo === "lector") inputRef.current?.focus();
     }
   }
 
@@ -101,6 +102,13 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
   }
 
   const { camaraActiva, errorCamara, buscandoEnCuadro, videoRef, toggleCamara } = useEscanerCamara(buscarCodigo);
+
+  function seleccionarModo(modo: "lector" | "camara") {
+    if (modo === "camara" && !camaraActiva) toggleCamara();
+    if (modo === "lector" && camaraActiva) toggleCamara();
+    setModoEscaneo(modo);
+    if (modo === "lector") setTimeout(() => inputRef.current?.focus(), 0);
+  }
 
   async function registrarDerrame() {
     if (!encontrado) return;
@@ -145,7 +153,7 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={onKeyDown}
-                onBlur={() => !camaraActiva && setTimeout(() => inputRef.current?.focus(), 50)}
+                onBlur={() => modoEscaneo === "lector" && setTimeout(() => inputRef.current?.focus(), 50)}
                 placeholder="Apunta el lector Bluetooth aquí y dispara, o escribe y da Enter"
                 className="input min-w-0 flex-1"
                 autoComplete="off"
@@ -160,10 +168,33 @@ export default function EscanerInsumos({ embedded = false }: { embedded?: boolea
               </button>
             </div>
           </div>
-          <button type="button" onClick={toggleCamara} className={camaraActiva ? "btn-secondary" : "btn-primary"}>
-            {camaraActiva ? "Apagar cámara" : "Usar cámara del teléfono"}
-          </button>
+          <div>
+            <p className="label">Modo de escaneo</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                aria-pressed={modoEscaneo === "lector"}
+                onClick={() => seleccionarModo("lector")}
+                className={modoEscaneo === "lector" ? "btn-primary" : "btn-secondary"}
+              >
+                Lector Bluetooth
+              </button>
+              <button
+                type="button"
+                aria-pressed={modoEscaneo === "camara"}
+                onClick={() => seleccionarModo("camara")}
+                className={modoEscaneo === "camara" ? "btn-primary" : "btn-secondary"}
+              >
+                Cámara
+              </button>
+            </div>
+          </div>
         </div>
+        {modoEscaneo === "lector" && (
+          <p className="text-xs text-brand-500 mt-2">
+            Empareja el lector desde los ajustes Bluetooth del dispositivo. Si funciona como teclado, apunta al código y dispara.
+          </p>
+        )}
         {buscando && (
           <p className="text-xs text-brand-500 mt-2 flex items-center gap-1.5">
             <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" /> Buscando insumo…

@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth";
 import { esAdministrador } from "@/lib/roles";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { resolverAprobacion } from "@/lib/aprobaciones";
+import ReportarAvanceForm from "@/components/ReportarAvanceForm";
 
 async function aprobarOrden(ordenId: string, formData: FormData) {
   "use server";
@@ -32,53 +33,65 @@ async function rechazarOrden(ordenId: string, formData: FormData) {
   revalidatePath("/dashboard/produccion");
 }
 
-async function reportarAvance(ordenId: string, formData: FormData) {
+async function reportarAvance(ordenId: string, formData: FormData): Promise<{ ok: boolean; mensaje?: string }> {
   "use server";
-  const db = supabaseAdmin();
-  const { data: ordenActual, error: errorOrden } = await db
-    .from("ordenes_produccion")
-    .select("aprobacion_estado, cantidad_planeada")
-    .eq("id", ordenId)
-    .single();
-  if (errorOrden) throw errorOrden;
-  if (ordenActual?.aprobacion_estado !== "Aprobada") {
-    throw new Error("Esta orden todavía no tiene el visto bueno del administrador.");
-  }
+  try {
+    const db = supabaseAdmin();
+    const { data: ordenActual, error: errorOrden } = await db
+      .from("ordenes_produccion")
+      .select("aprobacion_estado, cantidad_planeada")
+      .eq("id", ordenId)
+      .single();
+    if (errorOrden) throw errorOrden;
+    if (ordenActual?.aprobacion_estado !== "Aprobada") {
+      throw new Error("Esta orden todavía no tiene el visto bueno del administrador.");
+    }
 
-  const user = await getSessionUser();
-  const cantidadProducida = Number(formData.get("cantidad_producida") || 0);
-  const cantidadMerma = Number(formData.get("cantidad_merma") || 0);
-  if (!Number.isFinite(cantidadProducida) || !Number.isFinite(cantidadMerma) || cantidadProducida <= 0 || cantidadMerma < 0) {
-    throw new Error("La cantidad producida debe ser mayor a cero y la merma no puede ser negativa.");
+    const user = await getSessionUser();
+    const cantidadProducida = Number(formData.get("cantidad_producida") || 0);
+    const cantidadMerma = Number(formData.get("cantidad_merma") || 0);
+    if (!Number.isFinite(cantidadProducida) || !Number.isFinite(cantidadMerma) || cantidadProducida <= 0 || cantidadMerma < 0) {
+      throw new Error("La cantidad producida debe ser mayor a cero y la merma no puede ser negativa.");
+    }
+    const { data: reportesPrevios, error: errorReportes } = await db
+      .from("reportes_avance")
+      .select("cantidad_producida, cantidad_merma")
+      .eq("orden_produccion_id", ordenId);
+    if (errorReportes) throw errorReportes;
+    const totalPrevio = (reportesPrevios || []).reduce(
+      (total, reporte) => total + Number(reporte.cantidad_producida) + Number(reporte.cantidad_merma),
+      0
+    );
+    if (totalPrevio + cantidadProducida + cantidadMerma > Number(ordenActual.cantidad_planeada)) {
+      throw new Error("El avance acumulado no puede superar la cantidad planeada de la orden.");
+    }
+    await procesarReporteAvance({
+      ordenProduccionId: ordenId,
+      fecha: (formData.get("fecha") as string) || new Date().toISOString().slice(0, 10),
+      cantidadProducida,
+      cantidadMerma,
+      notas: formData.get("notas") as string,
+      reportadoPor: user?.id,
+    });
+    await registrarAuditoria({
+      accion: "reportar_avance_produccion",
+      entidad: "ordenes_produccion",
+      entidadId: ordenId,
+      detalle: { cantidad_producida: cantidadProducida, cantidad_merma: cantidadMerma },
+    });
+    const { error: errorEstado } = await db
+      .from("ordenes_produccion")
+      .update({ estado: "En proceso" })
+      .eq("id", ordenId);
+    if (errorEstado) throw errorEstado;
+    revalidatePath(`/dashboard/produccion/${ordenId}`);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      mensaje: error instanceof Error ? error.message : "No se pudo registrar el avance.",
+    };
   }
-  const { data: reportesPrevios, error: errorReportes } = await db
-    .from("reportes_avance")
-    .select("cantidad_producida, cantidad_merma")
-    .eq("orden_produccion_id", ordenId);
-  if (errorReportes) throw errorReportes;
-  const totalPrevio = (reportesPrevios || []).reduce(
-    (total, reporte) => total + Number(reporte.cantidad_producida) + Number(reporte.cantidad_merma),
-    0
-  );
-  if (totalPrevio + cantidadProducida + cantidadMerma > Number(ordenActual.cantidad_planeada)) {
-    throw new Error("El avance acumulado no puede superar la cantidad planeada de la orden.");
-  }
-  await procesarReporteAvance({
-    ordenProduccionId: ordenId,
-    fecha: (formData.get("fecha") as string) || new Date().toISOString().slice(0, 10),
-    cantidadProducida,
-    cantidadMerma,
-    notas: formData.get("notas") as string,
-    reportadoPor: user?.id,
-  });
-  await registrarAuditoria({
-    accion: "reportar_avance_produccion",
-    entidad: "ordenes_produccion",
-    entidadId: ordenId,
-    detalle: { cantidad_producida: cantidadProducida, cantidad_merma: cantidadMerma },
-  });
-  await db.from("ordenes_produccion").update({ estado: "En proceso" }).eq("id", ordenId);
-  revalidatePath(`/dashboard/produccion/${ordenId}`);
 }
 
 async function cerrarOrden(ordenId: string) {
@@ -311,27 +324,7 @@ export default async function DetalleProduccionPage({ params }: { params: { id: 
       {orden.estado !== "Cerrada" && orden.aprobacion_estado === "Aprobada" && (
         <div className="card">
           <h2 className="font-semibold mb-3">Reportar avance</h2>
-          <form action={reportarAvance.bind(null, orden.id)} className="grid md:grid-cols-4 gap-3 items-end">
-            <div>
-              <label className="label">Fecha</label>
-              <input name="fecha" type="date" className="input" defaultValue={new Date().toISOString().slice(0, 10)} />
-            </div>
-            <div>
-              <label className="label">Cantidad producida</label>
-              <input name="cantidad_producida" type="number" step="0.01" className="input" required />
-            </div>
-            <div>
-              <label className="label">Merma</label>
-              <input name="cantidad_merma" type="number" step="0.01" className="input" defaultValue={0} />
-            </div>
-            <div>
-              <label className="label">Notas</label>
-              <input name="notas" className="input" />
-            </div>
-            <div className="md:col-span-4">
-              <button className="btn-primary">Registrar reporte de avance</button>
-            </div>
-          </form>
+          <ReportarAvanceForm action={reportarAvance.bind(null, orden.id)} />
           <p className="text-xs text-brand-500 mt-2">
             Al registrar, el sistema descuenta la receta proporcionalmente. El resultado queda en inventario como
             {orden.productos?.tipo_producto === "intermedio" ? " producto intermedio para futuras recetas." : " producto terminado listo para venta."}

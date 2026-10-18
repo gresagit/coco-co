@@ -14,19 +14,26 @@ export default async function DashboardHome() {
     ]);
 
   // Semáforo: insumos y productos por debajo de su stock mínimo
-  const [{ data: insumoStock }, { data: productoStock }] = await Promise.all([
+  const [insumoStockResult, productoStockResult] = await Promise.all([
     db
       .from("insumo_stock")
       .select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)")
-      .order("cantidad_disponible", { ascending: true })
-      .limit(200),
+      .order("cantidad_disponible", { ascending: true }),
     db
       .from("producto_stock")
       .select("cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)")
-      .order("cantidad_disponible", { ascending: true })
-      .limit(200),
+      .order("cantidad_disponible", { ascending: true }),
   ]);
 
+  if (insumoStockResult.error) {
+    throw new Error(`No se pudo cargar el semáforo de insumos: ${insumoStockResult.error.message}`);
+  }
+  if (productoStockResult.error) {
+    throw new Error(`No se pudo cargar el semáforo de productos terminados: ${productoStockResult.error.message}`);
+  }
+
+  const insumoStock = insumoStockResult.data;
+  const productoStock = productoStockResult.data;
   const bajoInsumos = (insumoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
   const bajoProductos = (productoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
 

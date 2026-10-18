@@ -35,11 +35,12 @@ async function rechazarOrden(ordenId: string, formData: FormData) {
 async function reportarAvance(ordenId: string, formData: FormData) {
   "use server";
   const db = supabaseAdmin();
-  const { data: ordenActual } = await db
+  const { data: ordenActual, error: errorOrden } = await db
     .from("ordenes_produccion")
     .select("aprobacion_estado, cantidad_planeada")
     .eq("id", ordenId)
     .single();
+  if (errorOrden) throw errorOrden;
   if (ordenActual?.aprobacion_estado !== "Aprobada") {
     throw new Error("Esta orden todavía no tiene el visto bueno del administrador.");
   }
@@ -47,15 +48,19 @@ async function reportarAvance(ordenId: string, formData: FormData) {
   const user = await getSessionUser();
   const cantidadProducida = Number(formData.get("cantidad_producida") || 0);
   const cantidadMerma = Number(formData.get("cantidad_merma") || 0);
-  if (cantidadProducida <= 0 || cantidadMerma < 0) {
+  if (!Number.isFinite(cantidadProducida) || !Number.isFinite(cantidadMerma) || cantidadProducida <= 0 || cantidadMerma < 0) {
     throw new Error("La cantidad producida debe ser mayor a cero y la merma no puede ser negativa.");
   }
-  const { data: reportesPrevios } = await db
+  const { data: reportesPrevios, error: errorReportes } = await db
     .from("reportes_avance")
     .select("cantidad_producida, cantidad_merma")
     .eq("orden_produccion_id", ordenId);
-  const producidoPrevio = (reportesPrevios || []).reduce((total, reporte) => total + Number(reporte.cantidad_producida), 0);
-  if (producidoPrevio + cantidadProducida + cantidadMerma > Number(ordenActual.cantidad_planeada)) {
+  if (errorReportes) throw errorReportes;
+  const totalPrevio = (reportesPrevios || []).reduce(
+    (total, reporte) => total + Number(reporte.cantidad_producida) + Number(reporte.cantidad_merma),
+    0
+  );
+  if (totalPrevio + cantidadProducida + cantidadMerma > Number(ordenActual.cantidad_planeada)) {
     throw new Error("El avance acumulado no puede superar la cantidad planeada de la orden.");
   }
   await procesarReporteAvance({

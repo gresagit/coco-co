@@ -2,6 +2,43 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { descontarInsumo } from "@/lib/insumo-consumo";
 import { convertirCantidad } from "@/lib/unidades";
 
+async function asegurarContadorProducto(db: ReturnType<typeof supabaseAdmin>, productoId: string, sku: string) {
+  const { data: contador, error: errorContador } = await db
+    .from("folio_contadores")
+    .select("producto_id")
+    .eq("producto_id", productoId)
+    .maybeSingle();
+
+  if (errorContador) throw errorContador;
+  if (contador) return;
+
+  const { data: piezas, error: errorPiezas } = await db
+    .from("piezas")
+    .select("folio_pieza")
+    .eq("producto_id", productoId);
+
+  if (errorPiezas) throw errorPiezas;
+
+  const ultimoNumero = (piezas || []).reduce((mayor, pieza) => {
+    const numero = Number(pieza.folio_pieza.match(/(\d+)$/)?.[1]);
+    return Number.isFinite(numero) ? Math.max(mayor, numero) : mayor;
+  }, -1) + 1;
+  const prefijo = (sku.split("-")[0] || "PROD").toUpperCase();
+  const { error: errorInsertar } = await db
+    .from("folio_contadores")
+    .insert({ producto_id: productoId, prefijo, ultimo_numero: ultimoNumero });
+
+  if (errorInsertar) {
+    const { data: contadorCreado, error: errorVerificar } = await db
+      .from("folio_contadores")
+      .select("producto_id")
+      .eq("producto_id", productoId)
+      .maybeSingle();
+
+    if (errorVerificar || !contadorCreado) throw errorInsertar;
+  }
+}
+
 // Procesa un reporte de avance de producción:
 // 1. Crea (o reutiliza) el lote de esta corrida.
 // 2. Genera folios de pieza individuales, correlativos por producto.
@@ -18,16 +55,19 @@ export async function procesarReporteAvance(params: {
 }) {
   const db = supabaseAdmin();
 
-  const { data: orden } = await db
+  const { data: orden, error: errorOrden } = await db
     .from("ordenes_produccion")
     .select("*, productos(*)")
     .eq("id", params.ordenProduccionId)
     .single();
+  if (errorOrden) throw errorOrden;
   if (!orden) throw new Error("Orden de producción no encontrada");
+
+  await asegurarContadorProducto(db, orden.producto_id, orden.productos?.sku || "");
 
   // 1. Lote: uno por reporte, para trazabilidad granular
   const folioLote = `${orden.folio}-L${Date.now().toString().slice(-5)}`;
-  const { data: lote } = await db
+  const { data: lote, error: errorLote } = await db
     .from("lotes")
     .insert({
       folio_lote: folioLote,
@@ -39,10 +79,11 @@ export async function procesarReporteAvance(params: {
     })
     .select()
     .single();
+  if (errorLote) throw errorLote;
   if (!lote) throw new Error("No se pudo crear el lote");
 
   // 2. Reporte de avance
-  const { data: reporte } = await db
+  const { data: reporte, error: errorReporte } = await db
     .from("reportes_avance")
     .insert({
       orden_produccion_id: orden.id,
@@ -55,13 +96,16 @@ export async function procesarReporteAvance(params: {
     })
     .select()
     .single();
+  if (errorReporte) throw errorReporte;
+  if (!reporte) throw new Error("No se pudo guardar el reporte de avance.");
 
   // 3. Piezas individuales (folio correlativo por producto)
   const piezas = [];
   for (let i = 0; i < params.cantidadProducida; i++) {
-    const { data: folioData } = await db.rpc("siguiente_folio_producto", { p_producto_id: orden.producto_id });
+    const { data: folioData, error } = await db.rpc("siguiente_folio_producto", { p_producto_id: orden.producto_id });
+    if (error || !folioData) throw error || new Error("No se pudo generar el folio de la pieza.");
     piezas.push({
-      folio_pieza: folioData as string,
+      folio_pieza: folioData,
       lote_id: lote.id,
       producto_id: orden.producto_id,
       sucursal_id: orden.sucursal_id,
@@ -69,7 +113,8 @@ export async function procesarReporteAvance(params: {
     });
   }
   if (piezas.length) {
-    await db.from("piezas").insert(piezas);
+    const { error } = await db.from("piezas").insert(piezas);
+    if (error) throw error;
   }
 
   // 4. Descuento de insumos según BOM, proporcional a lo reportado (producido + merma)

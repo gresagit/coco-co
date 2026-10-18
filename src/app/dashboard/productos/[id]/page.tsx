@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { agruparStockProductos } from "@/lib/producto-stock";
 
 async function actualizarStockMinimo(productoId: string, formData: FormData) {
   "use server";
@@ -43,10 +44,12 @@ async function actualizarPrecioManual(productoId: string, formData: FormData) {
 export default async function ProductoDetallePage({ params }: { params: { id: string } }) {
   const db = supabaseAdmin();
   const { data: producto } = await db.from("productos").select("*").eq("id", params.id).single();
-  const { data: stocks } = await db
+  const { data: stockRows, error: errorStocks } = await db
     .from("producto_stock")
     .select("*, sucursales(nombre)")
     .eq("producto_id", params.id);
+  if (errorStocks) throw errorStocks;
+  const stocks = agruparStockProductos(stockRows || []);
   const { data: generaciones } = await db
     .from("generaciones_codigo_barra")
     .select("id, cantidad, created_at")

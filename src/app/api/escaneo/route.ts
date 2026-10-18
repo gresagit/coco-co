@@ -22,14 +22,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const resultado = await confirmarPiezaPorFolio(folio, sucursalId, user.id);
-  if (resultado.ok) {
-    await registrarAuditoria({
-      accion: "escanear_pieza",
-      entidad: "piezas",
-      sucursalId,
-      detalle: { folio: resultado.folio, producto_sku: resultado.productoSku },
-    });
+  try {
+    const resultado = await confirmarPiezaPorFolio(folio, sucursalId, user.id);
+    if (resultado.ok) {
+      await registrarAuditoria({
+        accion: "escanear_pieza",
+        entidad: "piezas",
+        sucursalId,
+        detalle: { folio: resultado.folio, producto_sku: resultado.productoSku },
+      });
+    }
+    return NextResponse.json(resultado);
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : "Ocurrió un error al registrar el escaneo.";
+    return NextResponse.json({ ok: false, folio, mensaje }, { status: 500 });
   }
-  return NextResponse.json(resultado);
 }

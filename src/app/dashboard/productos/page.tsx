@@ -9,6 +9,7 @@ import Link from "next/link";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInventario from "@/components/EscanerInventario";
 import ProductosTabla from "@/components/ProductosTabla";
+import { cargarTodasLasFilas } from "@/lib/supabase/pagination";
 
 async function crearProducto(formData: FormData) {
   "use server";
@@ -201,21 +202,32 @@ export default async function ProductosPage({
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
 
-  const [{ data: productos }, { data: categorias }, { data: stockRows }] = await Promise.all([
-    db.from("productos").select("*, categorias(nombre)").order("nombre"),
+  const [productos, categoriasResult, stockRows] = await Promise.all([
+    cargarTodasLasFilas((desde, hasta) =>
+      db.from("productos").select("*, categorias(nombre)").order("nombre").range(desde, hasta)
+    ),
     db.from("categorias").select("*").order("nombre"),
     sucursalId
-      ? db.from("producto_stock").select("producto_id, cantidad_disponible").eq("sucursal_id", sucursalId)
-      : Promise.resolve({ data: [] as any[] }),
+      ? cargarTodasLasFilas((desde, hasta) =>
+          db
+            .from("producto_stock")
+            .select("producto_id, cantidad_disponible")
+            .eq("sucursal_id", sucursalId)
+            .order("producto_id")
+            .range(desde, hasta)
+        )
+      : Promise.resolve([] as { producto_id: string; cantidad_disponible: number }[]),
   ]);
+  if (categoriasResult.error) throw categoriasResult.error;
+  const categorias = categoriasResult.data;
 
   const stockPorProducto: Record<string, number> = {};
   for (const row of stockRows || []) {
-    stockPorProducto[row.producto_id] = Number(row.cantidad_disponible);
+    stockPorProducto[row.producto_id] = (stockPorProducto[row.producto_id] || 0) + Number(row.cantidad_disponible || 0);
   }
 
   const conCosteo = await Promise.all(
-    (productos || []).map(async (p: any) => {
+    productos.map(async (p: any) => {
       const costo = await calcularCostoProducto(p.id);
       const precio = p.precio_venta_override ?? precioSugerido(costo, Number(p.porcentaje_margen_deseado));
       return { ...p, costo, precio, stock: stockPorProducto[p.id] ?? 0 };

@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { agruparStockProductos } from "@/lib/producto-stock";
+import { cargarTodasLasFilas } from "@/lib/supabase/pagination";
 
 async function crearConfig(formData: FormData) {
   "use server";
@@ -33,26 +35,31 @@ async function eliminarConfig(id: string) {
 
 export default async function AlertasPage() {
   const db = supabaseAdmin();
-  const [rolesResult, configsResult, insumoStockResult, productoStockResult] = await Promise.all([
+  const [rolesResult, configsResult, insumoStock, productoStockRows] = await Promise.all([
     db.from("roles").select("*").order("nombre"),
     db.from("alertas_config").select("*, roles(nombre)").order("tipo_alerta"),
-    db.from("insumo_stock").select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)"),
-    db.from("producto_stock").select("cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)"),
+    cargarTodasLasFilas((desde, hasta) =>
+      db
+        .from("insumo_stock")
+        .select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)")
+        .order("cantidad_disponible", { ascending: true })
+        .range(desde, hasta)
+    ),
+    cargarTodasLasFilas((desde, hasta) =>
+      db
+        .from("producto_stock")
+        .select("producto_id, sucursal_id, cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)")
+        .order("producto_id")
+        .order("sucursal_id")
+        .range(desde, hasta)
+    ),
   ]);
-
-  if (insumoStockResult.error) {
-    throw new Error(`No se pudieron cargar las alertas de insumos: ${insumoStockResult.error.message}`);
-  }
-  if (productoStockResult.error) {
-    throw new Error(`No se pudieron cargar las alertas de productos terminados: ${productoStockResult.error.message}`);
-  }
 
   const roles = rolesResult.data;
   const configs = configsResult.data;
-  const insumoStock = insumoStockResult.data;
-  const productoStock = productoStockResult.data;
   const activasInsumo = (insumoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
-  const activasProducto = (productoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
+  const productoStock = agruparStockProductos(productoStockRows);
+  const activasProducto = productoStock.filter((r) => r.cantidad_disponible <= r.stock_minimo);
 
   return (
     <div className="space-y-6">

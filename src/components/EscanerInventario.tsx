@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEscanerCamara } from "@/lib/useEscanerCamara";
 
 type Registro = {
@@ -20,9 +21,11 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
 
   const [ultimoResultado, setUltimoResultado] = useState<Registro | null>(null);
 
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // El input siempre debe tener el foco: así un escáner Bluetooth (que actúa
   // como teclado) puede "escribir" y mandar Enter sin que el usuario haga nada.
@@ -33,6 +36,7 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
   useEffect(() => {
     return () => {
       if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
   }, []);
 
@@ -89,6 +93,8 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
       bannerTimeoutRef.current = setTimeout(() => setUltimoResultado(null), 4000);
       if (data.ok) {
         setTally((prev) => ({ ...prev, [data.productoNombre]: (prev[data.productoNombre] || 0) + 1 }));
+        if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = setTimeout(() => router.refresh(), 750);
       }
     } catch {
       const registro: Registro = {

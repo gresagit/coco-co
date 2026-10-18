@@ -1,8 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, getSucursalActualId } from "@/lib/auth";
+import { agruparStockProductos } from "@/lib/producto-stock";
+import { cargarTodasLasFilas } from "@/lib/supabase/pagination";
 
 export default async function DashboardHome() {
   const user = await getSessionUser();
+  const sucursalId = getSucursalActualId();
   const db = supabaseAdmin();
 
   const [{ count: productos }, { count: insumos }, { count: sucursales }, { count: ocAbiertas }] =
@@ -14,28 +17,26 @@ export default async function DashboardHome() {
     ]);
 
   // Semáforo: insumos y productos por debajo de su stock mínimo
-  const [insumoStockResult, productoStockResult] = await Promise.all([
-    db
-      .from("insumo_stock")
-      .select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)")
-      .order("cantidad_disponible", { ascending: true }),
-    db
-      .from("producto_stock")
-      .select("cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)")
-      .order("cantidad_disponible", { ascending: true }),
+  const [insumoStock, productoStockRows] = await Promise.all([
+    cargarTodasLasFilas((desde, hasta) =>
+      db
+        .from("insumo_stock")
+        .select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)")
+        .order("cantidad_disponible", { ascending: true })
+        .range(desde, hasta)
+    ),
+    cargarTodasLasFilas((desde, hasta) => {
+      let query = db
+        .from("producto_stock")
+        .select("producto_id, sucursal_id, cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)");
+      if (sucursalId) query = query.eq("sucursal_id", sucursalId);
+      return query.order("producto_id").order("sucursal_id").range(desde, hasta);
+    }),
   ]);
 
-  if (insumoStockResult.error) {
-    throw new Error(`No se pudo cargar el semáforo de insumos: ${insumoStockResult.error.message}`);
-  }
-  if (productoStockResult.error) {
-    throw new Error(`No se pudo cargar el semáforo de productos terminados: ${productoStockResult.error.message}`);
-  }
-
-  const insumoStock = insumoStockResult.data;
-  const productoStock = productoStockResult.data;
   const bajoInsumos = (insumoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
-  const bajoProductos = (productoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
+  const productoStock = agruparStockProductos(productoStockRows);
+  const bajoProductos = productoStock.filter((r) => r.cantidad_disponible <= r.stock_minimo);
 
   return (
     <div className="space-y-8">

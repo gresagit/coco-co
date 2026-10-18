@@ -26,12 +26,13 @@ export async function confirmarPiezaPorFolio(
   const db = supabaseAdmin();
   const folio = folioPieza.trim();
 
-  const { data: pieza } = await db
+  const { data: pieza, error: errorPieza } = await db
     .from("piezas")
     .select("*, productos(nombre, sku)")
     .eq("folio_pieza", folio)
     .maybeSingle();
 
+  if (errorPieza) throw errorPieza;
   if (!pieza) {
     return { ok: false, folio, mensaje: "No existe ninguna pieza con ese folio." };
   }
@@ -46,10 +47,20 @@ export async function confirmarPiezaPorFolio(
   }
 
   // 1. Descuento de insumos según BOM (x1 unidad de producto)
-  const { data: bomItems } = await db
+  const { data: bomItems, error: errorBom } = await db
     .from("bom")
     .select("*, insumos(unidad_medida)")
     .eq("producto_id", pieza.producto_id);
+  if (errorBom) throw errorBom;
+
+  const { data: filasStock, error: errorStock } = await db
+    .from("producto_stock")
+    .select("id, cantidad_disponible")
+    .eq("producto_id", pieza.producto_id)
+    .eq("sucursal_id", sucursalId)
+    .order("id");
+  if (errorStock) throw errorStock;
+
   for (const item of bomItems || []) {
     const cantidadNecesaria = Number(item.cantidad_por_unidad);
     if (cantidadNecesaria <= 0) continue;
@@ -83,29 +94,25 @@ export async function confirmarPiezaPorFolio(
   }
 
   // 2. Suma 1 al stock de producto terminado
-  const { data: prodStock } = await db
-    .from("producto_stock")
-    .select("*")
-    .eq("producto_id", pieza.producto_id)
-    .eq("sucursal_id", sucursalId)
-    .maybeSingle();
-
+  const prodStock = filasStock?.[0];
   if (prodStock) {
-    await db
+    const { error } = await db
       .from("producto_stock")
       .update({ cantidad_disponible: Number(prodStock.cantidad_disponible) + 1 })
       .eq("id", prodStock.id);
+    if (error) throw error;
   } else {
-    await db.from("producto_stock").insert({
+    const { error } = await db.from("producto_stock").insert({
       producto_id: pieza.producto_id,
       sucursal_id: sucursalId,
       cantidad_disponible: 1,
       stock_minimo: 0,
     });
+    if (error) throw error;
   }
 
   // 3. Confirma la pieza
-  await db
+  const { error: errorActualizarPieza } = await db
     .from("piezas")
     .update({
       estado: "Disponible",
@@ -113,8 +120,9 @@ export async function confirmarPiezaPorFolio(
       escaneada_por: usuarioId || null,
     })
     .eq("id", pieza.id);
+  if (errorActualizarPieza) throw errorActualizarPieza;
 
-  await db.from("movimientos").insert({
+  const { error: errorMovimiento } = await db.from("movimientos").insert({
     tipo: "Entrada",
     origen_tipo: "Producto",
     producto_id: pieza.producto_id,
@@ -123,6 +131,7 @@ export async function confirmarPiezaPorFolio(
     referencia: folio,
     notas: "Alta por escaneo de código de barra",
   });
+  if (errorMovimiento) throw errorMovimiento;
 
   return {
     ok: true,

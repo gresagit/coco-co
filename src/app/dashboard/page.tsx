@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
 import { agruparStockProductos } from "@/lib/producto-stock";
 import { cargarTodasLasFilas } from "@/lib/supabase/pagination";
+import SemaforoProductos from "@/components/SemaforoProductos";
 
 export default async function DashboardHome() {
   const user = await getSessionUser();
@@ -36,7 +37,9 @@ export default async function DashboardHome() {
 
   const bajoInsumos = (insumoStock || []).filter((r: any) => r.cantidad_disponible <= r.stock_minimo);
   const productoStock = agruparStockProductos(productoStockRows);
-  const bajoProductos = productoStock.filter((r) => r.cantidad_disponible <= r.stock_minimo);
+  const productosOrdenados = [...productoStock].sort(
+    (a, b) => b.cantidad_disponible - a.cantidad_disponible
+  );
 
   return (
     <div className="space-y-8">
@@ -74,25 +77,7 @@ export default async function DashboardHome() {
           )}
         </div>
 
-        <div className="card">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">Semáforo — Producto terminado</h2>
-          {bajoProductos.length === 0 ? (
-            <p className="text-sm text-brand-500">Sin alertas de stock mínimo por ahora.</p>
-          ) : (
-            <ul className="space-y-2">
-              {bajoProductos.slice(0, 8).map((r: any, i: number) => (
-                <li key={i} className="flex items-center justify-between text-sm">
-                  <span>
-                    {r.productos?.nombre} <span className="text-brand-400">· {r.sucursales?.nombre}</span>
-                  </span>
-                  <span className={r.cantidad_disponible <= 0 ? "badge-rojo" : "badge-amarillo"}>
-                    {r.cantidad_disponible} disp.
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <SemaforoProductos productos={productosOrdenados} />
       </div>
     </div>
   );

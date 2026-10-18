@@ -15,7 +15,7 @@ type Registro = {
 export default function EscanerInventario({ embedded = false }: { embedded?: boolean }) {
   const [inputValue, setInputValue] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [modoEscaneo, setModoEscaneo] = useState<"lector" | "camara">("lector");
+  const [modoEscaneo, setModoEscaneo] = useState<"lector" | "camara" | "manual">("lector");
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [tally, setTally] = useState<Record<string, number>>({});
 
@@ -26,6 +26,9 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
   const audioCtxRef = useRef<AudioContext | null>(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const escanerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enviandoRef = useRef(false);
+  const teclasEscanerRef = useRef({ ultimaTecla: 0, rapidas: 0 });
 
   // El input siempre debe tener el foco: así un escáner Bluetooth (que actúa
   // como teclado) puede "escribir" y mandar Enter sin que el usuario haga nada.
@@ -37,6 +40,7 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
     return () => {
       if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      if (escanerTimeoutRef.current) clearTimeout(escanerTimeoutRef.current);
     };
   }, []);
 
@@ -71,7 +75,9 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
 
   async function procesarFolio(folio: string) {
     const limpio = folio.trim();
-    if (!limpio || enviando) return;
+    if (!limpio || enviandoRef.current) return;
+    if (escanerTimeoutRef.current) clearTimeout(escanerTimeoutRef.current);
+    enviandoRef.current = true;
     setEnviando(true);
     try {
       const res = await fetch("/api/escaneo", {
@@ -109,8 +115,10 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
       if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
       bannerTimeoutRef.current = setTimeout(() => setUltimoResultado(null), 4000);
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
       setInputValue("");
+      teclasEscanerRef.current = { ultimaTecla: 0, rapidas: 0 };
       if (modoEscaneo === "lector") inputRef.current?.focus();
     }
   }
@@ -118,17 +126,47 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
-      procesarFolio(inputValue);
+      procesarFolio(e.currentTarget.value);
+      return;
+    }
+
+    if (e.key === "Tab" && modoEscaneo === "lector" && teclasEscanerRef.current.rapidas >= 6) {
+      e.preventDefault();
+      procesarFolio(e.currentTarget.value);
+      return;
+    }
+
+    if (modoEscaneo === "lector" && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      const ahora = performance.now();
+      const estado = teclasEscanerRef.current;
+      estado.rapidas = ahora - estado.ultimaTecla <= 60 ? estado.rapidas + 1 : 1;
+      estado.ultimaTecla = ahora;
     }
   }
 
   const { camaraActiva, errorCamara, buscandoEnCuadro, videoRef, toggleCamara } = useEscanerCamara(procesarFolio);
 
-  function seleccionarModo(modo: "lector" | "camara") {
+  function seleccionarModo(modo: "lector" | "camara" | "manual") {
     if (modo === "camara" && !camaraActiva) toggleCamara();
     if (modo === "lector" && camaraActiva) toggleCamara();
+    if (modo === "manual" && camaraActiva) toggleCamara();
     setModoEscaneo(modo);
-    if (modo === "lector") setTimeout(() => inputRef.current?.focus(), 0);
+    if (escanerTimeoutRef.current) clearTimeout(escanerTimeoutRef.current);
+    teclasEscanerRef.current = { ultimaTecla: 0, rapidas: 0 };
+    if (modo !== "camara") setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function onInputChange(value: string) {
+    setInputValue(value);
+    if (modoEscaneo !== "lector") return;
+
+    if (escanerTimeoutRef.current) clearTimeout(escanerTimeoutRef.current);
+    if (teclasEscanerRef.current.rapidas < 6) return;
+
+    escanerTimeoutRef.current = setTimeout(() => {
+      const folioEscaneado = inputRef.current?.value || "";
+      if (folioEscaneado.trim()) procesarFolio(folioEscaneado);
+    }, 120);
   }
 
   const totalSesion = Object.values(tally).reduce((a, b) => a + b, 0);
@@ -166,26 +204,34 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
       <div className="card">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex-1 min-w-[240px]">
-            <label className="label">Escanea o escribe el folio</label>
+            <label className="label">
+              {modoEscaneo === "manual" ? "Escribe el folio" : "Escanea o escribe el folio"}
+            </label>
             <div className="flex gap-2">
               <input
                 ref={inputRef}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => onInputChange(e.target.value)}
                 onKeyDown={onKeyDown}
                 onBlur={() => modoEscaneo === "lector" && setTimeout(() => inputRef.current?.focus(), 50)}
-                placeholder="Apunta el lector Bluetooth aquí y dispara, o escribe y da Enter"
+                placeholder={
+                  modoEscaneo === "manual"
+                    ? "Escribe la clave y presiona Aceptar"
+                    : "Apunta el lector Bluetooth aquí; el folio se registra automáticamente"
+                }
                 className="input min-w-0 flex-1"
                 autoComplete="off"
               />
-              <button
-                type="button"
-                onClick={() => procesarFolio(inputValue)}
-                disabled={!inputValue.trim() || enviando}
-                className="btn-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Aceptar
-              </button>
+              {modoEscaneo === "manual" && (
+                <button
+                  type="button"
+                  onClick={() => procesarFolio(inputValue)}
+                  disabled={!inputValue.trim() || enviando}
+                  className="btn-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Aceptar
+                </button>
+              )}
             </div>
           </div>
           <div>
@@ -206,6 +252,14 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
                 className={modoEscaneo === "camara" ? "btn-primary" : "btn-secondary"}
               >
                 Cámara
+              </button>
+              <button
+                type="button"
+                aria-pressed={modoEscaneo === "manual"}
+                onClick={() => seleccionarModo("manual")}
+                className={modoEscaneo === "manual" ? "btn-primary" : "btn-secondary"}
+              >
+                Manual
               </button>
             </div>
           </div>

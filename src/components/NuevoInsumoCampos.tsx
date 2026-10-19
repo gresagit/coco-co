@@ -33,7 +33,9 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
   const subtotalNumero = Number(subtotal);
   const ivaNumero = ivaIncluido ? 0 : subtotalNumero * (Number(ivaPorcentaje) / 100);
   const totalNumero = subtotalNumero + ivaNumero + Number(envio || 0);
-  const costoUnitario = cantidadNumero > 0 && totalNumero > 0 ? totalNumero / cantidadNumero : null;
+  const cantidadEnUnidadBase = unidad === "g" ? cantidadNumero / 1000 : cantidadNumero;
+  const unidadBase = unidad === "g" ? "kg" : unidad;
+  const costoUnitario = cantidadEnUnidadBase > 0 && totalNumero > 0 ? totalNumero / cantidadEnUnidadBase : null;
 
   const unidadesDisponibles = unidadesPermitidasPara(tipo);
 
@@ -91,6 +93,7 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
           Cantidad inicial ({unidad}) {sucursalNombre && <span className="text-brand-400 font-normal">({sucursalNombre})</span>}
         </label>
         <input id="insumo-cantidad-inicial" name="cantidad_inicial" type="number" step="0.01" min={0} className="input" placeholder={`Ej. 100 ${unidad}`} value={cantidad} onChange={(event) => setCantidad(event.target.value)} />
+        {unidad === "g" && <p className="text-xs text-brand-400 mt-1">Se convertirá a kg al guardar el stock (1,000 g = 1 kg).</p>}
       </div>
       <div>
         <label htmlFor="insumo-subtotal-compra" className="label">Subtotal de compra</label>
@@ -116,8 +119,8 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
         <input id="insumo-envio" name="envio_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 50" value={envio} onChange={(event) => setEnvio(event.target.value)} />
         <p className="text-xs text-brand-400 mt-1">
           {costoUnitario !== null
-            ? `Total: $${totalNumero.toFixed(2)} · costo: $${costoUnitario.toFixed(4)} por ${unidad}`
-            : `El costo por ${unidad} incluye subtotal, IVA y envío.`}
+            ? `Total: $${totalNumero.toFixed(2)} · costo: $${costoUnitario.toFixed(4)} por ${unidadBase}`
+            : `El costo por ${unidadBase} incluye subtotal, IVA y envío.`}
         </p>
       </div>
     </>

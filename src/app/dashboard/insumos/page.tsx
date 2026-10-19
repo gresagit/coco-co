@@ -23,17 +23,22 @@ async function crearInsumo(_estado: CrearInsumoState, formData: FormData): Promi
   // pz (para los que en realidad se cuentan por pieza). Se revalida aquí por
   // si el formulario se manipula, ya que el <select> del cliente es solo la
   // primera línea de defensa.
-  const unidadMedida = formData.get("unidad_medida") as string;
-  if (!unidadesPermitidasPara(tipo).includes(unidadMedida)) {
+  const unidadIngresada = formData.get("unidad_medida") as string;
+  if (!unidadesPermitidasPara(tipo).includes(unidadIngresada)) {
     return {
-      error: `La unidad "${unidadMedida}" no es válida para "${tipo}". Usa una de: ${unidadesPermitidasPara(tipo).join(", ")}.`,
+      error: `La unidad "${unidadIngresada}" no es válida para "${tipo}". Usa una de: ${unidadesPermitidasPara(tipo).join(", ")}.`,
     };
   }
+  // La base de datos puede tener una restricción que no admite "g".
+  // Guardamos los insumos pesados en kg y convertimos las cantidades
+  // capturadas en gramos para mantener una unidad base consistente.
+  const unidadMedida = unidadIngresada === "g" ? "kg" : unidadIngresada;
 
   // El código interno se genera automáticamente a partir del tipo de insumo.
   const codigoInterno = await siguienteCodigoInsumo(tipo);
   const controlaCaducidad = formData.get("controla_caducidad") === "on";
-  const cantidadInicial = Number(formData.get("cantidad_inicial") || 0);
+  const cantidadIngresada = Number(formData.get("cantidad_inicial") || 0);
+  const cantidadInicial = unidadIngresada === "g" ? cantidadIngresada / 1000 : cantidadIngresada;
   const costoCompra = calcularCostoCompra(
     Number(formData.get("costo_subtotal_inicial") || 0),
     Number(formData.get("iva_porcentaje_inicial") || 0),

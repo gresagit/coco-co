@@ -1,17 +1,19 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { siguienteCodigoInsumo } from "@/lib/sku";
 import { getSucursalActualId } from "@/lib/auth";
 import type { SVGProps } from "react";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInsumos from "@/components/EscanerInsumos";
+import CrearInsumoForm, { CrearInsumoSubmit, type CrearInsumoState } from "@/components/CrearInsumoForm";
 import NuevoInsumoCampos from "@/components/NuevoInsumoCampos";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { calcularCostoCompra } from "@/lib/costo-compra";
 import { unidadesPermitidasPara } from "@/lib/unidades";
 
-async function crearInsumo(formData: FormData) {
+async function crearInsumo(_estado: CrearInsumoState, formData: FormData): Promise<CrearInsumoState> {
   "use server";
   const db = supabaseAdmin();
   const tipo = formData.get("tipo") as string;
@@ -23,9 +25,9 @@ async function crearInsumo(formData: FormData) {
   // primera línea de defensa.
   const unidadMedida = formData.get("unidad_medida") as string;
   if (!unidadesPermitidasPara(tipo).includes(unidadMedida)) {
-    throw new Error(
-      `Unidad de medida "${unidadMedida}" no es válida para el tipo "${tipo}". Usa una de: ${unidadesPermitidasPara(tipo).join(", ")}.`
-    );
+    return {
+      error: `La unidad "${unidadMedida}" no es válida para "${tipo}". Usa una de: ${unidadesPermitidasPara(tipo).join(", ")}.`,
+    };
   }
 
   // El código interno se genera automáticamente a partir del tipo de insumo.
@@ -56,47 +58,30 @@ async function crearInsumo(formData: FormData) {
     .select()
     .single();
 
-  if (!error && insumo) {
-    // Crea fila de stock (0) en todas las sucursales activas
-    const { data: sucursales } = await db.from("sucursales").select("id").eq("activa", true);
-    if (sucursales?.length) {
-      await db.from("insumo_stock").insert(
-        sucursales.map((s: any) => ({ insumo_id: insumo.id, sucursal_id: s.id, stock_minimo: 0, cantidad_disponible: 0 }))
-      );
-    }
+  if (error || !insumo) {
+    return { error: `No se pudo crear el insumo: ${error?.message || "no se recibió el registro creado."}` };
+  }
 
-    // Si se capturó cantidad inicial, se aplica a la sucursal con la que
-    // estás trabajando ahorita (la que elegiste arriba a la derecha).
-    const sucursalActualId = getSucursalActualId();
-    if (cantidadInicial > 0 && sucursalActualId) {
-      if (controlaCaducidad) {
-        await db.from("insumo_lotes").insert({
-          insumo_id: insumo.id,
-          sucursal_id: sucursalActualId,
-          folio_lote: `${codigoInterno}-INICIAL`,
-          fecha_caducidad: fechaCaducidad,
-          cantidad_inicial: cantidadInicial,
-          cantidad_restante: cantidadInicial,
-          costo_subtotal: costoCompra.subtotal || null,
-          costo_total: costoTotalInicial || null,
-          costo_unitario: costoUnitario,
-          iva_porcentaje: costoCompra.ivaPorcentaje,
-          iva_incluido: costoCompra.ivaIncluido,
-          iva_total: costoCompra.ivaTotal,
-          envio_total: costoCompra.envioTotal,
-        });
-      }
-      await db
-        .from("insumo_stock")
-        .update({ cantidad_disponible: cantidadInicial })
-        .eq("insumo_id", insumo.id)
-        .eq("sucursal_id", sucursalActualId);
-      await db.from("movimientos").insert({
-        tipo: "Entrada",
-        origen_tipo: "Insumo",
+  // Crea fila de stock (0) en todas las sucursales activas
+  const { data: sucursales } = await db.from("sucursales").select("id").eq("activa", true);
+  if (sucursales?.length) {
+    await db.from("insumo_stock").insert(
+      sucursales.map((s: any) => ({ insumo_id: insumo.id, sucursal_id: s.id, stock_minimo: 0, cantidad_disponible: 0 }))
+    );
+  }
+
+  // Si se capturó cantidad inicial, se aplica a la sucursal con la que
+  // estás trabajando ahorita (la que elegiste arriba a la derecha).
+  const sucursalActualId = getSucursalActualId();
+  if (cantidadInicial > 0 && sucursalActualId) {
+    if (controlaCaducidad) {
+      await db.from("insumo_lotes").insert({
         insumo_id: insumo.id,
         sucursal_id: sucursalActualId,
-        cantidad: cantidadInicial,
+        folio_lote: `${codigoInterno}-INICIAL`,
+        fecha_caducidad: fechaCaducidad,
+        cantidad_inicial: cantidadInicial,
+        cantidad_restante: cantidadInicial,
         costo_subtotal: costoCompra.subtotal || null,
         costo_total: costoTotalInicial || null,
         costo_unitario: costoUnitario,
@@ -104,19 +89,39 @@ async function crearInsumo(formData: FormData) {
         iva_incluido: costoCompra.ivaIncluido,
         iva_total: costoCompra.ivaTotal,
         envio_total: costoCompra.envioTotal,
-        referencia: "Alta inicial",
-        notas: "Cantidad inicial capturada al crear el insumo",
       });
     }
-
-    await registrarAuditoria({
-      accion: "crear_insumo",
-      entidad: "insumos",
-      entidadId: insumo.id,
-      detalle: { codigo_interno: insumo.codigo_interno, nombre: insumo.nombre, tipo },
+    await db
+      .from("insumo_stock")
+      .update({ cantidad_disponible: cantidadInicial })
+      .eq("insumo_id", insumo.id)
+      .eq("sucursal_id", sucursalActualId);
+    await db.from("movimientos").insert({
+      tipo: "Entrada",
+      origen_tipo: "Insumo",
+      insumo_id: insumo.id,
+      sucursal_id: sucursalActualId,
+      cantidad: cantidadInicial,
+      costo_subtotal: costoCompra.subtotal || null,
+      costo_total: costoTotalInicial || null,
+      costo_unitario: costoUnitario,
+      iva_porcentaje: costoCompra.ivaPorcentaje,
+      iva_incluido: costoCompra.ivaIncluido,
+      iva_total: costoCompra.ivaTotal,
+      envio_total: costoCompra.envioTotal,
+      referencia: "Alta inicial",
+      notas: "Cantidad inicial capturada al crear el insumo",
     });
   }
+
+  await registrarAuditoria({
+    accion: "crear_insumo",
+    entidad: "insumos",
+    entidadId: insumo.id,
+    detalle: { codigo_interno: insumo.codigo_interno, nombre: insumo.nombre, tipo },
+  });
   revalidatePath("/dashboard/insumos");
+  redirect("/dashboard/insumos");
 }
 
 async function desactivarInsumo(insumoId: string) {
@@ -246,28 +251,28 @@ export default async function InsumosPage({ searchParams }: { searchParams?: { c
                 va a poder guardar hasta que elijas sucursal.
               </p>
             )}
-            <form action={crearInsumo} className="grid md:grid-cols-3 gap-3">
+            <CrearInsumoForm action={crearInsumo} className="grid md:grid-cols-3 gap-3">
               <div>
-                <label className="label">Nombre</label>
-                <input name="nombre" className="input" required />
+                <label htmlFor="insumo-nombre" className="label">Nombre</label>
+                <input id="insumo-nombre" name="nombre" className="input" required />
               </div>
               <div>
-                <label className="label">Marca (opcional)</label>
-                <input name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
+                <label htmlFor="insumo-marca" className="label">Marca (opcional)</label>
+                <input id="insumo-marca" name="marca" className="input" placeholder="Ej. proveedor o fabricante" />
               </div>
               <NuevoInsumoCampos sucursalNombre={sucursalNombre} />
               <div>
-                <label className="label">Fecha de caducidad (si aplica)</label>
-                <input name="fecha_caducidad" type="date" className="input" />
+                <label htmlFor="insumo-fecha-caducidad" className="label">Fecha de caducidad (si aplica)</label>
+                <input id="insumo-fecha-caducidad" name="fecha_caducidad" type="date" className="input" />
               </div>
               <div className="flex items-center gap-2 pt-6">
-                <input type="checkbox" name="controla_caducidad" id="cad" />
-                <label htmlFor="cad" className="text-sm">¿Controla caducidad? (activa FEFO)</label>
+                <input type="checkbox" name="controla_caducidad" id="insumo-controla-caducidad" />
+                <label htmlFor="insumo-controla-caducidad" className="text-sm">¿Controla caducidad? (activa FEFO)</label>
               </div>
               <div className="md:col-span-3">
-                <button className="btn-primary">Agregar insumo</button>
+                <CrearInsumoSubmit />
               </div>
-            </form>
+            </CrearInsumoForm>
           </div>
         </details>
       </div>
@@ -276,8 +281,8 @@ export default async function InsumosPage({ searchParams }: { searchParams?: { c
         <div className="flex flex-wrap items-end gap-3">
           <form method="get" action="/dashboard/insumos" className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="label">Filtrar por categoría</label>
-              <select name="categoria" className="input" defaultValue={categoriaSeleccionada}>
+              <label htmlFor="insumos-categoria" className="label">Filtrar por categoría</label>
+              <select id="insumos-categoria" name="categoria" className="input" defaultValue={categoriaSeleccionada}>
                 <option value="">Todas</option>
                 {(categoriasInsumos || []).map((categoria: string) => (
                   <option key={categoria} value={categoria}>{categoria}</option>

@@ -52,8 +52,8 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
   return (
     <>
       <div>
-        <label className="label">Tipo</label>
-        <select name="tipo" className="input" value={tipo} onChange={(event) => onTipoChange(event.target.value)} required>
+        <label htmlFor="insumo-tipo" className="label">Tipo</label>
+        <select id="insumo-tipo" name="tipo" className="input" value={tipo} onChange={(event) => onTipoChange(event.target.value)} required>
           <option>Materia Prima</option>
           <option>Empaque</option>
           <option>Etiqueta</option>
@@ -62,8 +62,9 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
         <p className="text-xs text-brand-400 mt-1">Define el prefijo del código.</p>
       </div>
       <div>
-        <label className="label">Unidad de medida</label>
+        <label htmlFor="insumo-unidad-medida" className="label">Unidad de medida</label>
         <select
+          id="insumo-unidad-medida"
           name="unidad_medida"
           className="input"
           value={unidad}
@@ -86,18 +87,18 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
         </p>
       </div>
       <div>
-        <label className="label">
+        <label htmlFor="insumo-cantidad-inicial" className="label">
           Cantidad inicial ({unidad}) {sucursalNombre && <span className="text-brand-400 font-normal">({sucursalNombre})</span>}
         </label>
-        <input name="cantidad_inicial" type="number" step="0.01" min={0} className="input" placeholder={`Ej. 100 ${unidad}`} value={cantidad} onChange={(event) => setCantidad(event.target.value)} />
+        <input id="insumo-cantidad-inicial" name="cantidad_inicial" type="number" step="0.01" min={0} className="input" placeholder={`Ej. 100 ${unidad}`} value={cantidad} onChange={(event) => setCantidad(event.target.value)} />
       </div>
       <div>
-        <label className="label">Subtotal de compra</label>
-        <input name="costo_subtotal_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 200" value={subtotal} onChange={(event) => setSubtotal(event.target.value)} />
+        <label htmlFor="insumo-subtotal-compra" className="label">Subtotal de compra</label>
+        <input id="insumo-subtotal-compra" name="costo_subtotal_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 200" value={subtotal} onChange={(event) => setSubtotal(event.target.value)} />
       </div>
       <div>
-        <label className="label">IVA (%)</label>
-        <select name="iva_porcentaje_inicial" className="input" value={ivaPorcentaje} onChange={(event) => setIvaPorcentaje(event.target.value)}>
+        <label htmlFor="insumo-iva-porcentaje" className="label">IVA (%)</label>
+        <select id="insumo-iva-porcentaje" name="iva_porcentaje_inicial" className="input" value={ivaPorcentaje} onChange={(event) => setIvaPorcentaje(event.target.value)}>
           <option value="">0%</option>
           <option value="0">0%</option>
           <option value="8">8%</option>
@@ -106,13 +107,13 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
           <option value="20">20%</option>
         </select>
         <label className="mt-1 flex items-center gap-2 text-xs text-brand-500">
-          <input name="iva_incluido_inicial" type="checkbox" checked={ivaIncluido} onChange={(event) => setIvaIncluido(event.target.checked)} />
+          <input id="insumo-iva-incluido" name="iva_incluido_inicial" type="checkbox" checked={ivaIncluido} onChange={(event) => setIvaIncluido(event.target.checked)} />
           IVA incluido en subtotal
         </label>
       </div>
       <div>
-        <label className="label">Envío</label>
-        <input name="envio_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 50" value={envio} onChange={(event) => setEnvio(event.target.value)} />
+        <label htmlFor="insumo-envio" className="label">Envío</label>
+        <input id="insumo-envio" name="envio_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 50" value={envio} onChange={(event) => setEnvio(event.target.value)} />
         <p className="text-xs text-brand-400 mt-1">
           {costoUnitario !== null
             ? `Total: $${totalNumero.toFixed(2)} · costo: $${costoUnitario.toFixed(4)} por ${unidad}`

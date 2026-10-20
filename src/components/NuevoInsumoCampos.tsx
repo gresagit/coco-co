@@ -22,6 +22,7 @@ const UNIDAD_LABELS: Record<string, string> = {
 export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?: string }) {
   const [tipo, setTipo] = useState("Materia Prima");
   const [unidad, setUnidad] = useState("kg");
+  const [unidadPrecio, setUnidadPrecio] = useState<"kg" | "g">("kg");
   const [unidadTocadaAMano, setUnidadTocadaAMano] = useState(false);
   const [cantidad, setCantidad] = useState("");
   const [subtotal, setSubtotal] = useState("");
@@ -36,6 +37,9 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
   const cantidadEnUnidadBase = unidad === "g" ? cantidadNumero / 1000 : cantidadNumero;
   const unidadBase = unidad === "g" ? "kg" : unidad;
   const costoUnitario = cantidadEnUnidadBase > 0 && totalNumero > 0 ? totalNumero / cantidadEnUnidadBase : null;
+  const esUnidadDeMasa = unidad === "kg" || unidad === "g";
+  const costoMostrado =
+    costoUnitario !== null && unidadPrecio === "g" ? costoUnitario / 1000 : costoUnitario;
 
   const unidadesDisponibles = unidadesPermitidasPara(tipo);
 
@@ -117,11 +121,33 @@ export default function NuevoInsumoCampos({ sucursalNombre }: { sucursalNombre?:
       <div>
         <label htmlFor="insumo-envio" className="label">Envío</label>
         <input id="insumo-envio" name="envio_inicial" type="number" step="0.01" min={0} className="input" placeholder="Ej. 50" value={envio} onChange={(event) => setEnvio(event.target.value)} />
-        <p className="text-xs text-brand-400 mt-1">
-          {costoUnitario !== null
-            ? `Total: $${totalNumero.toFixed(2)} · costo: $${costoUnitario.toFixed(4)} por ${unidadBase}`
-            : `El costo por ${unidadBase} incluye subtotal, IVA y envío.`}
-        </p>
+        <div className="mt-1">
+          {esUnidadDeMasa && (
+            <div className="mb-2 flex items-center gap-1" role="group" aria-label="Unidad para mostrar el costo">
+              <span className="mr-1 text-xs text-brand-400">Mostrar precio:</span>
+              {(["kg", "g"] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  aria-pressed={unidadPrecio === u}
+                  onClick={() => setUnidadPrecio(u)}
+                  className={`rounded-md border px-2 py-1 text-xs ${
+                    unidadPrecio === u
+                      ? "border-brand-500 bg-brand-50 font-semibold text-brand-700"
+                      : "border-brand-200 text-brand-500 hover:bg-brand-50"
+                  }`}
+                >
+                  por {u}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-brand-400">
+            {costoMostrado !== null
+              ? `Total: $${totalNumero.toFixed(2)} · costo: $${costoMostrado.toFixed(4)} por ${esUnidadDeMasa ? unidadPrecio : unidadBase}`
+              : `El costo por ${esUnidadDeMasa ? unidadPrecio : unidadBase} incluye subtotal, IVA y envío.`}
+          </p>
+        </div>
       </div>
     </>
   );

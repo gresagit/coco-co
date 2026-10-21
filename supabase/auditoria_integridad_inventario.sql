@@ -428,31 +428,11 @@ where p.nombre ilike '%ropa%normal%1kg%'
 order by m.fecha desc, m.id desc
 limit 500;
 
--- 25. Cruza cada entrada registrada por escaneo con la pieza/lote/reporte que
--- la genero. Si pieza y lote corresponden al reporte OP-JRN-0001 de 647 pzas,
--- ese folio pudo ya estar contado en la entrada de produccion.
-select
-  m.id as movimiento_id,
-  m.fecha as fecha_escaneo,
-  m.referencia as folio_escaneado,
-  m.cantidad as cantidad_movimiento,
-  x.id as pieza_id,
-  x.estado as estado_actual_pieza,
-  x.lote_id,
-  l.folio_lote,
-  r.id as reporte_avance_id,
-  r.cantidad_producida,
-  r.cantidad_merma,
-  r.fecha as fecha_reporte
-from public.movimientos m
-join public.productos p on p.id = m.producto_id
-left join public.piezas x
-  on x.folio_pieza = m.referencia
- and x.producto_id = m.producto_id
- and x.sucursal_id = m.sucursal_id
-left join public.lotes l on l.id = x.lote_id
-left join public.reportes_avance r on r.lote_id = l.id
-where p.nombre ilike '%ropa%normal%1kg%'
-  and m.tipo = 'Entrada'
-  and m.notas ilike '%escaneo%'
-order by m.fecha, m.referencia;
+git add src/app/dashboard/page.tsx \
+        src/app/dashboard/alertas/page.tsx \
+        supabase/auditoria_integridad_inventario.sql
+
+git commit -m "Corrige semaforos y agrega auditoria de inventario" \
+  -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+
+git push origin HEAD

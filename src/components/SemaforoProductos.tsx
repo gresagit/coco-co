@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type ProductoStock = {
   producto_id: string;
@@ -14,6 +15,8 @@ type ProductoStock = {
 
 export default function SemaforoProductos({ productos }: { productos: ProductoStock[] }) {
   const [mostrarDisponibles, setMostrarDisponibles] = useState(true);
+  const [actualizando, startTransition] = useTransition();
+  const router = useRouter();
   const visibles = productos.filter((producto) =>
     mostrarDisponibles ? producto.cantidad_disponible > 0 : producto.cantidad_disponible <= 0
   );
@@ -30,6 +33,14 @@ export default function SemaforoProductos({ productos }: { productos: ProductoSt
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="btn-secondary text-xs"
+            onClick={() => startTransition(() => router.refresh())}
+            disabled={actualizando}
+          >
+            {actualizando ? "Actualizando..." : "Actualizar"}
+          </button>
           <button
             type="button"
             className="btn-secondary text-xs"

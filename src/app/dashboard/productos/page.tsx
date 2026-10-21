@@ -207,16 +207,13 @@ export default async function ProductosPage({
       db.from("productos").select("*, categorias(nombre)").order("nombre").range(desde, hasta)
     ),
     db.from("categorias").select("*").order("nombre"),
-    sucursalId
-      ? cargarTodasLasFilas((desde, hasta) =>
-          db
-            .from("producto_stock")
-            .select("producto_id, cantidad_disponible")
-            .eq("sucursal_id", sucursalId)
-            .order("producto_id")
-            .range(desde, hasta)
-        )
-      : Promise.resolve([] as { producto_id: string; cantidad_disponible: number }[]),
+    cargarTodasLasFilas((desde, hasta) => {
+      let query = db
+        .from("producto_stock")
+        .select("producto_id, cantidad_disponible");
+      if (sucursalId) query = query.eq("sucursal_id", sucursalId);
+      return query.order("producto_id").range(desde, hasta);
+    }),
   ]);
   if (categoriasResult.error) throw categoriasResult.error;
   const categorias = categoriasResult.data;
@@ -363,6 +360,7 @@ export default async function ProductosPage({
         <ProductosTabla
           productos={conCosteo}
           categorias={categorias || []}
+          stockLabel={sucursalId ? "Stock" : "Stock total"}
           editarProducto={editarProducto}
           eliminarProducto={eliminarProducto}
         />

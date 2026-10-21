@@ -8,19 +8,28 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect("/login");
 
   const db = supabaseAdmin();
-  let query = db.from("sucursales").select("id, nombre").eq("activa", true).order("nombre");
-  if (!user.acceso_todas_sucursales && user.sucursales.length > 0) {
-    query = query.in("id", user.sucursales);
-  }
-  const { data: sucursales } = await query;
+  const { data: sucursalesActivas, error } = await db
+    .from("sucursales")
+    .select("id, nombre")
+    .eq("activa", true)
+    .order("nombre");
+  if (error) throw error;
+
+  const sucursales = user.acceso_todas_sucursales
+    ? sucursalesActivas || []
+    : (sucursalesActivas || []).filter((sucursal) => user.sucursales.includes(sucursal.id));
+  const sucursalCookieId = getSucursalActualId();
+  const sucursalActualId = sucursales.some((sucursal) => sucursal.id === sucursalCookieId)
+    ? sucursalCookieId
+    : null;
 
   return (
     <DashboardChrome
       nombre={user.nombre_completo}
       usuario={user.usuario}
       roles={user.roles}
-      sucursales={sucursales || []}
-      sucursalActualId={getSucursalActualId()}
+      sucursales={sucursales}
+      sucursalActualId={sucursalActualId}
       permisos={user.permisos}
     >
       {children}

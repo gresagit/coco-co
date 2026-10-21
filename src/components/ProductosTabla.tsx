@@ -21,11 +21,13 @@ type Producto = {
 export default function ProductosTabla({
   productos,
   categorias,
+  stockLabel,
   editarProducto,
   eliminarProducto,
 }: {
   productos: Producto[];
   categorias: Categoria[];
+  stockLabel: string;
   editarProducto: (formData: FormData) => Promise<void>;
   eliminarProducto: (productoId: string) => Promise<void>;
 }) {
@@ -102,7 +104,7 @@ export default function ProductosTabla({
               <th>SKU</th>
               <th>Nombre</th>
               <th>Categoría</th>
-              <th>Stock</th>
+              <th>{stockLabel}</th>
               <th>Costo (auto)</th>
               <th>Precio sugerido</th>
               <th>Margen</th>

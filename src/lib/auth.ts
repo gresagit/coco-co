@@ -68,6 +68,41 @@ export async function login(usuario: string, password: string) {
     return { ok: false as const, message: "Usuario o contraseña incorrectos." };
   }
 
+  const { data: sucursalesActivas, error: errorSucursales } = await db
+    .from("sucursales")
+    .select("id")
+    .eq("activa", true)
+    .order("nombre");
+  if (errorSucursales) throw errorSucursales;
+
+  let sucursalesDisponibles = sucursalesActivas || [];
+  if (!user.acceso_todas_sucursales) {
+    const { data: asignaciones, error: errorAsignaciones } = await db
+      .from("usuario_sucursales")
+      .select("sucursal_id")
+      .eq("usuario_id", user.id);
+    if (errorAsignaciones) throw errorAsignaciones;
+
+    const sucursalesPermitidas = new Set((asignaciones || []).map((fila) => fila.sucursal_id));
+    sucursalesDisponibles = sucursalesDisponibles.filter((sucursal) => sucursalesPermitidas.has(sucursal.id));
+  }
+
+  const sucursalPreferidaId = cookies().get(SUCURSAL_COOKIE_NAME)?.value;
+  const sucursalPredeterminada =
+    sucursalesDisponibles.find((sucursal) => sucursal.id === sucursalPreferidaId) || sucursalesDisponibles[0];
+
+  if (sucursalPredeterminada) {
+    cookies().set(SUCURSAL_COOKIE_NAME, sucursalPredeterminada.id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  } else {
+    cookies().delete(SUCURSAL_COOKIE_NAME);
+  }
+
   await db.from("auditoria").insert({
     usuario_id: user.id,
     accion: "login",
@@ -170,11 +205,10 @@ export async function requireUser(): Promise<SessionUser> {
   return user;
 }
 
-// Sucursal "activa" en la sesión: el usuario la elige desde un selector en
-// el dashboard, y las pantallas que filtran por sucursal la usan como
-// default. No sustituye el control de acceso real (usuario_sucursales) —
-// solo valida que la sucursal elegida sea una a la que el usuario tenga
-// permiso, para evitar que alguien fije por cookie una sucursal ajena.
+// La sucursal activa se conserva en una cookie por 30 días. Al iniciar sesión
+// se elige automáticamente la primera sucursal activa permitida si todavía no
+// hay una preferencia válida. Este selector no sustituye el control de acceso:
+// al cambiar de sucursal se valida contra las asignaciones del usuario.
 export async function setSucursalActualId(sucursalId: string) {
   const user = await getSessionUser();
   if (!user) {

@@ -41,14 +41,16 @@ export default async function AlertasPage() {
     cargarTodasLasFilas((desde, hasta) =>
       db
         .from("insumo_stock")
-        .select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)")
+        .select("cantidad_disponible, stock_minimo, insumos!inner(nombre), sucursales(nombre)")
+        .eq("insumos.activo", true)
         .order("cantidad_disponible", { ascending: true })
         .range(desde, hasta)
     ),
     cargarTodasLasFilas((desde, hasta) =>
       db
         .from("producto_stock")
-        .select("producto_id, sucursal_id, cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)")
+        .select("producto_id, sucursal_id, cantidad_disponible, stock_minimo, productos!inner(nombre), sucursales(nombre)")
+        .eq("productos.activo", true)
         .order("producto_id")
         .order("sucursal_id")
         .range(desde, hasta)

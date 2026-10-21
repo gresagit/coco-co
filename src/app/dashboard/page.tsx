@@ -19,17 +19,21 @@ export default async function DashboardHome() {
 
   // Semáforo: insumos y productos por debajo de su stock mínimo
   const [insumoStock, productoStockRows] = await Promise.all([
-    cargarTodasLasFilas((desde, hasta) =>
-      db
+    cargarTodasLasFilas((desde, hasta) => {
+      let query = db
         .from("insumo_stock")
-        .select("cantidad_disponible, stock_minimo, insumos(nombre), sucursales(nombre)")
+        .select("cantidad_disponible, stock_minimo, insumos!inner(nombre), sucursales(nombre)")
+        .eq("insumos.activo", true);
+      if (sucursalId) query = query.eq("sucursal_id", sucursalId);
+      return query
         .order("cantidad_disponible", { ascending: true })
-        .range(desde, hasta)
-    ),
+        .range(desde, hasta);
+    }),
     cargarTodasLasFilas((desde, hasta) => {
       let query = db
         .from("producto_stock")
-        .select("producto_id, sucursal_id, cantidad_disponible, stock_minimo, productos(nombre), sucursales(nombre)");
+        .select("producto_id, sucursal_id, cantidad_disponible, stock_minimo, productos!inner(nombre), sucursales(nombre)")
+        .eq("productos.activo", true);
       if (sucursalId) query = query.eq("sucursal_id", sucursalId);
       return query.order("producto_id").order("sucursal_id").range(desde, hasta);
     }),

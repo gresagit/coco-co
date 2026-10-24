@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -15,6 +15,15 @@ export default function LoginPage() {
   const [mensajeSolicitud, setMensajeSolicitud] = useState<string | null>(null);
   const [errorSolicitud, setErrorSolicitud] = useState<string | null>(null);
   const [enviandoSolicitud, setEnviandoSolicitud] = useState(false);
+  const [mostrarSolicitud, setMostrarSolicitud] = useState(false);
+  const solicitudRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (mostrarSolicitud) {
+      solicitudRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      solicitudRef.current?.querySelector("input")?.focus({ preventScroll: true });
+    }
+  }, [mostrarSolicitud]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -98,13 +107,28 @@ export default function LoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-        <section className="card mt-4 space-y-3">
+        <p className="mt-4 text-center text-sm text-brand-500">
+          ¿Eres nuevo?{" "}
+          <a
+            href="#solicitar-acceso"
+            className="font-medium text-brand-600 underline"
+            aria-expanded={mostrarSolicitud}
+            aria-controls="solicitar-acceso"
+            onClick={(e) => {
+              e.preventDefault();
+              setMostrarSolicitud(true);
+            }}
+          >
+            Solicita acceso aquí
+          </a>
+        </p>
+        {mostrarSolicitud && (
+        <section id="solicitar-acceso" ref={solicitudRef} className="card mt-4 space-y-3">
           <div>
-            <h2 className="font-semibold text-ink">¿Eres nuevo?</h2>
+            <h2 className="font-semibold text-ink">Solicitud de acceso</h2>
             <p className="text-sm text-brand-500 mt-1">
-              Llena la solicitud con tu nombre completo, usuario y contraseña. El administrador revisará tus datos y
-              te asignará uno de los perfiles disponibles y las sucursales correspondientes. No podrás iniciar sesión
-              hasta que aprueben tu solicitud.
+              Completa tu nombre, usuario y contraseña. El administrador revisará tus datos y te asignará uno de los
+              perfiles disponibles y las sucursales correspondientes. No podrás iniciar sesión hasta que aprueben tu solicitud.
             </p>
           </div>
           <form onSubmit={solicitarAcceso} className="space-y-3">
@@ -154,6 +178,7 @@ export default function LoginPage() {
             </button>
           </form>
         </section>
+        )}
       </div>
     </div>
   );

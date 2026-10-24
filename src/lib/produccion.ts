@@ -124,28 +124,14 @@ export async function procesarReporteAvance(params: {
   }
 
   // 5. Suma producto terminado al stock de la sucursal
-  const { data: prodStock } = await db
-    .from("producto_stock")
-    .select("*")
-    .eq("producto_id", orden.producto_id)
-    .eq("sucursal_id", orden.sucursal_id)
-    .maybeSingle();
+  const { error: errorEntradaStock } = await db.rpc("incrementar_stock_producto", {
+    p_producto_id: orden.producto_id,
+    p_sucursal_id: orden.sucursal_id,
+    p_cantidad: Number(params.cantidadProducida),
+  });
+  if (errorEntradaStock) throw errorEntradaStock;
 
-  if (prodStock) {
-    await db
-      .from("producto_stock")
-      .update({ cantidad_disponible: Number(prodStock.cantidad_disponible) + Number(params.cantidadProducida) })
-      .eq("id", prodStock.id);
-  } else {
-    await db.from("producto_stock").insert({
-      producto_id: orden.producto_id,
-      sucursal_id: orden.sucursal_id,
-      stock_minimo: 0,
-      cantidad_disponible: Number(params.cantidadProducida),
-    });
-  }
-
-  await db.from("movimientos").insert({
+  const { error: errorMovimiento } = await db.from("movimientos").insert({
     tipo: "Entrada",
     origen_tipo: "Producto",
     producto_id: orden.producto_id,
@@ -154,6 +140,7 @@ export async function procesarReporteAvance(params: {
     referencia: orden.folio,
     notas: `Reporte de avance · lote ${folioLote}`,
   });
+  if (errorMovimiento) throw errorMovimiento;
 
   return { lote, reporte };
 }

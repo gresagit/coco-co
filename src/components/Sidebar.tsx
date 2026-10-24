@@ -65,6 +65,16 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
       items: [
         { href: "/dashboard/ventas/stock", label: "Stock Shopify", icon: IconCloud },
         { href: "/dashboard/ventas/pos", label: "Ventas punto de venta", icon: IconCart },
+        {
+          href: "/dashboard/ventas/pedidos",
+          label: "Pedidos y envíos",
+          icon: IconTruck,
+          children: [
+            { href: "/dashboard/ventas/pedidos", label: "Pedidos online" },
+            { href: "/dashboard/ventas/envios", label: "Preparar envíos" },
+            { href: "/dashboard/ventas/vendidos", label: "Vendidos" },
+          ],
+        },
       ],
     },
     {

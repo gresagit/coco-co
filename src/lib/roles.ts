@@ -1,11 +1,19 @@
 export const ROL_ADMINISTRADOR = "Administrador";
 
+export const ACCIONES_PERMISO = [
+  { clave: "ver", etiqueta: "Ver" },
+  { clave: "crear", etiqueta: "Crear" },
+  { clave: "editar", etiqueta: "Editar" },
+  { clave: "eliminar", etiqueta: "Eliminar" },
+] as const;
+
 export const APARTADOS_SISTEMA = [
   { clave: "productos", etiqueta: "Productos terminados", grupo: "Catálogo", ruta: "/dashboard/productos" },
   { clave: "insumos", etiqueta: "Insumos", grupo: "Catálogo", ruta: "/dashboard/insumos" },
   { clave: "bom", etiqueta: "Fórmulas (BOM)", grupo: "Catálogo", ruta: "/dashboard/bom" },
   { clave: "ventas_stock", etiqueta: "Stock de canales de venta", grupo: "Ventas", ruta: "/dashboard/ventas/stock" },
   { clave: "ventas_pos", etiqueta: "Ventas punto de venta", grupo: "Ventas", ruta: "/dashboard/ventas/pos" },
+  { clave: "pedidos_online", etiqueta: "Pedidos, envíos y vendidos", grupo: "Ventas", ruta: "/dashboard/ventas/pedidos" },
   { clave: "produccion", etiqueta: "Producción", grupo: "Operación", ruta: "/dashboard/produccion" },
   { clave: "movimientos", etiqueta: "Movimientos", grupo: "Operación", ruta: "/dashboard/movimientos" },
   { clave: "gastos", etiqueta: "Gastos empresa", grupo: "Operación", ruta: "/dashboard/gastos" },

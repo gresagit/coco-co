@@ -6,6 +6,7 @@ import { registrarAuditoria } from "@/lib/auditoria";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import { normalizarClienteDesdeFormulario, validarCliente } from "@/lib/clientes";
 import VentaCarrito from "@/components/VentaCarrito";
+import VentasTabs from "@/components/VentasTabs";
 
 type ItemCarrito = { producto_id: string; cantidad: number };
 
@@ -13,11 +14,8 @@ type ItemCarrito = { producto_id: string; cantidad: number };
  * Registra una venta con uno o varios productos (carrito) en una sola
  * operación. Pensado para ser eficiente cuando se venden varios productos
  * juntos:
- *  - Una sola consulta para leer el stock actual de todos los productos
- *    involucrados (en vez de una consulta por producto).
- *  - Tres escrituras en lote (ventas, stock, movimientos), cada una con un
- *    solo insert/upsert de todas las filas, en vez de un round-trip a la
- *    base de datos por cada producto del carrito.
+ *  - Una sola transacción para validar stock libre, registrar ventas,
+ *    descontar inventario y crear movimientos.
  */
 async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean; message?: string; folio?: string }> {
   "use server";
@@ -29,12 +27,22 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
 
   let items: ItemCarrito[];
   try {
-    items = JSON.parse((formData.get("items_json") as string) || "[]");
+    const parsed: unknown = JSON.parse((formData.get("items_json") as string) || "[]");
+    if (!Array.isArray(parsed)) {
+      return { ok: false, message: "El carrito llegó en un formato inválido." };
+    }
+    items = parsed.filter(
+      (item): item is ItemCarrito =>
+        !!item &&
+        typeof item === "object" &&
+        typeof item.producto_id === "string" &&
+        Number.isFinite(Number(item.cantidad)) &&
+        Number(item.cantidad) > 0
+    );
   } catch {
     return { ok: false, message: "El carrito llegó en un formato inválido." };
   }
 
-  items = (items || []).filter((it) => it.producto_id && Number(it.cantidad) > 0);
   if (items.length === 0) {
     return { ok: false, message: "Agrega al menos un producto a la venta." };
   }
@@ -97,34 +105,6 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
     return { ok: false, message: "No se pudo guardar la información del cliente." };
   }
 
-  // 1 sola consulta para el stock actual de todos los productos del carrito
-  const { data: stockRows, error: errStockActual } = await db
-    .from("producto_stock")
-    .select("producto_id, cantidad_disponible")
-    .eq("sucursal_id", sucursalId)
-    .in("producto_id", productoIds);
-
-  if (errStockActual) {
-    console.error(errStockActual);
-    return { ok: false, message: "No se pudo leer el stock actual." };
-  }
-
-  const stockActual = new Map((stockRows || []).map((s: any) => [s.producto_id, Number(s.cantidad_disponible)]));
-
-  // Si el mismo producto aparece en más de una línea (o el usuario editó la
-  // cantidad), se suman antes de descontar, para no pisar el cálculo.
-  const cantidadPorProducto = new Map<string, number>();
-  for (const it of items) {
-    cantidadPorProducto.set(it.producto_id, (cantidadPorProducto.get(it.producto_id) || 0) + Number(it.cantidad));
-  }
-
-  const filasStock = productoIds.map((pid) => ({
-    producto_id: pid,
-    sucursal_id: sucursalId,
-    cantidad_disponible: (stockActual.get(pid) ?? 0) - (cantidadPorProducto.get(pid) || 0),
-    stock_minimo: 0,
-  }));
-
   const lineasVenta = items.map((it) => ({
     sucursal_id: sucursalId,
     producto_id: it.producto_id,
@@ -150,29 +130,15 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
     cliente_productos_interes: clienteValido.es_mayorista ? clienteValido.productos_interes || null : null,
   }));
 
-  const movimientos = items.map((it) => ({
-    tipo: "Salida",
-    origen_tipo: "Producto",
-    producto_id: it.producto_id,
-    sucursal_id: sucursalId,
-    cantidad: it.cantidad,
-       referencia: `Venta POS ${folioPos}`,
-    usuario_id: user.id,
-    notas: notas || "Venta registrada desde punto de venta",
-  }));
-
-  // Nota: producto_stock tiene UNIQUE(producto_id, sucursal_id), así que el
-  // upsert actualiza las filas existentes e inserta las que falten, todas
-  // en una sola llamada.
-  const [{ error: errVentas }, { error: errStock }, { error: errMov }] = await Promise.all([
-    db.from("ventas_pos").insert(lineasVenta),
-    db.from("producto_stock").upsert(filasStock, { onConflict: "producto_id,sucursal_id" }),
-    db.from("movimientos").insert(movimientos),
-  ]);
-
-  if (errVentas || errStock || errMov) {
-    console.error("[registrarVentaCarrito]", { errVentas, errStock, errMov });
-    return { ok: false, message: "Ocurrió un error al guardar la venta. Intenta de nuevo." };
+  const { error: errorRegistro } = await db.rpc("registrar_venta_pos_atomica", {
+    p_sucursal_id: sucursalId,
+    p_usuario_id: user.id,
+    p_lineas: lineasVenta,
+    p_notas: notas,
+  });
+  if (errorRegistro) {
+    console.error("[registrarVentaCarrito]", errorRegistro);
+    return { ok: false, message: errorRegistro.message || "No se pudo completar la venta." };
   }
 
   const totalVenta = lineasVenta.reduce((acc, l) => acc + l.total, 0);
@@ -186,6 +152,7 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
   });
 
   revalidatePath("/dashboard/ventas/pos");
+  revalidatePath("/dashboard/ventas/vendidos");
   return { ok: true, folio: folioPos as string };
 }
 
@@ -263,6 +230,7 @@ export default async function VentasPosPage() {
           productos vendidos en la sucursal actual.
         </p>
       </div>
+      <VentasTabs active="/dashboard/ventas/pos" />
 
       {sucursalId && (
         <div className="banner">

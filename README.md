@@ -55,6 +55,10 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
   - `supabase/migration_015_produccion_etapas.sql` — Agrega fecha estimada y distingue productos intermedios de productos listos para venta
   - `supabase/migration_016_permisos_usuarios.sql` — Permite seleccionar los apartados visibles para cada usuario
   - `supabase/migration_017_canales_venta.sql` — Prepara configuraciones y mapeos de productos para Mercado Libre y Amazon
+  - `supabase/migration_030_solicitudes_acceso.sql` — Solicitudes públicas de acceso con aprobación administrativa
+  - `supabase/migration_031_escaneo_atomico.sql` — Confirma escaneos de producto terminado de forma transaccional
+  - `supabase/migration_032_pedidos_tienda_y_envios.sql` — Pedidos online, reservas, ventas POS atómicas, producción faltante y envíos
+  Ejecuta también las migraciones existentes `018` a `029` en orden numérico antes de `030`. Si tu base ya está actualizada hasta `029`, basta con aplicar `030`, `031` y `032`.
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.
@@ -97,6 +101,57 @@ npm run dev
 ```
 
 Abre `http://localhost:3000`.
+
+---
+
+## Pedidos online y envíos desde GoDaddy
+
+La tienda debe enviar un webhook `POST` a `/api/webhooks/godaddy` cuando se cree el pedido y cuando cambie su pago. El CRM conserva el primer pedido por `orderId`; si al inicio estaba pendiente, un evento posterior con pago confirmado lo pasa a pagado y reserva el inventario libre. Las cancelaciones y el envío se confirman manualmente desde Ventas. El stock físico se descuenta al confirmar la entrega a paquetería.
+
+Configura en el entorno del servidor (local y Vercel), nunca en el navegador:
+
+- `GODADDY_WEBHOOK_SECRET`: secreto compartido entre la tienda y el CRM.
+- `GODADDY_DEFAULT_SUCURSAL_ID`: UUID de la sucursal cuyo inventario atiende los pedidos de la fábrica. Debe ser una sucursal activa; no se debe asumir que “Matriz” es la fábrica.
+
+El webhook envía `x-godaddy-timestamp` (Unix en segundos) y `x-godaddy-signature` (HMAC-SHA256 hexadecimal del texto `timestamp.cuerpo-JSON-exacto`, usando el secreto compartido). El timestamp debe tener menos de cinco minutos. Ejemplo del cuerpo:
+
+```json
+{
+  "orderId": "WEB-1042",
+  "paymentStatus": "paid",
+  "createdAt": "2026-06-15T18:42:00Z",
+  "customer": { "name": "Nombre", "email": "cliente@example.com", "phone": "5551234567" },
+  "shippingAddress": {
+    "name": "Nombre", "phone": "5551234567", "address1": "Calle y número",
+    "address2": "", "city": "Ciudad", "state": "Estado", "postalCode": "00000", "country": "MX"
+  },
+  "items": [{ "sku": "JRN-0001", "quantity": 2, "unitPrice": 120 }]
+}
+```
+
+`paymentStatus` debe usar `paid` al confirmarse el cobro; cualquier estado distinto queda pendiente de pago. Cada SKU debe coincidir con el catálogo del CRM. La tienda debe firmar exactamente los bytes enviados; el CRM rechaza firmas inválidas, solicitudes vencidas y productos inexistentes. Una respuesta `200` confirma que se recibió o reconoció un evento duplicado. No se activa la conexión hasta ejecutar la migración 032 y configurar ambos valores de entorno.
+
+Ejemplo de envío desde el servidor Node.js de la tienda:
+
+```js
+import { createHmac } from "node:crypto";
+
+const body = JSON.stringify(orderPayload);
+const timestamp = Math.floor(Date.now() / 1000).toString();
+const signature = createHmac("sha256", process.env.CRM_WEBHOOK_SECRET)
+  .update(`${timestamp}.${body}`)
+  .digest("hex");
+
+await fetch(`${process.env.CRM_URL}/api/webhooks/godaddy`, {
+  method: "POST",
+  headers: {
+    "content-type": "application/json",
+    "x-godaddy-timestamp": timestamp,
+    "x-godaddy-signature": signature,
+  },
+  body,
+});
+```
 
 ---
 

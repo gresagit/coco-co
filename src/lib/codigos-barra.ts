@@ -373,10 +373,15 @@ export async function eliminarGeneracionCodigoBarra(generacionId: string) {
   if (errorGeneracion) throw errorGeneracion;
   if (!generacion) return;
 
-  const { data: piezas } = await db
+  const { data: piezas, error: errorPiezas } = await db
     .from("piezas")
-    .select("id")
+    .select("id, estado")
     .eq("generacion_id", generacionId);
+  if (errorPiezas) throw errorPiezas;
+
+  if ((piezas || []).some((pieza) => pieza.estado !== "Pendiente")) {
+    throw new Error("No se puede eliminar una tanda que contiene folios escaneados o ya utilizados.");
+  }
 
   const piezaIds = (piezas || []).map((pieza) => pieza.id);
 
@@ -443,12 +448,18 @@ export async function ajustarCantidadGeneracionCodigoBarra(generacionId: string,
   }
 
   if (accion === "reducir") {
-    const { data: piezas } = await db
+    const { data: piezas, error: errorPiezas } = await db
       .from("piezas")
       .select("id")
       .eq("generacion_id", generacionId)
+      .eq("estado", "Pendiente")
       .order("created_at", { ascending: false })
       .limit(diferencia);
+    if (errorPiezas) throw errorPiezas;
+
+    if ((piezas || []).length < diferencia) {
+      throw new Error("No hay suficientes folios pendientes para reducir la tanda sin afectar folios ya utilizados.");
+    }
 
     const piezaIds = (piezas || []).map((pieza) => pieza.id);
 
@@ -556,12 +567,18 @@ export async function eliminarPiezasGeneracionPorCantidad(generacionId: string, 
     };
   }
 
-  const { data: piezas } = await db
+  const { data: piezas, error: errorPiezas } = await db
     .from("piezas")
     .select("id")
     .eq("generacion_id", generacionId)
+    .eq("estado", "Pendiente")
     .order("created_at", { ascending: false })
     .limit(cantidad);
+  if (errorPiezas) throw errorPiezas;
+
+  if ((piezas || []).length < cantidad) {
+    throw new Error("No hay suficientes folios pendientes para eliminar esa cantidad sin afectar folios ya utilizados.");
+  }
 
   const piezaIds = (piezas || []).map((pieza) => pieza.id);
 

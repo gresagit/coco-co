@@ -5,6 +5,16 @@ export type ResultadoEscaneo =
   | { ok: true; folio: string; productoId: string; productoNombre: string; productoSku: string }
   | { ok: false; folio: string; mensaje: string };
 
+export type ResultadoEnvio = {
+  ok: true;
+  folio: string;
+  productoId: string;
+  productoNombre: string;
+  productoSku: string;
+  pedidoExternoId: string | null;
+  pedidoCompletado: boolean;
+};
+
 /**
  * Confirma una pieza y aplica el consumo de su fórmula dentro de una única
  * transacción para no dejar stock, consumos y estado de folio desincronizados.
@@ -74,5 +84,30 @@ export async function confirmarPiezaPorFolio(
     productoId: data.productoId,
     productoNombre: data.productoNombre || "Producto",
     productoSku: data.productoSku || "",
+  };
+}
+
+export async function enviarPiezaPorFolio(
+  folioPieza: string,
+  sucursalId: string,
+  usuarioId: string,
+  pedidoId: string | null
+): Promise<ResultadoEnvio> {
+  const { data, error } = await supabaseAdmin().rpc("enviar_pieza_escaneada", {
+    p_folio: folioPieza.trim(),
+    p_sucursal_id: sucursalId,
+    p_usuario_id: usuarioId,
+    p_pedido_id: pedidoId,
+  });
+  if (error) throw error;
+
+  return {
+    ok: true,
+    folio: data.folio,
+    productoId: data.productoId,
+    productoNombre: data.productoNombre || "Producto",
+    productoSku: data.productoSku || "",
+    pedidoExternoId: data.pedidoExternoId || null,
+    pedidoCompletado: data.pedidoCompletado === true,
   };
 }

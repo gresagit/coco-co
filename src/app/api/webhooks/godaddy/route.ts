@@ -88,9 +88,9 @@ export async function POST(req: NextRequest) {
     const sku = typeof item.sku === "string" ? item.sku.trim() : "";
     const cantidad = Number(item.quantity);
     const precioUnitario = Number(item.unitPrice ?? 0);
-    if (!sku || sku.length > 120 || !Number.isFinite(cantidad) || cantidad <= 0 || cantidad > 100_000 ||
+    if (!sku || sku.length > 120 || !Number.isInteger(cantidad) || cantidad <= 0 || cantidad > 100_000 ||
         !Number.isFinite(precioUnitario) || precioUnitario < 0 || precioUnitario > 99_999_999) {
-      return NextResponse.json({ ok: false, mensaje: "El pedido contiene un SKU, cantidad o precio inválido." }, { status: 400 });
+      return NextResponse.json({ ok: false, mensaje: "El pedido contiene un SKU, una cantidad entera o un precio inválido." }, { status: 400 });
     }
     const skuNormalizado = sku.toUpperCase();
     const actual = itemsBySku.get(skuNormalizado) || { sku, cantidad: 0, total: 0 };

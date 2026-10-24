@@ -12,8 +12,19 @@ type Registro = {
   hora: string;
 };
 
-export default function EscanerInventario({ embedded = false }: { embedded?: boolean }) {
+export type PedidoEscaneable = { id: string; folio: string; resumen: string };
+
+export default function EscanerInventario({
+  embedded = false,
+  operacion = "entrada",
+  pedidos = [],
+}: {
+  embedded?: boolean;
+  operacion?: "entrada" | "envio";
+  pedidos?: PedidoEscaneable[];
+}) {
   const [inputValue, setInputValue] = useState("");
+  const [pedidoId, setPedidoId] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [modoEscaneo, setModoEscaneo] = useState<"lector" | "camara" | "manual">("lector");
   const [registros, setRegistros] = useState<Registro[]>([]);
@@ -83,13 +94,25 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
       const res = await fetch("/api/escaneo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folio: limpio }),
+        body: JSON.stringify({
+          folio: limpio,
+          operacion,
+          pedidoId: operacion === "envio" ? pedidoId || null : null,
+        }),
       });
       const data = await res.json();
       const registro: Registro = {
         folio: limpio,
         ok: !!data.ok,
-        mensaje: data.ok ? `${data.productoNombre}` : data.mensaje,
+        mensaje: data.ok
+          ? operacion === "envio"
+            ? `${data.productoNombre} · ${
+                data.pedidoExternoId
+                  ? `pedido ${data.pedidoExternoId}${data.pedidoCompletado ? " completado" : ""}`
+                  : "venta física"
+              }`
+            : `${data.productoNombre}`
+          : data.mensaje,
         hora: new Date().toLocaleTimeString(),
       };
       setRegistros((prev) => [registro, ...prev].slice(0, 30));
@@ -98,6 +121,7 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
       if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
       bannerTimeoutRef.current = setTimeout(() => setUltimoResultado(null), 4000);
       if (data.ok) {
+        if (data.pedidoCompletado) setPedidoId("");
         setTally((prev) => ({ ...prev, [data.productoNombre]: (prev[data.productoNombre] || 0) + 1 }));
         if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
         refreshTimeoutRef.current = setTimeout(() => router.refresh(), 750);
@@ -173,6 +197,30 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
 
   return (
     <div className="space-y-4">
+      {operacion === "envio" && (
+        <div className="rounded-lg border border-brand-150 bg-brand-50 p-4">
+          <h2 className="font-semibold text-ink">Escanear salida de producto</h2>
+          <p className="mt-1 text-sm text-brand-600">
+            Escanea cada etiqueta antes de empacar. Cada escaneo descuenta una pieza y la marca como Enviado.
+            Elige un pedido online para consumir sus unidades reservadas; deja la opción física para ventas de mostrador.
+          </p>
+          <p className="mt-1 text-xs font-medium text-amber-800">
+            Para ventas físicas, usa este escáner en lugar de volver a registrar el mismo descuento en el POS.
+          </p>
+          <label className="label mt-3">Pedido online (opcional)</label>
+          <select className="input" value={pedidoId} onChange={(event) => setPedidoId(event.target.value)}>
+            <option value="">Venta física / sin pedido online</option>
+            {pedidos.map((pedido) => (
+              <option key={pedido.id} value={pedido.id}>
+                {pedido.folio} — {pedido.resumen}
+              </option>
+            ))}
+          </select>
+          {pedidos.length === 0 && (
+            <p className="mt-1 text-xs text-brand-500">No hay pedidos online pagados pendientes de escaneo en esta sucursal.</p>
+          )}
+        </div>
+      )}
       {/* Aviso grande e imposible de perder: confirma de inmediato si el
           escaneo funcionó o no (antes solo aparecía chiquito hasta abajo). */}
       {ultimoResultado && (
@@ -192,7 +240,9 @@ export default function EscanerInventario({ embedded = false }: { embedded?: boo
           </span>
           <div className="min-w-0">
             <p className={`font-semibold ${ultimoResultado.ok ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300"}`}>
-              {ultimoResultado.ok ? "¡Escaneado correctamente!" : "No se pudo escanear"}
+              {ultimoResultado.ok
+                ? operacion === "envio" ? "¡Salida registrada!" : "¡Escaneado correctamente!"
+                : "No se pudo escanear"}
             </p>
             <p className="text-sm text-ink truncate">
               <span className="font-mono text-xs text-brand-500">{ultimoResultado.folio}</span> — {ultimoResultado.mensaje}

@@ -58,7 +58,8 @@ Login por defecto: **Usuario: `Admin`  /  Contraseña: `cisco`**
   - `supabase/migration_030_solicitudes_acceso.sql` — Solicitudes públicas de acceso con aprobación administrativa
   - `supabase/migration_031_escaneo_atomico.sql` — Confirma escaneos de producto terminado de forma transaccional
   - `supabase/migration_032_pedidos_tienda_y_envios.sql` — Pedidos online, reservas, ventas POS atómicas, producción faltante y envíos
-  Ejecuta también las migraciones existentes `018` a `029` en orden numérico antes de `030`. Si tu base ya está actualizada hasta `029`, basta con aplicar `030`, `031` y `032`.
+  - `supabase/migration_033_envios_por_escaneo.sql` — Salidas por escaneo, estado Enviado y enlace de cada pieza a un pedido online
+  Ejecuta también las migraciones existentes `018` a `029` en orden numérico antes de `030`. Si tu base ya está actualizada hasta `029`, basta con aplicar `030`, `031`, `032` y `033`.
 4. (Opcional, cuando tengas el Excel) usa `supabase/seed_migracion_ejemplo.sql` como plantilla
    para generar los INSERT reales de tus 23 materias primas, 24 empaques, 11 etiquetas,
    ~40 SKUs y 21 recetas.
@@ -106,7 +107,7 @@ Abre `http://localhost:3000`.
 
 ## Pedidos online y envíos desde GoDaddy
 
-La tienda debe enviar un webhook `POST` a `/api/webhooks/godaddy` cuando se cree el pedido y cuando cambie su pago. El CRM conserva el primer pedido por `orderId`; si al inicio estaba pendiente, un evento posterior con pago confirmado lo pasa a pagado y reserva el inventario libre. Las cancelaciones y el envío se confirman manualmente desde Ventas. El stock físico se descuenta al confirmar la entrega a paquetería.
+La tienda debe enviar un webhook `POST` a `/api/webhooks/godaddy` cuando se cree el pedido y cuando cambie su pago. El CRM conserva el primer pedido por `orderId`; si al inicio estaba pendiente, un evento posterior con pago confirmado lo pasa a pagado y reserva el inventario libre. Para despachar, se selecciona el pedido en **Catálogo → Enviados** y se escanea cada etiqueta: la pieza se descuenta del stock en el acto y el pedido queda Enviado al completar todas sus unidades. Las ventas físicas se escanean con la opción sin pedido; no se debe volver a descontar en POS la misma pieza.
 
 Configura en el entorno del servidor (local y Vercel), nunca en el navegador:
 
@@ -129,7 +130,7 @@ El webhook envía `x-godaddy-timestamp` (Unix en segundos) y `x-godaddy-signatur
 }
 ```
 
-`paymentStatus` debe usar `paid` al confirmarse el cobro; cualquier estado distinto queda pendiente de pago. Cada SKU debe coincidir con el catálogo del CRM. La tienda debe firmar exactamente los bytes enviados; el CRM rechaza firmas inválidas, solicitudes vencidas y productos inexistentes. Una respuesta `200` confirma que se recibió o reconoció un evento duplicado. No se activa la conexión hasta ejecutar la migración 032 y configurar ambos valores de entorno.
+`paymentStatus` debe usar `paid` al confirmarse el cobro; cualquier estado distinto queda pendiente de pago. Cada SKU debe coincidir con el catálogo del CRM y las cantidades deben ser enteras para que el despacho por pieza escaneada pueda completar el pedido. La tienda debe firmar exactamente los bytes enviados; el CRM rechaza firmas inválidas, solicitudes vencidas y productos inexistentes. Una respuesta `200` confirma que se recibió o reconoció un evento duplicado. No se activa la conexión hasta ejecutar las migraciones 032 y 033 y configurar ambos valores de entorno.
 
 Ejemplo de envío desde el servidor Node.js de la tienda:
 

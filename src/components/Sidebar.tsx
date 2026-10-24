@@ -39,6 +39,7 @@ function construirGrupos(esAdmin: boolean, permisos: Permisos): NavGroup[] {
           children: [
             { href: "/dashboard/productos", label: "Lista de productos" },
             { href: "/dashboard/productos?seccion=escaner", label: "Escáner" },
+            { href: "/dashboard/productos?seccion=enviados", label: "Enviados" },
             { href: "/dashboard/codigos-barra/nueva", label: "Generar códigos de barras" },
             { href: "/dashboard/codigos-barra", label: "Historial de códigos de barras" },
           ],

@@ -202,6 +202,91 @@ export default async function ProductosPage({
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
 
+  if (searchParams.seccion === "enviados") {
+    const [{ data: sucursal, error: errorSucursal }, { data: pedidos, error: errorPedidos }, { data: enviados, error: errorEnviados }] =
+      await Promise.all([
+        sucursalId
+          ? db.from("sucursales").select("nombre").eq("id", sucursalId).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        sucursalId
+          ? db
+              .from("pedidos_tienda")
+              .select("id, pedido_externo_id, pedido_tienda_items(sku, nombre_producto, cantidad)")
+              .eq("sucursal_id", sucursalId)
+              .eq("estado", "Vendido")
+              .order("creado_en", { ascending: true })
+              .limit(100)
+          : Promise.resolve({ data: [], error: null }),
+        sucursalId
+          ? db
+              .from("piezas")
+              .select("id, folio_pieza, enviada_en, productos(sku, nombre), pedidos_tienda(pedido_externo_id)")
+              .eq("sucursal_id", sucursalId)
+              .eq("estado", "Enviado")
+              .order("enviada_en", { ascending: false })
+              .limit(200)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+    if (errorSucursal) throw errorSucursal;
+    if (errorPedidos) throw errorPedidos;
+    if (errorEnviados) throw errorEnviados;
+
+    const pedidosEscaneables = (pedidos || []).map((pedido: any) => ({
+      id: pedido.id,
+      folio: pedido.pedido_externo_id,
+      resumen: (pedido.pedido_tienda_items || [])
+        .map((item: any) => `${item.sku} ×${Number(item.cantidad)}`)
+        .join(", "),
+    }));
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <p className="eyebrow mb-1">Catálogo · 01</p>
+          <h1 className="page-title">Enviados</h1>
+          <p className="page-subtitle">
+            Escanea la etiqueta individual de cada producto antes de empacarlo. Cada escaneo registra la salida y descuenta una pieza
+            {sucursal?.nombre ? ` del stock de ${sucursal.nombre}` : ""}.
+          </p>
+        </div>
+        <nav aria-label="Secciones del catálogo" className="flex flex-wrap gap-2 border-b border-brand-150 pb-3">
+          <Link href="/dashboard/productos" className="btn-secondary text-sm">Catálogo</Link>
+          <Link href="/dashboard/productos?seccion=escaner" className="btn-secondary text-sm">Alta por escáner</Link>
+          <Link href="/dashboard/productos?seccion=enviados" aria-current="page" className="btn-primary text-sm">Enviados</Link>
+        </nav>
+        {!sucursalId ? (
+          <div className="card text-sm text-amber-700">Selecciona una sucursal antes de escanear una salida.</div>
+        ) : (
+          <>
+            <EscanerInventario embedded operacion="envio" pedidos={pedidosEscaneables} />
+            <div className="card overflow-x-auto">
+              <h2 className="mb-3 font-semibold">Últimos productos enviados</h2>
+              <table className="table-base">
+                <thead><tr><th>Fecha y hora</th><th>Producto</th><th>Folio escaneado</th><th>Pedido</th></tr></thead>
+                <tbody>
+                  {(enviados || []).map((pieza: any) => (
+                    <tr key={pieza.id}>
+                      <td className="whitespace-nowrap text-xs">{pieza.enviada_en ? new Date(pieza.enviada_en).toLocaleString() : "—"}</td>
+                      <td>{pieza.productos?.sku} — {pieza.productos?.nombre}</td>
+                      <td className="font-mono text-xs">{pieza.folio_pieza}</td>
+                      <td>{pieza.pedidos_tienda?.pedido_externo_id || "Venta física"}</td>
+                    </tr>
+                  ))}
+                  {(enviados || []).length === 0 && (
+                    <tr><td colSpan={4} className="py-4 text-center text-sm text-brand-400">Aún no hay productos enviados por escaneo.</td></tr>
+                  )}
+                </tbody>
+              </table>
+              {(enviados || []).length === 200 && (
+                <p className="mt-2 text-xs text-brand-400">Se muestran los 200 envíos más recientes.</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   const [productos, categoriasResult, stockRows] = await Promise.all([
     cargarTodasLasFilas((desde, hasta) =>
       db.from("productos").select("*, categorias(nombre)").order("nombre").range(desde, hasta)
@@ -246,6 +331,23 @@ export default async function ProductosPage({
           El SKU se genera automáticamente a partir de la categoría. Costo y precio sugerido se calculan a partir del BOM.
         </p>
       </div>
+      <nav aria-label="Secciones del catálogo" className="flex flex-wrap gap-2 border-b border-brand-150 pb-3">
+        <Link
+          href="/dashboard/productos"
+          aria-current={!searchParams.seccion ? "page" : undefined}
+          className={!searchParams.seccion ? "btn-primary text-sm" : "btn-secondary text-sm"}
+        >
+          Catálogo
+        </Link>
+        <Link
+          href="/dashboard/productos?seccion=escaner"
+          aria-current={searchParams.seccion === "escaner" ? "page" : undefined}
+          className={searchParams.seccion === "escaner" ? "btn-primary text-sm" : "btn-secondary text-sm"}
+        >
+          Alta por escáner
+        </Link>
+        <Link href="/dashboard/productos?seccion=enviados" className="btn-secondary text-sm">Enviados</Link>
+      </nav>
 
       <div className="card">
         <div className="flex flex-wrap items-center justify-between gap-3">

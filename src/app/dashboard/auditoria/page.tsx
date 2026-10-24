@@ -52,6 +52,7 @@ const ETIQUETAS_ACCION: Record<string, string> = {
   registrar_reemplazo_etiquetas: "Registró reemplazo de etiquetas",
   reimprimir_etiqueta: "Reimprimió una etiqueta",
   escanear_pieza: "Escaneó una pieza",
+  escanear_salida_producto: "Escaneó salida de producto",
 };
 
 function etiquetaAccion(accion: string) {

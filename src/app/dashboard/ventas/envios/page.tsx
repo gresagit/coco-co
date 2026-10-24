@@ -1,46 +1,10 @@
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import Link from "next/link";
 import VentasTabs from "@/components/VentasTabs";
-import { registrarAuditoria } from "@/lib/auditoria";
 import {
   exigirPermisoPedidosOnline,
   sucursalActualRequerida,
-  usuarioPuedeAccederSucursal,
 } from "@/lib/pedidos-online";
 import { supabaseAdmin } from "@/lib/supabase/server";
-
-async function marcarPedidoEnviado(formData: FormData) {
-  "use server";
-  const user = await exigirPermisoPedidosOnline("editar");
-  const pedidoId = String(formData.get("pedido_id") || "");
-  const sucursalId = await sucursalActualRequerida(user);
-  const db = supabaseAdmin();
-  const { data: pedido, error: errorPedido } = await db
-    .from("pedidos_tienda")
-    .select("id, sucursal_id, pedido_externo_id")
-    .eq("id", pedidoId)
-    .single();
-  if (errorPedido) throw errorPedido;
-  if (pedido.sucursal_id !== sucursalId || !usuarioPuedeAccederSucursal(user, pedido.sucursal_id)) {
-    throw new Error("No tienes acceso a la sucursal de este pedido.");
-  }
-
-  const { error } = await db.rpc("enviar_pedido_tienda", {
-    p_pedido_id: pedidoId,
-    p_usuario_id: user.id,
-  });
-  if (error) throw new Error(error.message);
-  await registrarAuditoria({
-    accion: "enviar_pedido_tienda",
-    entidad: "pedidos_tienda",
-    entidadId: pedidoId,
-    sucursalId,
-    detalle: { pedido_externo_id: pedido.pedido_externo_id },
-  });
-  revalidatePath("/dashboard/ventas/envios");
-  revalidatePath("/dashboard/ventas/vendidos");
-  redirect("/dashboard/ventas/envios");
-}
 
 export default async function EnviosPage() {
   const user = await exigirPermisoPedidosOnline();
@@ -53,15 +17,33 @@ export default async function EnviosPage() {
     .order("creado_en", { ascending: true })
     .limit(200);
   if (error) throw error;
+  const pedidosIds = (pedidos || []).map((pedido: any) => pedido.id);
+  const { data: piezasEnviadas, error: errorPiezas } = pedidosIds.length
+    ? await supabaseAdmin()
+        .from("piezas")
+        .select("pedido_tienda_id, producto_id")
+        .in("pedido_tienda_id", pedidosIds)
+        .eq("estado", "Enviado")
+    : { data: [], error: null };
+  if (errorPiezas) throw errorPiezas;
+
+  const enviadasPorPedidoProducto = new Map<string, number>();
+  for (const pieza of piezasEnviadas || []) {
+    const key = `${pieza.pedido_tienda_id}:${pieza.producto_id}`;
+    enviadasPorPedidoProducto.set(key, (enviadasPorPedidoProducto.get(key) || 0) + 1);
+  }
 
   return (
     <div className="space-y-6">
       <header>
         <p className="eyebrow mb-1">Ventas · 03</p>
         <h1 className="page-title">Preparación y envíos</h1>
-        <p className="page-subtitle">Confirma el envío al entregar el pedido a la paquetería; en ese momento se descuenta el stock.</p>
+        <p className="page-subtitle">Escanea cada producto de un pedido antes de empacarlo. Cada lectura descuenta una unidad y el pedido se marca Enviado al completar todas sus piezas.</p>
       </header>
       <VentasTabs active="/dashboard/ventas/envios" />
+      <Link href="/dashboard/productos?seccion=enviados" className="btn-primary inline-flex">
+        Abrir escáner de envíos
+      </Link>
       <div className="grid gap-4">
         {(pedidos || []).map((pedido: any) => (
           <article className="card space-y-4" key={pedido.id}>
@@ -86,10 +68,17 @@ export default async function EnviosPage() {
                 ))}
               </ul>
             </div>
-            <form action={marcarPedidoEnviado}>
-              <input type="hidden" name="pedido_id" value={pedido.id} />
-              <button className="btn-primary">Confirmar entrega a paquetería</button>
-            </form>
+            <div className="space-y-1 border-t border-brand-100 pt-3 text-sm">
+              <p className="font-medium">Progreso de escaneo</p>
+              {(pedido.pedido_tienda_items || []).map((item: any) => {
+                const escaneadas = enviadasPorPedidoProducto.get(`${pedido.id}:${item.producto_id}`) || 0;
+                return (
+                  <p key={item.id} className="text-brand-500">
+                    {item.sku}: {escaneadas} de {Math.ceil(Number(item.cantidad))} escaneadas
+                  </p>
+                );
+              })}
+            </div>
           </article>
         ))}
         {(pedidos || []).length === 0 && <div className="card text-sm text-brand-400">No hay pedidos pagados pendientes de envío.</div>}

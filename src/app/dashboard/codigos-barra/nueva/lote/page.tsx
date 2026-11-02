@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, requirePermiso } from "@/lib/auth";
 import { generarTandaCodigosBarra, type ModoGeneracion, type TipoFolio } from "@/lib/codigos-barra";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import { registrarAuditoria } from "@/lib/auditoria";
 
 async function generar(formData: FormData) {
   "use server";
+  await requirePermiso("productos", "crear");
   const user = await getSessionUser();
   const productoId = formData.get("producto_id") as string;
 
@@ -42,6 +43,7 @@ export default async function NuevaGeneracionPage({
 }: {
   searchParams: { producto?: string; error?: string; detalle?: string };
 }) {
+  await requirePermiso("productos");
   const db = supabaseAdmin();
   const { data: productos } = await db.from("productos").select("id, sku, nombre").eq("activo", true).order("nombre");
   const { data: sucursales } = await db.from("sucursales").select("*").eq("activa", true).order("nombre");

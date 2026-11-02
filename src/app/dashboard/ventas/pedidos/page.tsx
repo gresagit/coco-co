@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { registrarAuditoria } from "@/lib/auditoria";
@@ -7,6 +8,7 @@ import VentasTabs from "@/components/VentasTabs";
 
 async function crearOrdenesProduccionPedido(formData: FormData) {
   "use server";
+  await requirePermiso("pedidos_online", "crear");
   const user = await exigirPermisoPedidosOnline("editar");
   const pedidoId = String(formData.get("pedido_id") || "");
   const sucursalId = await sucursalActualRequerida(user);
@@ -39,6 +41,7 @@ async function crearOrdenesProduccionPedido(formData: FormData) {
 
 async function cancelarPedido(formData: FormData) {
   "use server";
+  await requirePermiso("pedidos_online", "eliminar");
   const user = await exigirPermisoPedidosOnline("editar");
   const pedidoId = String(formData.get("pedido_id") || "");
   const sucursalId = await sucursalActualRequerida(user);
@@ -68,6 +71,7 @@ async function cancelarPedido(formData: FormData) {
 }
 
 export default async function PedidosOnlinePage() {
+  await requirePermiso("pedidos_online");
   const user = await exigirPermisoPedidosOnline();
   const sucursalId = await sucursalActualRequerida(user);
   const db = supabaseAdmin();

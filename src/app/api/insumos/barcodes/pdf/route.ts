@@ -1,3 +1,4 @@
+import { guardApi } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -12,6 +13,8 @@ const MAX_COPIAS_POR_INSUMO = 96;
 // Se conserva por compatibilidad; el selector nuevo (POST) permite escoger
 // cuántos insumos, de qué tipo/material y cuántas copias de cada uno.
 export async function GET(req: NextRequest) {
+  const denegado = await guardApi("insumos", "ver");
+  if (denegado) return denegado;
   const db = supabaseAdmin();
   const tipoParam = req.nextUrl.searchParams.get("tipo");
 
@@ -44,6 +47,8 @@ export async function GET(req: NextRequest) {
 // Así el usuario puede elegir exactamente cuántos códigos y de qué
 // insumo/material imprimir, en vez de recibir siempre "uno de cada uno".
 export async function POST(req: NextRequest) {
+  const denegado = await guardApi("insumos", "crear");
+  if (denegado) return denegado;
   let body: any;
   try {
     body = await req.json();

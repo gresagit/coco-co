@@ -1,3 +1,4 @@
+import { guardApi } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from "pdf-lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -131,6 +132,8 @@ async function crearPdf(ventas: Venta[], formato: string) {
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const denegado = await guardApi("ventas_pos", "ver");
+  if (denegado) return denegado;
   const db = supabaseAdmin();
   const formato = req.nextUrl.searchParams.get("formato") === "ticket" ? "ticket" : "carta";
   let { data: ventas } = await db

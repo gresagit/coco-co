@@ -1,8 +1,11 @@
+import { guardApi } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const denegado = await guardApi("ordenes_compra", "ver");
+  if (denegado) return denegado;
   const db = supabaseAdmin();
   const { data: orden } = await db
     .from("ordenes_compra")

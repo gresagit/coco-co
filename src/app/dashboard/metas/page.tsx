@@ -1,4 +1,4 @@
-import { getSessionUser, getSucursalActualId } from "@/lib/auth";
+import { getSessionUser, getSucursalActualId, requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { obtenerPanoramaProduccion, crearMetaProduccion } from "@/lib/metas";
 import { revalidatePath } from "next/cache";
@@ -6,6 +6,7 @@ import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearMeta(formData: FormData) {
   "use server";
+  await requirePermiso("metas", "crear");
   const user = await getSessionUser();
   const sucursalId = formData.get("sucursal_id") as string;
 
@@ -31,6 +32,7 @@ async function crearMeta(formData: FormData) {
 }
 
 export default async function MetasPage() {
+  await requirePermiso("metas");
   const user = await getSessionUser();
   const db = supabaseAdmin();
 

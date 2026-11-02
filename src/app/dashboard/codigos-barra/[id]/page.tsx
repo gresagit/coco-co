@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -12,6 +13,7 @@ import { ConfirmDeleteCodigoBarra } from "@/components/ConfirmDeleteCodigoBarra"
 
 async function eliminarGeneracion(generacionId: string) {
   "use server";
+  await requirePermiso("productos", "eliminar");
   await eliminarGeneracionCodigoBarra(generacionId);
   revalidatePath("/dashboard/codigos-barra");
   redirect("/dashboard/codigos-barra");
@@ -19,6 +21,7 @@ async function eliminarGeneracion(generacionId: string) {
 
 async function corregirCantidadGeneracion(formData: FormData) {
   "use server";
+  await requirePermiso("productos", "editar");
   const generacionId = String(formData.get("generacion_id") || "");
   const nuevaCantidad = Number(formData.get("nueva_cantidad") || 0);
 
@@ -33,6 +36,7 @@ async function corregirCantidadGeneracion(formData: FormData) {
 
 async function eliminarPiezasGeneracion(formData: FormData) {
   "use server";
+  await requirePermiso("productos", "eliminar");
   const generacionId = String(formData.get("generacion_id") || "");
   const cantidadAEliminar = Number(formData.get("cantidad_a_eliminar") || 0);
 
@@ -46,6 +50,7 @@ async function eliminarPiezasGeneracion(formData: FormData) {
 }
 
 export default async function DetalleGeneracionPage({ params }: { params: { id: string } }) {
+  await requirePermiso("productos");
   const db = supabaseAdmin();
   const { data: generacion } = await db
     .from("generaciones_codigo_barra")

@@ -1,8 +1,11 @@
+import { guardApi } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const denegado = await guardApi("insumos", "ver");
+  if (denegado) return denegado;
   const db = supabaseAdmin();
   const { data: generacion } = await db
     .from("insumo_codigo_barra_generaciones")

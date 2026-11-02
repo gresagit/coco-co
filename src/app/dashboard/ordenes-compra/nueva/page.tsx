@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { siguienteFolioOC } from "@/lib/folios";
 import { redirect } from "next/navigation";
@@ -7,6 +8,7 @@ import { calcularCostoCompra } from "@/lib/costo-compra";
 
 async function crearOrden(formData: FormData) {
   "use server";
+  await requirePermiso("ordenes_compra", "crear");
   const db = supabaseAdmin();
 
   const proveedorId = formData.get("proveedor_id") as string;
@@ -68,6 +70,7 @@ async function crearOrden(formData: FormData) {
 }
 
 export default async function NuevaOrdenCompraPage({ searchParams }: { searchParams: { insumo?: string } }) {
+  await requirePermiso("ordenes_compra");
   const db = supabaseAdmin();
   const [{ data: proveedores }, { data: sucursales }, { data: insumos }] = await Promise.all([
     db.from("proveedores").select("*").eq("activo", true).order("nombre"),

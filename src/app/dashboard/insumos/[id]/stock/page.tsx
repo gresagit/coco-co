@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -9,6 +10,7 @@ import { calcularCostoCompra } from "@/lib/costo-compra";
 
 async function agregarEntrada(insumoId: string, formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "crear");
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const cantidad = Number(formData.get("cantidad"));
@@ -100,6 +102,7 @@ async function agregarEntrada(insumoId: string, formData: FormData) {
 
 async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const db = supabaseAdmin();
   const costoUnitarioActual = Number(formData.get("costo_unitario_actual") || 0);
 
@@ -131,6 +134,7 @@ async function actualizarDatosInsumo(insumoId: string, formData: FormData) {
 
 async function actualizarStockMinimo(insumoId: string, formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const stockMinimo = Number(formData.get("stock_minimo") || 0);
@@ -151,6 +155,7 @@ async function actualizarStockMinimo(insumoId: string, formData: FormData) {
 
 async function actualizarCantidadDisponible(insumoId: string, formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const nuevaCantidad = Number(formData.get("cantidad_disponible") || 0);
@@ -195,6 +200,7 @@ async function actualizarCantidadDisponible(insumoId: string, formData: FormData
 
 async function ajusteManual(insumoId: string, formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const cantidad = Number(formData.get("cantidad"));
@@ -239,6 +245,7 @@ async function ajusteManual(insumoId: string, formData: FormData) {
 
 async function ajustarGeneracionInsumo(formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const generacionId = String(formData.get("generacion_id") || "");
   const insumoId = String(formData.get("insumo_id") || "");
   const nuevaCantidad = Number(formData.get("nueva_cantidad") || 0);
@@ -254,6 +261,7 @@ async function ajustarGeneracionInsumo(formData: FormData) {
 
 async function eliminarGeneracionInsumoAction(formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "eliminar");
   const generacionId = String(formData.get("generacion_id") || "");
   const insumoId = String(formData.get("insumo_id") || "");
 
@@ -267,6 +275,7 @@ async function eliminarGeneracionInsumoAction(formData: FormData) {
 }
 
 export default async function InsumoStockPage({ params }: { params: { id: string } }) {
+  await requirePermiso("insumos");
   const db = supabaseAdmin();
   const { data: insumo } = await db.from("insumos").select("*").eq("id", params.id).single();
   const { data: stocks } = await db

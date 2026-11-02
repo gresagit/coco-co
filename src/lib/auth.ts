@@ -1,8 +1,10 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import type { Permisos } from "@/lib/roles";
+import { esAdministrador, tienePermiso, type Permisos } from "@/lib/roles";
 
 const COOKIE_NAME = "cococo_session";
 const SUCURSAL_COOKIE_NAME = "cococo_sucursal_actual";
@@ -32,7 +34,11 @@ function verify(signed: string): string | null {
   const payload = signed.slice(0, idx);
   const sig = signed.slice(idx + 1);
   const expected = crypto.createHmac("sha256", secret()).update(payload).digest("hex");
-  if (crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+  const sigBuf = Buffer.from(sig);
+  const expectedBuf = Buffer.from(expected);
+  // timingSafeEqual lanza error si los largos difieren (cookie alterada).
+  if (sigBuf.length !== expectedBuf.length) return null;
+  if (crypto.timingSafeEqual(sigBuf, expectedBuf)) {
     return payload;
   }
   return null;
@@ -167,7 +173,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const [{ data: roleRows }, { data: sucRows }] = await Promise.all([
     db
       .from("usuario_roles")
-      .select("roles(nombre, permisos)")
+      .select("roles(nombre, permisos, vigente_desde, vigente_hasta)")
       .eq("usuario_id", user.id),
     db
       .from("usuario_sucursales")
@@ -175,8 +181,18 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       .eq("usuario_id", user.id),
   ]);
 
+  // Un rol con vigencia (perfil temporal) solo cuenta dentro de sus fechas.
+  const hoy = new Date().toISOString().slice(0, 10);
+  const rolesVigentes = (roleRows || []).filter((row: any) => {
+    const rol = row.roles;
+    if (!rol) return false;
+    if (rol.vigente_desde && hoy < rol.vigente_desde) return false;
+    if (rol.vigente_hasta && hoy > rol.vigente_hasta) return false;
+    return true;
+  });
+
   const permisos: Permisos = {};
-  for (const row of roleRows || []) {
+  for (const row of rolesVigentes) {
     const rolePermisos = (row as any).roles?.permisos || {};
     for (const [apartado, acciones] of Object.entries(rolePermisos)) {
       permisos[apartado] = Array.from(new Set([...(permisos[apartado] || []), ...(Array.isArray(acciones) ? acciones : [])]));
@@ -191,7 +207,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     usuario: user.usuario,
     nombre_completo: user.nombre_completo,
     acceso_todas_sucursales: user.acceso_todas_sucursales,
-    roles: (roleRows || []).map((r: any) => r.roles?.nombre).filter(Boolean),
+    roles: rolesVigentes.map((r: any) => r.roles?.nombre).filter(Boolean),
     sucursales: (sucRows || []).map((s: any) => s.sucursal_id),
     permisos,
   };
@@ -231,4 +247,28 @@ export async function setSucursalActualId(sucursalId: string) {
 
 export function getSucursalActualId(): string | null {
   return cookies().get(SUCURSAL_COOKIE_NAME)?.value ?? null;
+}
+
+function puedeHacer(user: SessionUser, apartado: string, accion: string): boolean {
+  return esAdministrador(user.roles) || tienePermiso(user.permisos, apartado, accion);
+}
+
+// Para páginas y server actions: exige sesión y permiso sobre el apartado.
+// Ocultar el link en el Sidebar NO protege la ruta; esta es la protección real.
+export async function requirePermiso(apartado: string, accion = "ver"): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (!puedeHacer(user, apartado, accion)) redirect("/dashboard?sin_permiso=1");
+  return user;
+}
+
+// Para rutas /api: devuelve la respuesta 401/403 si no corresponde, o null si puede seguir.
+// Uso: const denegado = await guardApi("ordenes_compra"); if (denegado) return denegado;
+export async function guardApi(apartado?: string, accion = "ver"): Promise<NextResponse | null> {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ message: "Sesión no válida" }, { status: 401 });
+  if (apartado && !puedeHacer(user, apartado, accion)) {
+    return NextResponse.json({ message: "No tienes permiso para esto" }, { status: 403 });
+  }
+  return null;
 }

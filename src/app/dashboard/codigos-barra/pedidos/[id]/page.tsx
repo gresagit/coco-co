@@ -1,7 +1,9 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import Link from "next/link";
 
 export default async function PedidoImpresionPage({ params }: { params: { id: string } }) {
+  await requirePermiso("productos");
   const db = supabaseAdmin();
   const { data: pedido } = await db
     .from("pedidos_impresion")

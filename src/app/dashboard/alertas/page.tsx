@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { registrarAuditoria } from "@/lib/auditoria";
@@ -6,6 +7,7 @@ import { cargarTodasLasFilas } from "@/lib/supabase/pagination";
 
 async function crearConfig(formData: FormData) {
   "use server";
+  await requirePermiso("alertas", "crear");
   const db = supabaseAdmin();
   await db.from("alertas_config").insert({
     rol_id: formData.get("rol_id") || null,
@@ -23,6 +25,7 @@ async function crearConfig(formData: FormData) {
 
 async function eliminarConfig(id: string) {
   "use server";
+  await requirePermiso("alertas", "eliminar");
   const db = supabaseAdmin();
   await db.from("alertas_config").delete().eq("id", id);
   await registrarAuditoria({
@@ -34,6 +37,7 @@ async function eliminarConfig(id: string) {
 }
 
 export default async function AlertasPage() {
+  await requirePermiso("alertas");
   const db = supabaseAdmin();
   const [rolesResult, configsResult, insumoStock, productoStockRows] = await Promise.all([
     db.from("roles").select("*").order("nombre"),

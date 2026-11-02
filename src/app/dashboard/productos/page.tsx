@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import { siguienteSkuProducto, LINEAS_PRODUCTO } from "@/lib/sku";
-import { getSucursalActualId } from "@/lib/auth";
+import { getSucursalActualId, requirePermiso } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/auditoria";
 import type { SVGProps } from "react";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { cargarTodasLasFilas } from "@/lib/supabase/pagination";
 
 async function crearProducto(formData: FormData) {
   "use server";
+  await requirePermiso("productos", "crear");
   const db = supabaseAdmin();
   let categoriaId = formData.get("categoria_id") as string;
   const categoriaNueva = (formData.get("categoria_nueva") as string)?.trim();
@@ -78,6 +79,7 @@ async function crearProducto(formData: FormData) {
 // de un producto ya existente. Se usa desde el modal "Editar" de la tabla.
 async function editarProducto(formData: FormData) {
   "use server";
+  await requirePermiso("productos", "editar");
   const db = supabaseAdmin();
   const productoId = formData.get("producto_id") as string;
   if (!productoId) return;
@@ -163,6 +165,7 @@ async function editarProducto(formData: FormData) {
 // mostrar y de poder vender/producir) en lugar de perder el historial.
 async function eliminarProducto(productoId: string) {
   "use server";
+  await requirePermiso("productos", "eliminar");
   const db = supabaseAdmin();
 
   const { error } = await db.from("productos").delete().eq("id", productoId);
@@ -199,6 +202,7 @@ export default async function ProductosPage({
 }: {
   searchParams: { seccion?: string };
 }) {
+  await requirePermiso("productos");
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
 

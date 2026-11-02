@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { eliminarGeneracionCodigoBarra } from "@/lib/codigos-barra";
@@ -6,11 +7,13 @@ import { ConfirmDeleteCodigoBarra } from "@/components/ConfirmDeleteCodigoBarra"
 
 async function eliminarGeneracion(generacionId: string) {
   "use server";
+  await requirePermiso("productos", "eliminar");
   await eliminarGeneracionCodigoBarra(generacionId);
   revalidatePath("/dashboard/codigos-barra");
 }
 
 export default async function CodigosBarraPage() {
+  await requirePermiso("productos");
   const db = supabaseAdmin();
   const { data: generaciones } = await db
     .from("generaciones_codigo_barra")

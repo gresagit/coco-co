@@ -1,9 +1,11 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearSucursal(formData: FormData) {
   "use server";
+  await requirePermiso("sucursales", "crear");
   const db = supabaseAdmin();
   const { data: sucursal } = await db.from("sucursales").insert({
     nombre: formData.get("nombre"),
@@ -21,6 +23,7 @@ async function crearSucursal(formData: FormData) {
 
 async function toggleActiva(id: string, activa: boolean) {
   "use server";
+  await requirePermiso("sucursales", "editar");
   const db = supabaseAdmin();
   await db.from("sucursales").update({ activa: !activa }).eq("id", id);
   await registrarAuditoria({
@@ -32,6 +35,7 @@ async function toggleActiva(id: string, activa: boolean) {
 }
 
 export default async function SucursalesPage() {
+  await requirePermiso("sucursales");
   const db = supabaseAdmin();
   const { data: sucursales } = await db.from("sucursales").select("*").order("created_at");
 

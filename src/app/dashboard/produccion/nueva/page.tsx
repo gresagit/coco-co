@@ -1,9 +1,11 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearOrdenProduccion(formData: FormData) {
   "use server";
+  await requirePermiso("produccion", "crear");
   const db = supabaseAdmin();
   const productoId = formData.get("producto_id") as string;
 
@@ -38,6 +40,7 @@ async function crearOrdenProduccion(formData: FormData) {
 }
 
 export default async function NuevaOrdenProduccionPage() {
+  await requirePermiso("produccion");
   const db = supabaseAdmin();
   const [{ data: productos }, { data: sucursales }] = await Promise.all([
     db.from("productos").select("id, sku, nombre, tipo_producto").eq("activo", true).order("nombre"),

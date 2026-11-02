@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import Link from "next/link";
 import VentasTabs from "@/components/VentasTabs";
 import {
@@ -7,6 +8,7 @@ import {
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export default async function EnviosPage() {
+  await requirePermiso("pedidos_online");
   const user = await exigirPermisoPedidosOnline();
   const sucursalId = await sucursalActualRequerida(user);
   const { data: pedidos, error } = await supabaseAdmin()

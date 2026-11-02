@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import ShopifyStockSync from "@/components/ShopifyStockSync";
@@ -5,6 +6,7 @@ import { registrarAuditoria } from "@/lib/auditoria";
 
 async function guardarConfig(formData: FormData) {
   "use server";
+  await requirePermiso("ventas_stock", "editar");
   const db = supabaseAdmin();
   const dominio = (formData.get("dominio") as string)?.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
   const accessToken = (formData.get("access_token") as string)?.trim();
@@ -26,6 +28,7 @@ async function guardarConfig(formData: FormData) {
 
 async function guardarCanal(formData: FormData) {
   "use server";
+  await requirePermiso("ventas_stock", "editar");
   const db = supabaseAdmin();
   const canal = formData.get("canal") as string;
   const nombre = (formData.get("nombre") as string)?.trim();
@@ -52,6 +55,7 @@ async function guardarCanal(formData: FormData) {
 }
 
 export default async function VentasStockPage() {
+  await requirePermiso("ventas_stock");
   const db = supabaseAdmin();
   const [{ data: config }, { data: canales }] = await Promise.all([
     db.from("shopify_config").select("*").eq("id", "default").maybeSingle(),

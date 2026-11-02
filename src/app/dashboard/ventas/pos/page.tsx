@@ -1,7 +1,8 @@
 import { randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getSessionUser, getSucursalActualId } from "@/lib/auth";
+import { getSessionUser, getSucursalActualId, requirePermiso } from "@/lib/auth";
+import { esAdministrador, tienePermiso } from "@/lib/roles";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { calcularCostoProducto, precioSugerido } from "@/lib/costeo";
 import { normalizarClienteDesdeFormulario, validarCliente } from "@/lib/clientes";
@@ -23,6 +24,9 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
   const sucursalId = getSucursalActualId();
   if (!user || !sucursalId) {
     return { ok: false, message: "Elige una sucursal antes de registrar la venta." };
+  }
+  if (!esAdministrador(user.roles) && !tienePermiso(user.permisos, "ventas_pos", "crear")) {
+    return { ok: false, message: "No tienes permiso para registrar ventas." };
   }
 
   let items: ItemCarrito[];
@@ -157,6 +161,7 @@ async function registrarVentaCarrito(formData: FormData): Promise<{ ok: boolean;
 }
 
 export default async function VentasPosPage() {
+  await requirePermiso("ventas_pos");
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
 

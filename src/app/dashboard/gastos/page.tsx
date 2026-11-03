@@ -1,9 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, requirePermiso } from "@/lib/auth";
 
 async function registrarGasto(formData: FormData) {
   "use server";
+  await requirePermiso("gastos", "crear");
   const db = supabaseAdmin();
   const user = await getSessionUser();
 
@@ -30,6 +31,7 @@ async function registrarGasto(formData: FormData) {
 
 async function eliminarGasto(id: string) {
   "use server";
+  await requirePermiso("gastos", "eliminar");
   const db = supabaseAdmin();
   await db.from("gastos_empresa").delete().eq("id", id);
   revalidatePath("/dashboard/gastos");
@@ -37,6 +39,7 @@ async function eliminarGasto(id: string) {
 }
 
 export default async function GastosPage() {
+  await requirePermiso("gastos");
   const db = supabaseAdmin();
   const [{ data: gastos }, { data: resumen }] = await Promise.all([
     db.from("gastos_empresa").select("*").order("fecha", { ascending: false }).limit(200),

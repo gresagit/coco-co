@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { registrarAuditoria } from "@/lib/auditoria";
@@ -14,6 +15,7 @@ const UNIDADES_VALIDAS = ["kg", "g", "L", "ml", "pz", "m"];
 // se compre y almacene en kilos).
 async function agregarInsumoBom(formData: FormData) {
   "use server";
+  await requirePermiso("bom", "crear");
   const db = supabaseAdmin();
   const productoId = formData.get("producto_id") as string;
   const insumoId = formData.get("insumo_id") as string;
@@ -51,6 +53,7 @@ async function agregarInsumoBom(formData: FormData) {
 // de `productos.unidad_venta` del producto usado como insumo.
 async function agregarProductoAnidadoBom(formData: FormData) {
   "use server";
+  await requirePermiso("bom", "crear");
   const db = supabaseAdmin();
   const productoId = formData.get("producto_id") as string;
   const insumoProductoId = formData.get("insumo_producto_id") as string;
@@ -82,6 +85,7 @@ async function agregarProductoAnidadoBom(formData: FormData) {
 
 async function eliminarItemBom(id: string) {
   "use server";
+  await requirePermiso("bom", "eliminar");
   const db = supabaseAdmin();
   await db.from("bom").delete().eq("id", id);
   await registrarAuditoria({
@@ -93,6 +97,7 @@ async function eliminarItemBom(id: string) {
 }
 
 export default async function BomPage({ searchParams }: { searchParams: { producto?: string } }) {
+  await requirePermiso("bom");
   const db = supabaseAdmin();
   const [{ data: productos }, { data: insumos }, { data: productosIntermedios }] = await Promise.all([
     db.from("productos").select("id, sku, nombre").order("nombre"),

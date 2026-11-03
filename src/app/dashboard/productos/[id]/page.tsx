@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import { agruparStockProductos } from "@/lib/producto-stock";
 
 async function actualizarStockMinimo(productoId: string, formData: FormData) {
   "use server";
+  await requirePermiso("productos", "editar");
   const db = supabaseAdmin();
   const sucursalId = formData.get("sucursal_id") as string;
   const stockMinimo = Number(formData.get("stock_minimo") || 0);
@@ -26,6 +28,7 @@ async function actualizarStockMinimo(productoId: string, formData: FormData) {
 
 async function actualizarPrecioManual(productoId: string, formData: FormData) {
   "use server";
+  await requirePermiso("productos", "editar");
   const db = supabaseAdmin();
   const val = formData.get("precio_manual") as string;
   await db
@@ -42,6 +45,7 @@ async function actualizarPrecioManual(productoId: string, formData: FormData) {
 }
 
 export default async function ProductoDetallePage({ params }: { params: { id: string } }) {
+  await requirePermiso("productos");
   const db = supabaseAdmin();
   const { data: producto } = await db.from("productos").select("*").eq("id", params.id).single();
   const { data: stockRows, error: errorStocks } = await db

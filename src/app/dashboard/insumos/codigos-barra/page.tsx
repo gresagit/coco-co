@@ -1,8 +1,10 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import SeleccionarCodigosInsumos from "@/components/SeleccionarCodigosInsumos";
 import Link from "next/link";
 
 export default async function CodigosBarraInsumosPage() {
+  await requirePermiso("insumos");
   const db = supabaseAdmin();
   const { data: insumos } = await db
     .from("insumos")

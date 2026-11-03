@@ -1,10 +1,25 @@
+import { guardApi } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const config: Record<string, { titulo: string; tabla: string; select: string }> = { inventario: { titulo: "Inventario general", tabla: "movimientos", select: "tipo, origen_tipo, cantidad, fecha, referencia" }, insumos: { titulo: "Insumos y materiales", tabla: "insumos", select: "codigo_interno, nombre, tipo, unidad_medida, costo_unitario_actual, activo" }, productos: { titulo: "Productos terminados", tabla: "productos", select: "sku, nombre, presentacion, unidad_venta, activo" }, ventas: { titulo: "Ventas POS", tabla: "ventas_pos", select: "folio_pos, cantidad, total, medio_pago, creado_en" }, compras: { titulo: "Órdenes de compra", tabla: "ordenes_compra", select: "folio, estado, fecha_emision, fecha_entrega_esperada, total" }, produccion: { titulo: "Órdenes de producción", tabla: "ordenes_produccion", select: "folio, estado, cantidad_planeada, frecuencia_reporte, created_at" }, proveedores: { titulo: "Proveedores", tabla: "proveedores", select: "nombre, contacto, telefono, email, tiempo_entrega_dias, activo" }, clientes: { titulo: "Clientes y cotizaciones", tabla: "", select: "" } };
 
+// Apartado que debe poder "ver" el usuario para descargar cada reporte.
+// "clientes" no tiene apartado propio todavía: basta con tener sesión.
+const APARTADO_POR_REPORTE: Record<string, string | undefined> = {
+  inventario: "movimientos",
+  insumos: "insumos",
+  productos: "productos",
+  ventas: "ventas_pos",
+  compras: "ordenes_compra",
+  produccion: "produccion",
+  proveedores: "proveedores",
+};
+
 export async function GET(_request: Request, { params }: { params: { tipo: string } }) {
+  const denegado = await guardApi(APARTADO_POR_REPORTE[params.tipo]);
+  if (denegado) return denegado;
   const selected = config[params.tipo];
   if (!selected) return NextResponse.json({ message: "Reporte no encontrado" }, { status: 404 });
   let rows: Record<string, unknown>[] = [];

@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
@@ -5,6 +6,7 @@ import { registrarAuditoria } from "@/lib/auditoria";
 
 async function marcarReimpresa(piezaId: string, formData: FormData) {
   "use server";
+  await requirePermiso("produccion", "editar");
   const db = supabaseAdmin();
   await db.from("reimpresiones_etiqueta").insert({
     pieza_id: piezaId,
@@ -20,6 +22,7 @@ async function marcarReimpresa(piezaId: string, formData: FormData) {
 }
 
 export default async function EtiquetasLotePage({ params }: { params: { id: string; loteId: string } }) {
+  await requirePermiso("produccion");
   const db = supabaseAdmin();
   const { data: lote } = await db.from("lotes").select("*, productos(nombre, sku)").eq("id", params.loteId).single();
   const { data: piezas } = await db.from("piezas").select("*").eq("lote_id", params.loteId).order("folio_pieza");

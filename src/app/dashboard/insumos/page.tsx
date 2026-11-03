@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { siguienteCodigoInsumo } from "@/lib/sku";
-import { getSucursalActualId } from "@/lib/auth";
+import { getSucursalActualId, requirePermiso } from "@/lib/auth";
 import type { SVGProps } from "react";
 import CollapsePanel from "@/components/CollapsePanel";
 import EscanerInsumos from "@/components/EscanerInsumos";
@@ -15,6 +15,7 @@ import { unidadesPermitidasPara } from "@/lib/unidades";
 
 async function crearInsumo(_estado: CrearInsumoState, formData: FormData): Promise<CrearInsumoState> {
   "use server";
+  await requirePermiso("insumos", "crear");
   const db = supabaseAdmin();
   const tipo = formData.get("tipo") as string;
 
@@ -131,6 +132,7 @@ async function crearInsumo(_estado: CrearInsumoState, formData: FormData): Promi
 
 async function desactivarInsumo(insumoId: string) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const db = supabaseAdmin();
   const { error } = await db.from("insumos").update({ activo: false }).eq("id", insumoId);
 
@@ -149,6 +151,7 @@ async function desactivarInsumo(insumoId: string) {
 
 async function desactivarInsumosMasivos(formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const ids = formData.getAll("insumo_ids").map(String).filter(Boolean);
   if (!ids.length) return;
 
@@ -172,6 +175,7 @@ async function desactivarInsumosMasivos(formData: FormData) {
 }
 
 export default async function InsumosPage({ searchParams }: { searchParams?: { categoria?: string } }) {
+  await requirePermiso("insumos");
   const db = supabaseAdmin();
   const sucursalId = getSucursalActualId();
   const categoriaSeleccionada = String(searchParams?.categoria || "");

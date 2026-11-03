@@ -1,9 +1,11 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearTransferencia(formData: FormData) {
   "use server";
+  await requirePermiso("movimientos", "crear");
   const db = supabaseAdmin();
   const tipoItem = formData.get("tipo_item") as string; // Producto | Insumo
   const itemId = formData.get("item_id") as string;
@@ -45,6 +47,7 @@ async function crearTransferencia(formData: FormData) {
 
 async function confirmarRecepcion(movimientoId: string) {
   "use server";
+  await requirePermiso("movimientos", "editar");
   const db = supabaseAdmin();
   const { data: mov } = await db.from("movimientos").select("*").eq("id", movimientoId).single();
   if (!mov || mov.estado !== "En tránsito") return;
@@ -71,6 +74,7 @@ async function confirmarRecepcion(movimientoId: string) {
 }
 
 export default async function MovimientosPage() {
+  await requirePermiso("movimientos");
   const db = supabaseAdmin();
   const [{ data: sucursales }, { data: productos }, { data: insumos }, { data: movimientos }] = await Promise.all([
     db.from("sucursales").select("*").eq("activa", true).order("nombre"),

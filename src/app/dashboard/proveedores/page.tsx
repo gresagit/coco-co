@@ -1,9 +1,11 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 async function crearProveedor(formData: FormData) {
   "use server";
+  await requirePermiso("proveedores", "crear");
   const db = supabaseAdmin();
   const condicionesPago = String(formData.get("condiciones_pago") || "");
   const { data: proveedor } = await db.from("proveedores").insert({
@@ -28,6 +30,7 @@ async function crearProveedor(formData: FormData) {
 
 async function asociarInsumo(formData: FormData) {
   "use server";
+  await requirePermiso("proveedores", "crear");
   const db = supabaseAdmin();
   await db.from("insumo_proveedores").upsert({
     proveedor_id: formData.get("proveedor_id"),
@@ -45,6 +48,7 @@ async function asociarInsumo(formData: FormData) {
 
 async function actualizarProveedor(formData: FormData) {
   "use server";
+  await requirePermiso("proveedores", "editar");
   const db = supabaseAdmin();
   const proveedorId = formData.get("proveedor_id") as string;
   const condicionesPago = String(formData.get("condiciones_pago") || "");
@@ -77,6 +81,7 @@ async function actualizarProveedor(formData: FormData) {
 
 async function eliminarProveedor(formData: FormData) {
   "use server";
+  await requirePermiso("proveedores", "eliminar");
   const db = supabaseAdmin();
   const proveedorId = formData.get("proveedor_id") as string;
   if (!proveedorId) return;
@@ -97,6 +102,7 @@ async function eliminarProveedor(formData: FormData) {
 }
 
 export default async function ProveedoresPage({ searchParams }: { searchParams?: { categoria?: string; editar?: string } }) {
+  await requirePermiso("proveedores");
   const db = supabaseAdmin();
   const categoriaSeleccionada = String(searchParams?.categoria || "");
   const editarId = String(searchParams?.editar || "");

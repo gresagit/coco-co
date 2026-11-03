@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -6,6 +7,7 @@ import { ajustarCantidadGeneracionInsumo, eliminarGeneracionInsumo } from "@/lib
 
 async function ajustarGeneracion(formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "editar");
   const generacionId = String(formData.get("generacion_id") || "");
   const cantidad = Number(formData.get("cantidad") || 0);
   if (!generacionId) redirect("/dashboard/insumos/codigos-barra/historial");
@@ -16,6 +18,7 @@ async function ajustarGeneracion(formData: FormData) {
 
 async function eliminarGeneracion(formData: FormData) {
   "use server";
+  await requirePermiso("insumos", "eliminar");
   const generacionId = String(formData.get("generacion_id") || "");
   if (!generacionId) redirect("/dashboard/insumos/codigos-barra/historial");
   await eliminarGeneracionInsumo(generacionId);
@@ -24,6 +27,7 @@ async function eliminarGeneracion(formData: FormData) {
 }
 
 export default async function HistorialCodigosBarraInsumosPage() {
+  await requirePermiso("insumos");
   const db = supabaseAdmin();
   const { data: generaciones } = await db
     .from("insumo_codigo_barra_generaciones")

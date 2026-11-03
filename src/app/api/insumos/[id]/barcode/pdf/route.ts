@@ -1,3 +1,4 @@
+import { guardApi } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
@@ -8,6 +9,8 @@ import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
 // (ej. MP-0001), así que al escanearlo el sistema ya sabe a qué insumo
 // corresponde sin necesidad de generar folios nuevos.
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const denegado = await guardApi("insumos", "ver");
+  if (denegado) return denegado;
   const db = supabaseAdmin();
   const { data: insumo } = await db.from("insumos").select("*").eq("id", params.id).single();
   if (!insumo) return NextResponse.json({ message: "Insumo no encontrado" }, { status: 404 });

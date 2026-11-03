@@ -4,7 +4,11 @@ import { agruparStockProductos } from "@/lib/producto-stock";
 import { cargarTodasLasFilas } from "@/lib/supabase/pagination";
 import SemaforoProductos from "@/components/SemaforoProductos";
 
-export default async function DashboardHome() {
+export default async function DashboardHome({
+  searchParams,
+}: {
+  searchParams?: { sin_permiso?: string };
+}) {
   const user = await getSessionUser();
   const sucursalId = getSucursalActualId();
   const db = supabaseAdmin();
@@ -47,6 +51,11 @@ export default async function DashboardHome() {
 
   return (
     <div className="space-y-8">
+      {searchParams?.sin_permiso && (
+        <div className="banner text-sm" role="alert">
+          No tienes permiso para entrar a ese apartado. Si lo necesitas, pídeselo a un administrador.
+        </div>
+      )}
       <div>
         <p className="eyebrow mb-1">Panel · 00</p>
         <h1 className="page-title">Hola, {user?.nombre_completo?.split(" ")[0]}</h1>

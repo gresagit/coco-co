@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import Link from "next/link";
 
@@ -8,6 +9,7 @@ const APROBACION_COLOR: Record<string, string> = {
 };
 
 export default async function ProduccionPage() {
+  await requirePermiso("produccion");
   const db = supabaseAdmin();
   const { data: ordenes } = await db
     .from("ordenes_produccion")

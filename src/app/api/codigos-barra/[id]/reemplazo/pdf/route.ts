@@ -1,3 +1,4 @@
+import { guardApi } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { construirPdfEtiquetas, construirPdfEtiquetasTermica } from "@/lib/etiquetas-pdf";
@@ -7,6 +8,8 @@ import { construirPdfEtiquetas, construirPdfEtiquetasTermica } from "@/lib/etiqu
 // genérico" ni sobrantes. ?formato=termica para el formato de impresora
 // térmica en vez de la hoja carta normal.
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const denegado = await guardApi("productos", "ver");
+  if (denegado) return denegado;
   const piezasParam = req.nextUrl.searchParams.get("piezas") || "";
   const formato = req.nextUrl.searchParams.get("formato") === "termica" ? "termica" : "hoja";
   const piezaIds = piezasParam.split(",").map((s) => s.trim()).filter(Boolean);

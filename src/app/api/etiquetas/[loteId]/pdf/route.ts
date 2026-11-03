@@ -1,3 +1,4 @@
+import { guardApi } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
@@ -6,6 +7,8 @@ import { construirPdfEtiquetas } from "@/lib/etiquetas-pdf";
 // folio legible) lista para enviar a la imprenta externa. Incluye un 5% de
 // etiquetas de repuesto adicionales al final.
 export async function GET(_req: Request, { params }: { params: { loteId: string } }) {
+  const denegado = await guardApi("produccion", "ver");
+  if (denegado) return denegado;
   const db = supabaseAdmin();
   const { data: lote } = await db.from("lotes").select("*, productos(nombre, sku)").eq("id", params.loteId).single();
   if (!lote) return NextResponse.json({ message: "Lote no encontrado" }, { status: 404 });

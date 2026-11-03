@@ -409,7 +409,10 @@ export default async function UsuariosPage() {
           <div><label className="label">Contraseña</label><input name="password" type="password" className="input" required /></div>
           <div>
             <label className="label">Rol</label>
-            <select name="rol_id" className="input">
+            {/* Sin opción vacía, el navegador elegía el primer rol de la lista
+                (normalmente "Administrador") al crear un usuario sin tocar el campo. */}
+            <select name="rol_id" className="input" defaultValue="">
+              <option value="">Sin rol (solo permisos directos)</option>
               {(roles || []).map((r: any) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
             </select>
           </div>

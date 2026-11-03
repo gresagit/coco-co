@@ -1,8 +1,10 @@
+import { requirePermiso } from "@/lib/auth";
 import { exigirPermisoPedidosOnline, sucursalActualRequerida } from "@/lib/pedidos-online";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import VentasTabs from "@/components/VentasTabs";
 
 export default async function VendidosPage() {
+  await requirePermiso("pedidos_online");
   const user = await exigirPermisoPedidosOnline();
   const sucursalId = await sucursalActualRequerida(user);
   const db = supabaseAdmin();

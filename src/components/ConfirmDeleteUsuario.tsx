@@ -6,9 +6,9 @@ type ConfirmDeleteUsuarioProps = {
   label?: string;
 };
 
-export function ConfirmDeleteUsuario({ usuario, action, label = "Eliminar" }: ConfirmDeleteUsuarioProps) {
+export function ConfirmDeleteUsuario({ usuario, action, label = "Desactivar" }: ConfirmDeleteUsuarioProps) {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    const confirmado = window.confirm(`¿Seguro que quieres eliminar al usuario ${usuario}?`);
+    const confirmado = window.confirm(`¿Seguro que quieres desactivar al usuario ${usuario}?`);
     if (!confirmado) {
       event.preventDefault();
     }

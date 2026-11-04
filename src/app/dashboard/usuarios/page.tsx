@@ -140,20 +140,16 @@ async function toggleActivo(usuarioId: string, activo: boolean) {
   revalidatePath("/dashboard/usuarios");
 }
 
-async function eliminarUsuario(usuarioId: string) {
+async function desactivarUsuario(usuarioId: string) {
   "use server";
   await exigirAdministrador();
   const db = supabaseAdmin();
 
-  const { error: errorRoles } = await db.from("usuario_roles").delete().eq("usuario_id", usuarioId);
-  if (errorRoles) throw errorRoles;
-  const { error: errorSucursales } = await db.from("usuario_sucursales").delete().eq("usuario_id", usuarioId);
-  if (errorSucursales) throw errorSucursales;
-  const { error } = await db.from("usuarios").delete().eq("id", usuarioId);
+  const { error } = await db.from("usuarios").update({ activo: false }).eq("id", usuarioId);
   if (error) throw error;
 
   await registrarAuditoria({
-    accion: "eliminar_usuario",
+    accion: "desactivar_usuario",
     entidad: "usuarios",
     entidadId: usuarioId,
   });
@@ -507,13 +503,17 @@ export default async function UsuariosPage() {
                 </td>
                 <td>
                   <div className="flex gap-2 items-center">
-                    <form action={toggleActivo.bind(null, u.id, u.activo)}>
-                      <button className="btn-secondary text-xs">{u.activo ? "Desactivar" : "Activar"}</button>
-                    </form>
-                    <ConfirmDeleteUsuario
-                      usuario={u.usuario}
-                      action={eliminarUsuario.bind(null, u.id)}
-                    />
+                    {u.activo ? (
+                      <ConfirmDeleteUsuario
+                        usuario={u.usuario}
+                        action={desactivarUsuario.bind(null, u.id)}
+                        label="Desactivar"
+                      />
+                    ) : (
+                      <form action={toggleActivo.bind(null, u.id, u.activo)}>
+                        <button className="btn-secondary text-xs">Activar</button>
+                      </form>
+                    )}
                   </div>
                 </td>
               </tr>

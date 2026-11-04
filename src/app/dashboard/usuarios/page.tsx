@@ -311,11 +311,12 @@ async function actualizarAccesosUsuario(usuarioId: string, formData: FormData) {
   revalidatePath("/dashboard/usuarios");
 }
 
-export default async function UsuariosPage() {
+export default async function UsuariosPage({ searchParams }: { searchParams?: { estado?: string } }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!esAdministrador(user.roles)) redirect("/dashboard");
 
+  const mostrarInactivos = searchParams?.estado === "inactivos";
   const db = supabaseAdmin();
   const [{ data: usuarios }, { data: roles }, { data: sucursales }, { data: usuarioRoles }, solicitudesResult] = await Promise.all([
     db.from("usuarios").select("*").order("created_at"),
@@ -329,6 +330,10 @@ export default async function UsuariosPage() {
   ]);
   if (solicitudesResult.error) throw solicitudesResult.error;
   const solicitudes = solicitudesResult.data;
+  const usuariosMostrados = (usuarios || []).filter((usuario: any) =>
+    mostrarInactivos ? !usuario.activo : usuario.activo
+  );
+  const cantidadInactivos = (usuarios || []).filter((usuario: any) => !usuario.activo).length;
 
   const rolesPorUsuario: Record<string, string[]> = {};
   (usuarioRoles || []).forEach((ur: any) => {
@@ -344,61 +349,66 @@ export default async function UsuariosPage() {
         <p className="page-subtitle">Roles base + perfiles personalizados/temporales, acotables por sucursal.</p>
       </div>
 
-      <div className="card">
-        <h2 className="font-semibold mb-2">Solicitudes de acceso pendientes</h2>
-        <p className="text-sm text-brand-500 mb-4">
-          Al aprobar, asigna un perfil existente y al menos una sucursal. La cuenta podrá iniciar sesión únicamente
-          después de la aprobación.
-        </p>
-        {(solicitudes || []).length === 0 ? (
-          <p className="text-sm text-brand-400">No hay solicitudes pendientes.</p>
-        ) : (
-          <div className="space-y-4">
-            {(solicitudes || []).map((solicitud) => (
-              <div key={solicitud.id} className="rounded-lg border border-brand-150 p-4">
-                <div className="mb-3">
-                  <p className="font-medium">{solicitud.nombre_completo}</p>
-                  <p className="text-sm text-brand-500">
-                    Usuario: <span className="font-mono">{solicitud.usuario}</span>
-                    {" · "}Solicitó: {new Date(solicitud.created_at).toLocaleString("es-MX")}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-end gap-4">
-                  <form action={aprobarSolicitudAcceso.bind(null, solicitud.id)} className="flex flex-1 flex-wrap items-end gap-3">
-                    <div>
-                      <label className="label">Perfil</label>
-                      <select name="rol_id" className="input min-w-48" required defaultValue="">
-                        <option value="" disabled>Selecciona un perfil</option>
-                        {(roles || []).map((rol: any) => (
-                          <option key={rol.id} value={rol.id}>{rol.nombre}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <fieldset className="min-w-48">
-                      <legend className="label">Sucursales permitidas</legend>
-                      <div className="flex flex-wrap gap-3">
-                        {(sucursales || []).map((sucursal: any) => (
-                          <label key={sucursal.id} className="flex items-center gap-1 text-sm">
-                            <input type="checkbox" name="sucursal_id" value={sucursal.id} />
-                            {sucursal.nombre}
-                          </label>
-                        ))}
+      <details className="card group">
+        <summary className="cursor-pointer select-none font-semibold">
+          Solicitudes de acceso pendientes ({(solicitudes || []).length})
+        </summary>
+        <div className="mt-4">
+          <p className="text-sm text-brand-500 mb-4">
+            Al aprobar, asigna un perfil existente y al menos una sucursal. La cuenta podrá iniciar sesión únicamente
+            después de la aprobación.
+          </p>
+          {(solicitudes || []).length === 0 ? (
+            <p className="text-sm text-brand-400">No hay solicitudes pendientes.</p>
+          ) : (
+            <div className="space-y-4">
+              {(solicitudes || []).map((solicitud) => (
+                <div key={solicitud.id} className="rounded-lg border border-brand-150 p-4">
+                  <div className="mb-3">
+                    <p className="font-medium">{solicitud.nombre_completo}</p>
+                    <p className="text-sm text-brand-500">
+                      Usuario: <span className="font-mono">{solicitud.usuario}</span>
+                      {" · "}Solicitó: {new Date(solicitud.created_at).toLocaleString("es-MX")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-4">
+                    <form action={aprobarSolicitudAcceso.bind(null, solicitud.id)} className="flex flex-1 flex-wrap items-end gap-3">
+                      <div>
+                        <label className="label">Perfil</label>
+                        <select name="rol_id" className="input min-w-48" required defaultValue="">
+                          <option value="" disabled>Selecciona un perfil</option>
+                          {(roles || []).map((rol: any) => (
+                            <option key={rol.id} value={rol.id}>{rol.nombre}</option>
+                          ))}
+                        </select>
                       </div>
-                    </fieldset>
-                    <button className="btn-primary text-sm">Aprobar y crear cuenta</button>
-                  </form>
-                  <form action={rechazarSolicitudAcceso.bind(null, solicitud.id)}>
-                    <button className="btn-secondary text-sm">Rechazar</button>
-                  </form>
+                      <fieldset className="min-w-48">
+                        <legend className="label">Sucursales permitidas</legend>
+                        <div className="flex flex-wrap gap-3">
+                          {(sucursales || []).map((sucursal: any) => (
+                            <label key={sucursal.id} className="flex items-center gap-1 text-sm">
+                              <input type="checkbox" name="sucursal_id" value={sucursal.id} />
+                              {sucursal.nombre}
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                      <button className="btn-primary text-sm">Aprobar y crear cuenta</button>
+                    </form>
+                    <form action={rechazarSolicitudAcceso.bind(null, solicitud.id)}>
+                      <button className="btn-secondary text-sm">Rechazar</button>
+                    </form>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
 
-      <div className="card">
-        <h2 className="font-semibold mb-3">Nuevo usuario</h2>
+      <details className="card group">
+        <summary className="cursor-pointer select-none font-semibold">Crear usuario</summary>
+        <div className="mt-4">
         <form action={crearUsuario} className="grid md:grid-cols-3 gap-3">
           <div><label className="label">Usuario (login)</label><input name="usuario" className="input" required /></div>
           <div><label className="label">Nombre completo</label><input name="nombre_completo" className="input" required /></div>
@@ -428,10 +438,12 @@ export default async function UsuariosPage() {
           </fieldset>
           <div className="md:col-span-3"><button className="btn-primary">Crear usuario</button></div>
         </form>
-      </div>
+        </div>
+      </details>
 
-      <div className="card">
-        <h2 className="font-semibold mb-3">Nuevo rol / perfil personalizado o temporal</h2>
+      <details className="card group">
+        <summary className="cursor-pointer select-none font-semibold">Crear rol / perfil personalizado o temporal</summary>
+        <div className="mt-4">
         <form action={crearRolPersonalizado} className="grid md:grid-cols-4 gap-3 items-end">
           <div><label className="label">Nombre del rol</label><input name="nombre" className="input" placeholder="Ej. Becaria Verano 2026" required /></div>
           <div className="flex items-center gap-2 pb-2">
@@ -452,14 +464,26 @@ export default async function UsuariosPage() {
           Los permisos directos del usuario y los de todos sus roles se combinan. Cada apartado permite definir
           quién puede verlo, crearlo, editarlo o eliminarlo.
         </p>
-      </div>
+        </div>
+      </details>
 
       <div className="card overflow-x-auto">
-        <h2 className="font-semibold mb-3">Usuarios</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">{mostrarInactivos ? "Usuarios inactivos" : "Usuarios activos"}</h2>
+          {mostrarInactivos ? (
+            <a href="/dashboard/usuarios" className="text-sm text-brand-600 underline">
+              Volver a activos
+            </a>
+          ) : cantidadInactivos > 0 ? (
+            <a href="/dashboard/usuarios?estado=inactivos" className="text-sm text-brand-600 underline">
+              Ver inactivos ({cantidadInactivos})
+            </a>
+          ) : null}
+        </div>
         <table className="table-base">
-          <thead><tr><th>Usuario</th><th>Nombre</th><th>Roles</th><th>Estado</th><th>Accesos</th><th>Cambiar contraseña</th><th></th></tr></thead>
+          <thead><tr><th>Usuario</th><th>Nombre</th><th>Roles</th><th>Estado</th><th>Accesos</th><th>Contraseña</th><th></th></tr></thead>
           <tbody>
-            {(usuarios || []).map((u: any) => (
+            {usuariosMostrados.map((u: any) => (
               <tr key={u.id}>
                 <td className="font-mono text-xs">{u.usuario}</td>
                 <td>{u.nombre_completo}</td>
@@ -496,10 +520,13 @@ export default async function UsuariosPage() {
                   </details>
                 </td>
                 <td>
-                  <form action={cambiarPassword.bind(null, u.id)} className="flex gap-2">
-                    <input name="password_nueva" type="password" placeholder="Nueva contraseña" className="input !w-40 !py-1" />
-                    <button className="btn-secondary text-xs">Cambiar</button>
-                  </form>
+                  <details>
+                    <summary className="cursor-pointer text-brand-600 underline text-xs">Cambiar</summary>
+                    <form action={cambiarPassword.bind(null, u.id)} className="mt-2 flex gap-2">
+                      <input name="password_nueva" type="password" placeholder="Nueva contraseña" className="input !w-40 !py-1" />
+                      <button className="btn-secondary text-xs">Guardar</button>
+                    </form>
+                  </details>
                 </td>
                 <td>
                   <div className="flex gap-2 items-center">
@@ -518,13 +545,20 @@ export default async function UsuariosPage() {
                 </td>
               </tr>
             ))}
+            {usuariosMostrados.length === 0 && (
+              <tr>
+                <td colSpan={7} className="py-6 text-center text-sm text-brand-400">
+                  {mostrarInactivos ? "No hay usuarios inactivos." : "No hay usuarios activos."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      <div className="card overflow-x-auto">
-        <h2 className="font-semibold mb-3">Roles</h2>
-        <table className="table-base">
+      <details className="card group overflow-x-auto">
+        <summary className="cursor-pointer select-none font-semibold">Roles ({(roles || []).length})</summary>
+        <table className="table-base mt-4">
           <thead><tr><th>Nombre</th><th>Base / Personalizado</th><th>Temporal</th><th>Vigencia</th><th>Permisos</th></tr></thead>
           <tbody>
             {(roles || []).map((r: any) => (
@@ -546,7 +580,7 @@ export default async function UsuariosPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </details>
     </div>
   );
 }

@@ -69,35 +69,129 @@ async function crearUsuario(formData: FormData) {
   "use server";
   await exigirAdministrador();
   const db = supabaseAdmin();
-  const password = formData.get("password") as string;
+  const usuarioNombre = formData.get("usuario");
+  const nombreCompletoValor = formData.get("nombre_completo");
+  const passwordValor = formData.get("password");
+  if (
+    typeof usuarioNombre !== "string" ||
+    typeof nombreCompletoValor !== "string" ||
+    typeof passwordValor !== "string"
+  ) {
+    redirect("/dashboard/usuarios?creacion=datos_invalidos");
+  }
+
+  const nombreUsuario = usuarioNombre.trim().toLowerCase();
+  const nombreCompleto = nombreCompletoValor.trim();
+  const password = passwordValor;
+  if (
+    nombreUsuario.length < 3 ||
+    nombreUsuario.length > 32 ||
+    !/^[a-z0-9._-]+$/.test(nombreUsuario) ||
+    !nombreCompleto ||
+    nombreCompleto.length > 120
+  ) {
+    redirect("/dashboard/usuarios?creacion=datos_invalidos");
+  }
+  const passwordBytes = new TextEncoder().encode(password).length;
+  if (password.length < 8 || passwordBytes > 72) {
+    redirect("/dashboard/usuarios?creacion=password_invalida");
+  }
+
+  const accesoTodas = formData.get("acceso_todas") === "on";
+  const rolIdValor = formData.get("rol_id");
+  const rolId = typeof rolIdValor === "string" ? rolIdValor : "";
+  const sucursalIds = Array.from(new Set(formData.getAll("sucursal_id").filter(
+    (sucursalId): sucursalId is string => typeof sucursalId === "string"
+  )));
+
+  if (rolId) {
+    const { data: rol, error } = await db.from("roles").select("id").eq("id", rolId).maybeSingle();
+    if (error) {
+      console.error("[usuarios] no se pudo validar el rol:", error);
+      redirect("/dashboard/usuarios?creacion=error");
+    }
+    if (!rol) redirect("/dashboard/usuarios?creacion=rol_invalido");
+  }
+
+  if (!accesoTodas && sucursalIds.length) {
+    const { data: sucursalesValidas, error } = await db
+      .from("sucursales")
+      .select("id")
+      .eq("activa", true)
+      .in("id", sucursalIds);
+    if (error) {
+      console.error("[usuarios] no se pudieron validar las sucursales:", error);
+      redirect("/dashboard/usuarios?creacion=error");
+    }
+    if ((sucursalesValidas || []).length !== sucursalIds.length) {
+      redirect("/dashboard/usuarios?creacion=sucursales_invalidas");
+    }
+  }
+
+  const { data: usuarioExistente, error: errorExistente } = await db
+    .from("usuarios")
+    .select("id")
+    .eq("usuario", nombreUsuario)
+    .maybeSingle();
+  if (errorExistente) {
+    console.error("[usuarios] no se pudo validar el nombre de usuario:", errorExistente);
+    redirect("/dashboard/usuarios?creacion=error");
+  }
+  if (usuarioExistente) redirect("/dashboard/usuarios?creacion=duplicado");
+
   const hash = await bcrypt.hash(password, 10);
   const permisos = permisosDesdeFormulario(formData);
 
   const { data: usuario, error } = await db
     .from("usuarios")
     .insert({
-      usuario: formData.get("usuario"),
-      nombre_completo: formData.get("nombre_completo"),
+      usuario: nombreUsuario,
+      nombre_completo: nombreCompleto,
       password_hash: hash,
-      acceso_todas_sucursales: formData.get("acceso_todas") === "on",
+      acceso_todas_sucursales: accesoTodas,
       permisos,
     })
-    .select()
+    .select("id, usuario, nombre_completo")
     .single();
-  if (error) throw error;
-
-  const rolId = formData.get("rol_id") as string;
-  if (rolId) {
-    const { error: errorRol } = await db.from("usuario_roles").insert({ usuario_id: usuario.id, rol_id: rolId });
-    if (errorRol) throw errorRol;
+  if (error) {
+    console.error("[usuarios] no se pudo crear la cuenta:", error);
+    redirect(error.code === "23505"
+      ? "/dashboard/usuarios?creacion=duplicado"
+      : "/dashboard/usuarios?creacion=error");
   }
 
-  const sucursalIds = formData.getAll("sucursal_id") as string[];
-  if (sucursalIds.length && formData.get("acceso_todas") !== "on") {
+  if (rolId) {
+    const { error: errorRol } = await db.from("usuario_roles").insert({ usuario_id: usuario.id, rol_id: rolId });
+    if (errorRol) {
+      console.error("[usuarios] no se pudo asignar el rol; se desactivará la cuenta creada:", errorRol);
+      const { error: errorDesactivacion } = await db
+        .from("usuarios")
+        .update({ activo: false })
+        .eq("id", usuario.id);
+      if (errorDesactivacion) {
+        console.error("[usuarios] tampoco se pudo desactivar la cuenta incompleta:", errorDesactivacion);
+        redirect("/dashboard/usuarios?creacion=desactivacion_fallida");
+      }
+      redirect("/dashboard/usuarios?creacion=asignacion_fallida");
+    }
+  }
+
+  if (sucursalIds.length && !accesoTodas) {
     const { error: errorSucursales } = await db
       .from("usuario_sucursales")
       .insert(sucursalIds.map((sid) => ({ usuario_id: usuario.id, sucursal_id: sid })));
-    if (errorSucursales) throw errorSucursales;
+    if (errorSucursales) {
+      console.error("[usuarios] no se pudieron asignar las sucursales; se desactivará la cuenta creada:", errorSucursales);
+      const { error: errorDesactivacion } = await db
+        .from("usuarios")
+        .update({ activo: false })
+        .eq("id", usuario.id);
+      if (errorDesactivacion) {
+        console.error("[usuarios] tampoco se pudo desactivar la cuenta incompleta:", errorDesactivacion);
+        redirect("/dashboard/usuarios?creacion=desactivacion_fallida");
+      }
+      redirect("/dashboard/usuarios?creacion=asignacion_fallida");
+    }
   }
 
   await registrarAuditoria({
@@ -107,6 +201,7 @@ async function crearUsuario(formData: FormData) {
     detalle: { usuario: usuario.usuario, nombre_completo: usuario.nombre_completo },
   });
   revalidatePath("/dashboard/usuarios");
+  redirect("/dashboard/usuarios?creacion=ok");
 }
 
 async function cambiarPassword(usuarioId: string, formData: FormData) {
@@ -311,7 +406,11 @@ async function actualizarAccesosUsuario(usuarioId: string, formData: FormData) {
   revalidatePath("/dashboard/usuarios");
 }
 
-export default async function UsuariosPage({ searchParams }: { searchParams?: { estado?: string } }) {
+export default async function UsuariosPage({
+  searchParams,
+}: {
+  searchParams?: { estado?: string; creacion?: string };
+}) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!esAdministrador(user.roles)) redirect("/dashboard");
@@ -348,6 +447,55 @@ export default async function UsuariosPage({ searchParams }: { searchParams?: { 
         <h1 className="page-title">Usuarios, roles y permisos</h1>
         <p className="page-subtitle">Roles base + perfiles personalizados/temporales, acotables por sucursal.</p>
       </div>
+
+      {searchParams?.creacion && (
+        <div
+          className={`card !py-3 border ${
+            searchParams.creacion === "ok"
+              ? "border-green-600 bg-green-50"
+              : "border-red-600 bg-red-50"
+          }`}
+          role="status"
+        >
+          {searchParams.creacion === "ok" && <p className="text-sm text-green-800">Usuario creado correctamente.</p>}
+          {searchParams.creacion === "datos_invalidos" && (
+            <p className="text-sm text-red-800">
+              Revisa los datos: el usuario debe tener de 3 a 32 caracteres (letras minúsculas, números, punto, guion o guion bajo) y el nombre completo hasta 120 caracteres.
+            </p>
+          )}
+          {searchParams.creacion === "password_invalida" && (
+            <p className="text-sm text-red-800">La contraseña debe tener al menos 8 caracteres y no más de 72 bytes.</p>
+          )}
+          {searchParams.creacion === "duplicado" && (
+            <p className="text-sm text-red-800">
+              Ya existe una cuenta con ese nombre, posiblemente inactiva. Revisa{" "}
+              <a href="/dashboard/usuarios?estado=inactivos" className="underline">usuarios inactivos</a>{" "}
+              o elige otro nombre.
+            </p>
+          )}
+          {searchParams.creacion === "rol_invalido" && (
+            <p className="text-sm text-red-800">El rol seleccionado ya no existe. Actualiza la página y vuelve a intentarlo.</p>
+          )}
+          {searchParams.creacion === "sucursales_invalidas" && (
+            <p className="text-sm text-red-800">Una o más sucursales seleccionadas ya no están activas. Actualiza la página y vuelve a intentarlo.</p>
+          )}
+          {searchParams.creacion === "asignacion_fallida" && (
+            <p className="text-sm text-red-800">
+              La cuenta se creó pero falló la asignación de accesos y quedó desactivada. Revisa usuarios inactivos antes de volver a crearla.
+            </p>
+          )}
+          {searchParams.creacion === "desactivacion_fallida" && (
+            <p className="text-sm text-red-800">
+              Falló la asignación de accesos y no se pudo confirmar la desactivación de la cuenta. Revisa los registros del servidor de inmediato.
+            </p>
+          )}
+          {searchParams.creacion === "error" && (
+            <p className="text-sm text-red-800">
+              No se pudo crear el usuario. Intenta de nuevo; si continúa, comparte los registros del servidor con soporte.
+            </p>
+          )}
+        </div>
+      )}
 
       <details className="card group">
         <summary className="cursor-pointer select-none font-semibold">
@@ -406,13 +554,22 @@ export default async function UsuariosPage({ searchParams }: { searchParams?: { 
         </div>
       </details>
 
-      <details className="card group">
+      <details className="card group" open={Boolean(searchParams?.creacion && searchParams.creacion !== "ok")}>
         <summary className="cursor-pointer select-none font-semibold">Crear usuario</summary>
         <div className="mt-4">
         <form action={crearUsuario} className="grid md:grid-cols-3 gap-3">
-          <div><label className="label">Usuario (login)</label><input name="usuario" className="input" required /></div>
-          <div><label className="label">Nombre completo</label><input name="nombre_completo" className="input" required /></div>
-          <div><label className="label">Contraseña</label><input name="password" type="password" className="input" required /></div>
+          <div>
+            <label className="label">Usuario (login)</label>
+            <input name="usuario" className="input" minLength={3} maxLength={32} pattern="[a-zA-Z0-9._-]+" autoCapitalize="none" required />
+          </div>
+          <div>
+            <label className="label">Nombre completo</label>
+            <input name="nombre_completo" className="input" maxLength={120} required />
+          </div>
+          <div>
+            <label className="label">Contraseña</label>
+            <input name="password" type="password" className="input" minLength={8} required />
+          </div>
           <div>
             <label className="label">Rol</label>
             {/* Sin opción vacía, el navegador elegía el primer rol de la lista

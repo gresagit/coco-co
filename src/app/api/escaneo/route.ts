@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, getSucursalActualId } from "@/lib/auth";
-import { confirmarPiezaPorFolio, enviarPiezaPorFolio } from "@/lib/escaneo";
+import { confirmarPiezaPorFolio, enviarPiezaPorFolio, extraerMensajeError } from "@/lib/escaneo";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { esAdministrador, tienePermiso } from "@/lib/roles";
 
@@ -79,7 +79,8 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(resultado);
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Ocurrió un error al registrar el escaneo.";
+    console.error("Error al registrar escaneo:", { folio, sucursalId, error });
+    const mensaje = extraerMensajeError(error, "Ocurrió un error al registrar el escaneo.");
     const status = error && typeof error === "object" && "code" in error && error.code === "P0001" ? 400 : 500;
     return NextResponse.json({ ok: false, folio, mensaje }, { status });
   }

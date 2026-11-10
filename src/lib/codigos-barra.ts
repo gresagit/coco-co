@@ -98,11 +98,17 @@ export async function generarTandaCodigosBarra(params: {
   metaId?: string;
   pedidoId?: string;
   tipoFolio?: TipoFolio;
+  folioInicial?: number | string;
   // "Disponible" = ya está producido (se debe indicar a propósito).
   // "Pendiente" (default) = código impreso, aún no confirmado — lo confirma el escaneo.
   estadoInicial?: "Disponible" | "Pendiente";
 }) {
   const db = supabaseAdmin();
+
+  const cantidad = Math.max(0, Math.round(Number(params.cantidad) || 0));
+  if (cantidad <= 0) {
+    throw new Error("La cantidad de etiquetas debe ser mayor a 0.");
+  }
 
   let loteId: string | null = null;
 
@@ -122,7 +128,7 @@ export async function generarTandaCodigosBarra(params: {
         orden_produccion_id: null,
         producto_id: params.productoId,
         sucursal_id: params.sucursalId,
-        cantidad_total: params.cantidad,
+        cantidad_total: cantidad,
       })
       .select()
       .single();
@@ -132,12 +138,13 @@ export async function generarTandaCodigosBarra(params: {
   // modo "sin_lote": loteId queda null
 
   const tipoFolio = params.tipoFolio || "secuencial";
+  const estadoInicial = params.estadoInicial || "Pendiente";
 
   const basePayload = {
     producto_id: params.productoId,
     sucursal_id: params.sucursalId,
     lote_id: loteId,
-    cantidad: params.cantidad,
+    cantidad,
     generado_por: params.generadoPor || null,
     meta_id: params.metaId || null,
     pedido_id: params.pedidoId || null,
@@ -170,13 +177,6 @@ export async function generarTandaCodigosBarra(params: {
 
   if (errGen || !generacion) throw errGen || new Error("No se pudo crear la generación");
 
-  // Por default, un código recién generado NO está producido todavía — solo
-  // es una etiqueta lista para imprimir. Queda "Pendiente" hasta que se
-  // escanea (ahí es cuando se descuentan insumos y sube el stock). Si algún
-  // caso de verdad necesita marcarlo como ya producido, debe pasar
-  // estadoInicial: "Disponible" explícitamente.
-  const estadoInicial = params.estadoInicial || "Pendiente";
-
   // Aquí es donde puede tronar la generación si al producto le falta su
   // "contador de folio" (por ejemplo, si el producto se dio de alta por
   // fuera de la app — importación, SQL manual, seed). Antes de intentar
@@ -191,10 +191,6 @@ export async function generarTandaCodigosBarra(params: {
   if (!contador) {
     const { data: producto } = await db.from("productos").select("sku").eq("id", params.productoId).single();
     const prefijo = (producto?.sku?.split("-")[0] || "PROD").toUpperCase();
-
-    // Si el producto ya tenía piezas generadas antes (por ejemplo, migradas
-    // a mano) partimos del número siguiente al más alto que ya esté en uso,
-    // para no repetir un folio existente.
     const { data: ultimaPieza } = await db
       .from("piezas")
       .select("folio_pieza")
@@ -210,10 +206,10 @@ export async function generarTandaCodigosBarra(params: {
     await db.from("folio_contadores").insert({ producto_id: params.productoId, prefijo, ultimo_numero: ultimoNumero });
   }
 
-  const piezas = [];
   const { data: producto } = await db.from("productos").select("sku").eq("id", params.productoId).single();
 
-  let folioUnicoPorProducto: string | null = null;
+  const prefijoActual = (producto?.sku?.split("-")[0] || "PROD").toUpperCase();
+  let folios: string[] = [];
 
   if (tipoFolio === "universal") {
     let candidato = generarFolioUniversal(producto?.sku);
@@ -224,45 +220,52 @@ export async function generarTandaCodigosBarra(params: {
       candidato = generarFolioUniversal(producto?.sku);
       intento += 1;
     }
-    folioUnicoPorProducto = candidato;
-  }
-
-  for (let i = 0; i < params.cantidad; i++) {
-    let folioGenerado: string;
-
-    if (tipoFolio === "universal") {
-      folioGenerado = folioUnicoPorProducto!;
-    } else {
-      const { data: folioData, error: errFolio } = await db.rpc("siguiente_folio_producto", {
-        p_producto_id: params.productoId,
-      });
-      if (errFolio) {
-        throw new Error(
-          `No se pudo generar el folio ${i + 1} de ${params.cantidad}: ${errFolio.message}`
-        );
-      }
-      folioGenerado = folioData as string;
+    folios = Array.from({ length: cantidad }, () => candidato);
+  } else if (params.folioInicial !== undefined && params.folioInicial !== null) {
+    const numeroInicial = Number(params.folioInicial);
+    if (!Number.isFinite(numeroInicial)) {
+      throw new Error("El folio inicial no es válido.");
     }
-
-    piezas.push({
-      folio_pieza: folioGenerado,
-      lote_id: loteId,
-      producto_id: params.productoId,
-      sucursal_id: params.sucursalId,
-      estado: estadoInicial,
-      generacion_id: generacion.id,
-      meta_id: params.metaId || null,
+    folios = Array.from({ length: cantidad }, (_, index) => `${prefijoActual}-${String(numeroInicial + index).padStart(4, "0")}`);
+  } else {
+    const { data: foliosRpc, error: errFolio } = await db.rpc("siguiente_folios_producto", {
+      p_producto_id: params.productoId,
+      p_cantidad: cantidad,
     });
+    if (errFolio) {
+      throw new Error(`No se pudo reservar la tanda de folios: ${errFolio.message}`);
+    }
+    folios = Array.isArray(foliosRpc) ? foliosRpc.map((folio) => String(folio)) : [];
   }
 
-  if (piezas.length) {
-    const { error: errPiezas } = await db.from("piezas").insert(piezas);
-    if (errPiezas) throw errPiezas;
+  if (!folios.length) {
+    throw new Error("No se pudieron reservar los folios de la tanda.");
+  }
+
+  const piezas = folios.map((folioGenerado) => ({
+    folio_pieza: folioGenerado,
+    lote_id: loteId,
+    producto_id: params.productoId,
+    sucursal_id: params.sucursalId,
+    estado: estadoInicial,
+    generacion_id: generacion.id,
+    meta_id: params.metaId || null,
+  }));
+
+  try {
+    if (piezas.length) {
+      const { error: errPiezas } = await db.from("piezas").insert(piezas);
+      if (errPiezas) throw errPiezas;
+    }
+  } catch (error) {
+    await db.from("generaciones_codigo_barra").delete().eq("id", generacion.id);
+    throw error;
   }
 
   const conteoGenerado = await db.from("piezas").select("id", { count: "exact", head: true }).eq("generacion_id", generacion.id);
-  const resultadoConteo = validarConteoCodigosSolicitados(params.cantidad, Number(conteoGenerado.count || 0));
+  const resultadoConteo = validarConteoCodigosSolicitados(cantidad, Number(conteoGenerado.count || 0));
   if (!resultadoConteo.ok) {
+    await db.from("generaciones_codigo_barra").delete().eq("id", generacion.id);
     throw new Error(resultadoConteo.mensaje);
   }
 
@@ -373,14 +376,30 @@ export async function eliminarGeneracionCodigoBarra(generacionId: string) {
   if (errorGeneracion) throw errorGeneracion;
   if (!generacion) return;
 
-  const { data: piezas, error: errorPiezas } = await db
+  const { data: piezas, error: errorPiezasListado } = await db
     .from("piezas")
     .select("id, estado")
     .eq("generacion_id", generacionId);
-  if (errorPiezas) throw errorPiezas;
+  if (errorPiezasListado) throw errorPiezasListado;
 
-  if ((piezas || []).some((pieza) => pieza.estado !== "Pendiente")) {
-    throw new Error("No se puede eliminar una tanda que contiene folios escaneados o ya utilizados.");
+  const piezasNoPendientes = (piezas || []).filter((pieza) => pieza.estado !== "Pendiente");
+  if (piezasNoPendientes.length) {
+    const resumenPartes: Array<[string, number]> = [
+      ["Disponible", (piezas || []).filter((pieza) => pieza.estado === "Disponible").length],
+      ["Vendida", (piezas || []).filter((pieza) => pieza.estado === "Vendida").length],
+      ["Enviado", (piezas || []).filter((pieza) => pieza.estado === "Enviado").length],
+      ["Dañada/Reimpresa", (piezas || []).filter((pieza) => pieza.estado === "Dañada/Reimpresa").length],
+      ["Transferida", (piezas || []).filter((pieza) => pieza.estado === "Transferida").length],
+    ];
+    const resumen = resumenPartes
+      .filter(([, cantidad]) => cantidad > 0)
+      .map(([estado, cantidad]) => `${cantidad} ${estado}`)
+      .join(", ");
+
+    throw new Error(
+      `No se puede eliminar la tanda porque contiene piezas ya usadas: ${resumen}.` +
+        " Antes de borrar, vuelve a la pieza a Pendiente o elimina manualmente la tanda desde SQL."
+    );
   }
 
   const piezaIds = (piezas || []).map((pieza) => pieza.id);

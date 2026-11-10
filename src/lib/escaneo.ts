@@ -1,6 +1,46 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { convertirCantidad } from "@/lib/unidades";
 
+type ErrorEscaneo = Error & { code?: string; details?: string; hint?: string };
+
+export function extraerMensajeError(error: unknown, fallback = "Ocurrió un error inesperado.") {
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const mensaje = typeof record.message === "string" ? record.message : "";
+
+    if (record.code === "PGRST202" || /could not find the function/i.test(mensaje)) {
+      return "Falta aplicar la migración 031/033 en Supabase.";
+    }
+    if (record.code === "23505") {
+      return "Ya existe un registro con ese identificador o folio.";
+    }
+    if (mensaje.trim()) return mensaje;
+
+    const detalle = [record.details, record.hint]
+      .filter((valor) => typeof valor === "string" && valor.trim())
+      .join(" ");
+    if (detalle) return detalle;
+
+    const nestedError = record.error as Record<string, unknown> | undefined;
+    if (typeof nestedError?.message === "string" && nestedError.message.trim()) return nestedError.message;
+  } else if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  return fallback;
+}
+
+export function crearErrorLegible(error: unknown, fallback = "Ocurrió un error inesperado.") {
+  const normalizado = new Error(extraerMensajeError(error, fallback)) as ErrorEscaneo;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    if (typeof record.code === "string") normalizado.code = record.code;
+    if (typeof record.details === "string") normalizado.details = record.details;
+    if (typeof record.hint === "string") normalizado.hint = record.hint;
+  }
+  return normalizado;
+}
+
 export type ResultadoEscaneo =
   | { ok: true; folio: string; productoId: string; productoNombre: string; productoSku: string }
   | { ok: false; folio: string; mensaje: string };
@@ -32,7 +72,8 @@ export async function confirmarPiezaPorFolio(
     .select("producto_id, sucursal_id, estado")
     .eq("folio_pieza", folio)
     .maybeSingle();
-  if (errorPieza) throw errorPieza;
+
+  if (errorPieza) throw crearErrorLegible(errorPieza, "No se pudo buscar la pieza.");
   if (!pieza) return { ok: false, folio, mensaje: "No existe ninguna pieza con ese folio." };
   if (pieza.sucursal_id !== sucursalId) {
     return { ok: false, folio, mensaje: "Esta pieza pertenece a otra sucursal." };
@@ -48,7 +89,7 @@ export async function confirmarPiezaPorFolio(
     .from("bom")
     .select("*, insumos(unidad_medida)")
     .eq("producto_id", pieza.producto_id);
-  if (errorBom) throw errorBom;
+  if (errorBom) throw crearErrorLegible(errorBom, "No se pudo cargar la fórmula del producto.");
 
   const consumos: Array<{ tipo: "insumo" | "producto"; id: string; cantidad: number }> = [];
   for (const item of bomItems || []) {
@@ -76,7 +117,7 @@ export async function confirmarPiezaPorFolio(
     p_usuario_id: usuarioId || null,
     p_consumos: consumos,
   });
-  if (error) throw error;
+  if (error) throw crearErrorLegible(error, "No se pudo confirmar la pieza escaneada.");
 
   return {
     ok: true,
@@ -99,7 +140,7 @@ export async function enviarPiezaPorFolio(
     p_usuario_id: usuarioId,
     p_pedido_id: pedidoId,
   });
-  if (error) throw error;
+  if (error) throw crearErrorLegible(error, "No se pudo registrar la salida de la pieza.");
 
   return {
     ok: true,

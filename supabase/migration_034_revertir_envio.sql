@@ -11,7 +11,7 @@ set search_path = public
 as $$
 declare
   v_pieza record;
-  v_cantidad integer := 0;
+  v_filas_stock integer;
 begin
   if p_folio is null or trim(p_folio) = '' then
     raise exception 'Debes indicar el folio de la pieza.';
@@ -49,6 +49,11 @@ begin
   update public.producto_stock
   set cantidad_disponible = cantidad_disponible + 1
   where producto_id = v_pieza.producto_id and sucursal_id = v_pieza.sucursal_id;
+  get diagnostics v_filas_stock = row_count;
+
+  if v_filas_stock <> 1 then
+    raise exception 'Se esperaba una fila de stock para el producto y sucursal; se encontraron %.', v_filas_stock;
+  end if;
 
   insert into public.movimientos (
     tipo,
@@ -66,9 +71,10 @@ begin
     v_pieza.sucursal_id,
     1,
     trim(p_folio),
-    coalesce(p_motivo, 'Corrección manual: reversa de envío')
+    coalesce(nullif(trim(p_motivo), ''), 'Corrección manual: reversa de envío')
   );
 end;
 $$;
 
+revoke all on function public.revertir_envio_pieza(text, uuid, uuid, text) from public, anon, authenticated;
 grant execute on function public.revertir_envio_pieza(text, uuid, uuid, text) to service_role;
